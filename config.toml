@@ -1,0 +1,4 @@
+# // Example .toml file for the configuration
+player_names = ["jengablox"]
+client_log_location = "Client.txt"
+filters = []
