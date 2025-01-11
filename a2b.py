@@ -101,6 +101,7 @@ def get_node_positions(tree: Tree, path: List[str]) -> Tuple[List[float], List[f
         labels.append(
             f"Node ID: {node.id}\nSkill: {node.skill_data.get('name', 'None')}\nStats:\n{stats_text}"
         )
+        
     return x_coords, y_coords, labels
 
 
