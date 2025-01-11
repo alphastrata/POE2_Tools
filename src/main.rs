@@ -21,7 +21,7 @@ struct Group {
 
 #[derive(Debug, Clone)]
 struct Node {
-    skill_id: Option<String>,
+    skill_id: Option<String>, // Should be a pointer to the PassiveSkill's .name
     parent: i64,    // group ID
     radius: i64,    // orbit index
     position: i64,  // orbit slot
@@ -30,7 +30,7 @@ struct Node {
     // Derived fields for rendering:
     name: String,
     is_notable: bool,
-    stats: Vec<(String, f32)>,
+    stats: Vec<(String, f32)>, // Should be a POINTER to the PassiveSkill's .stats we took it from
     // Computed world coords
     wx: f32,
     wy: f32,
