@@ -6,22 +6,28 @@ from bokeh.models import ColumnDataSource, HoverTool
 from typing import Set
 
 
-def calculate_node_position(node, group, orbit_radii, skills_per_orbit):
+def calculate_node_position(node, group, orbit_radii, skills_per_orbit, tree_size, min_x, min_y):
     """Calculate the (x, y) position of a node."""
-    orbit = node.get("radius", 0)  # Default to 0 if missing
-    position = node.get("position", 0)  # Default to 0 if missing
+    orbit = node.get("radius", 0)
+    position = node.get("position", 0)
     group_x, group_y = group["x"], group["y"]
 
     if orbit >= len(orbit_radii) or orbit >= len(skills_per_orbit):
-        return group_x, -group_y  # Default to group center for invalid orbit, with flipped y-axis
+        return group_x, -group_y
 
     radius = orbit_radii[orbit]
     angle_step = 2 * math.pi / skills_per_orbit[orbit]
     angle = position * angle_step
 
+    # Calculate relative position
     x = group_x + math.cos(angle) * radius
-    y = -(group_y + math.sin(angle) * radius)  # Flip the y-axis
+    y = group_y + math.sin(angle) * radius
+
+    # Apply scaling and centering
+    x = (x - min_x) / tree_size
+    y = -(y - min_y) / tree_size  # Flip y-axis and normalize
     return x, y
+
 
 
 def enrich_tree(tree, skills):
@@ -128,7 +134,6 @@ def get_reachable_nodes(tree: dict, start_node_id: str, steps: int) -> Set[str]:
                 queue.append((conn_id, depth + 1))
     return reachable
 
-
 def main():
     with open("POE2_TREE.json", "r") as f:
         data = json.load(f)
@@ -142,17 +147,20 @@ def main():
     # Enrich tree nodes with skill data
     enrich_tree(tree, skills)
 
-    starting_node = "49220"  # Starting node ID
-    steps = 20  # Number of steps to traverse
+    starting_node = "49220"
+    steps = 20
 
-    # Orbit radii and number of skills per orbit (these are from the Lua files)
+    # Orbit radii and number of skills per orbit
     orbit_radii = [0, 82, 162, 335, 493]
     skills_per_orbit = [1, 6, 12, 12, 40]
 
+    # Calculate tree size and offsets
+    max_x = max(group["x"] for group in tree["groups"].values())
+    max_y = max(group["y"] for group in tree["groups"].values())
+    min_x = min(group["x"] for group in tree["groups"].values())
+    min_y = min(group["y"] for group in tree["groups"].values())
+    tree_size = min(max_x - min_x, max_y - min_y) * 1.1
+
     # Find reachable nodes and visualize
     reachable_nodes = get_reachable_nodes(tree, starting_node, steps)
-    visualize_tree(tree, reachable_nodes, starting_node, orbit_radii, skills_per_orbit)
-
-
-if __name__ == "__main__":
-    main()
+    visualize_tree(tree, reachable_nodes, starting_node, orbit_radii, skills_per_orbit, tree_size, min_x, min_y)
