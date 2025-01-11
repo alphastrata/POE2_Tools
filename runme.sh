@@ -1,0 +1,17 @@
+# Original query
+curl "https://pathofexile.com/api/trade2/fetch/ed15e93c9a861c30c383fd562a39bef2718da6bfa09593bf590e25ba3740b75a,7e840ba96b97f2ab85458a78fb1650ba699691ccb29919d55212978a195bfd10,20369de687fcf615c7b6851746e7daf1f7f2fecf83f508cac33f474fe28750ae,44ea0a7a433c383c7cc22dac797b41b6c2d82723ffb8f9a51f27ebbd420f9a67,a77bb230e628230ba1ab37202af776d6987ba85dc1de147d7db9a11f6e1806dd,49400c52b9e72f0b3e6c332b82b4202940eca1933698b6f2698feccdd99121e0,ef2d0e15392fb849f05e988b65d2bced88faab9c782de9b2fa9e2835fd58fe83?query=2k2rnJpSk&realm=poe2" | jq -c '.' | tee "result_original.json"
+
+# Remove the first extra hash
+curl "https://pathofexile.com/api/trade2/fetch/7e840ba96b97f2ab85458a78fb1650ba699691ccb29919d55212978a195bfd10,20369de687fcf615c7b6851746e7daf1f7f2fecf83f508cac33f474fe28750ae,44ea0a7a433c383c7cc22dac797b41b6c2d82723ffb8f9a51f27ebbd420f9a67,a77bb230e628230ba1ab37202af776d6987ba85dc1de147d7db9a11f6e1806dd,49400c52b9e72f0b3e6c332b82b4202940eca1933698b6f2698feccdd99121e0,ef2d0e15392fb849f05e988b65d2bced88faab9c782de9b2fa9e2835fd58fe83?query=2k2rnJpSk&realm=poe2" | jq -c '.' | tee "result_removed_first.json"
+
+# Remove the second extra hash
+curl "https://pathofexile.com/api/trade2/fetch/ed15e93c9a861c30c383fd562a39bef2718da6bfa09593bf590e25ba3740b75a,20369de687fcf615c7b6851746e7daf1f7f2fecf83f508cac33f474fe28750ae,44ea0a7a433c383c7cc22dac797b41b6c2d82723ffb8f9a51f27ebbd420f9a67,a77bb230e628230ba1ab37202af776d6987ba85dc1de147d7db9a11f6e1806dd,49400c52b9e72f0b3e6c332b82b4202940eca1933698b6f2698feccdd99121e0,ef2d0e15392fb849f05e988b65d2bced88faab9c782de9b2fa9e2835fd58fe83?query=2k2rnJpSk&realm=poe2" | jq -c '.' | tee "result_removed_second.json"
+
+# Remove the third extra hash
+curl "https://pathofexile.com/api/trade2/fetch/ed15e93c9a861c30c383fd562a39bef2718da6bfa09593bf590e25ba3740b75a,7e840ba96b97f2ab85458a78fb1650ba699691ccb29919d55212978a195bfd10,44ea0a7a433c383c7cc22dac797b41b6c2d82723ffb8f9a51f27ebbd420f9a67,a77bb230e628230ba1ab37202af776d6987ba85dc1de147d7db9a11f6e1806dd,49400c52b9e72f0b3e6c332b82b4202940eca1933698b6f2698feccdd99121e0,ef2d0e15392fb849f05e988b65d2bced88faab9c782de9b2fa9e2835fd58fe83?query=2k2rnJpSk&realm=poe2" | jq -c '.' | tee "result_removed_third.json"
+
+# Continue for all hashes, saving each variation to a JSON file.
+# Repeat this pattern until only the base hash remains.
+
+# Final query with only the base hash
+curl "https://pathofexile.com/api/trade2/fetch/ed15e93c9a861c30c383fd562a39bef2718da6bfa09593bf590e25ba3740b75a?query=2k2rnJpSk&realm=poe2" | jq -c '.' | tee "result_removed_all.json"

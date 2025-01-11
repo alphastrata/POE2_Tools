@@ -1,4 +1,5 @@
 # // Example .toml file for the configuration
 player_names = ["jengablox"]
 client_log_location = "Client.txt"
-filters = []
+always_include = []
+always_exclude = ["EOS SDK", "VULKAN", "ENTITY", "RENDER", "SHADER", "SCENE", "DEBUG", "SOUND", "DEBUG", "CRIT", "WARN"]

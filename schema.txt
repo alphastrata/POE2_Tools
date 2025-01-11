@@ -1,0 +1,32 @@
+# Examine the structure inside passive_tree
+[
+  "groups",
+  "nodes",
+  "root_passives"
+]
+
+# Examine a sample root_passive (First 2)
+[
+  50459,
+  47175 
+]
+
+# Get the structure of groups (First 2 keys and their values)
+[
+  "1: {\"x\":-22256.955078125,\"y\":-6513.4951171875}",
+  "2: {\"x\":-21155.17578125,\"y\":4078.10498046875}"
+]
+
+# Get the keys of a single node and value (First 2 keys and their values)
+[
+  "4: [\"connections\",\"parent\",\"position\",\"radius\",\"skill_id\"]",
+  "16: [\"connections\",\"parent\",\"position\",\"radius\",\"skill_id\"]"
+]
+
+# Look at the node with connections data (First 2)
+
+# Examine one passive skill (First 2 keys and values)
+[
+  "attributes1: [\"icon\",\"name\",\"stats\"]",
+  "attributes2: [\"icon\",\"name\",\"stats\"]"
+]
