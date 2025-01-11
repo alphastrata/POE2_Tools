@@ -20,3 +20,4 @@ class Edge:
 class Tree:
     nodes: Dict[str, Node]
     edges: List[Edge]
+    groups: Dict[str, Dict]
