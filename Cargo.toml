@@ -4,8 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-path = "src/main.rs"
-name = "vis"
+path = "src/ggez_vis.rs"
+name = "gvis"
+
+
+[[bin]]
+path = "src/egui_vis.rs"
+name = "evis"
 
 
 [[bin]]
@@ -18,6 +23,7 @@ bevy = "0.15.1"
 chrono = { version = "0.4.39", features = ["serde"] }
 clap = { version = "4.5.23", features = ["derive"] }
 colored = "2.2.0"
+eframe = "0.30.0"
 egui = "0.30.0"
 ggez = "0.9.3"
 iced = "0.13.1"

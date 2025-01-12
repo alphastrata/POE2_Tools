@@ -97,10 +97,8 @@ fn run_as_daemon(port: u16, config: Config, lookback: usize) {
     thread::spawn(move || {
         let log_lines = read_logs(config.clone().into(), lookback);
         for line in log_lines {
-            if config.always_include.iter().any(|include| line.contains(include)) {
-                if tx.send(line).is_err() {
-                    break;
-                }
+            if config.always_include.iter().any(|include| line.contains(include)) && tx.send(line).is_err() {
+                break;
             }
         }
     });
@@ -147,7 +145,7 @@ fn read_logs<'a>(config: Arc<Config>, lookback: usize) -> mpsc::Receiver<String>
     rx
 }
 
-fn parse_log_line<'a>(line: &'a str) -> Option<LogLine<'a>> {
+fn parse_log_line(line: &str) -> Option<LogLine<'_>> {
     let parts: Vec<&str> = line.splitn(6, ' ').collect();
     if parts.len() < 6 {
         return None;
@@ -184,7 +182,7 @@ fn update_deaths(log_line: &LogLine) {
     }
 }
 
-impl<'a> std::fmt::Display for LogLine<'a> {
+impl std::fmt::Display for LogLine<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let timestamp = NaiveDateTime::from_timestamp_opt(self.timestamp, 0)
             .map(|dt| dt.format("%H:%M:%S").to_string())

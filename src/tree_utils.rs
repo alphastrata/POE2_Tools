@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use serde_json::Value;
+use std::collections::HashSet;
 
 fn print_keys_recursive(value: &Value, indent: usize, seen: &mut HashSet<String>) {
     if let Some(obj) = value.as_object() {
@@ -19,7 +19,7 @@ fn print_keys_recursive(value: &Value, indent: usize, seen: &mut HashSet<String>
 
 // Usage
 fn main() {
-    let data = std::fs::read_to_string("POE2_TREE.json").unwrap();
+    let data = std::fs::read_to_string("./data/POE2_TREE.json").unwrap();
     let json: Value = serde_json::from_str(&data).unwrap();
     let mut seen = HashSet::new();
     print_keys_recursive(&json, 0, &mut seen);
