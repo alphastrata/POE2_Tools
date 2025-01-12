@@ -81,10 +81,16 @@ impl eframe::App for MyApp {
                 self.camera_x += step;
             }
 
-            // Mouse scroll => zoom
+            // Layout at top or wherever you like:
+            ui.horizontal(|ui| {
+                ui.label("Zoom:");
+                ui.add(egui::Slider::new(&mut self.zoom, 0.01..=100.0));
+            });
+
+            // If your egui version doesn't have `scroll_delta`, use `raw_scroll_delta`
             let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
             if scroll_delta != 0.0 {
-                self.zoom += 0.1 * scroll_delta;
+                self.zoom += 0.01 * scroll_delta;
                 self.zoom = self.zoom.clamp(0.1, 100.0);
             }
 
@@ -157,6 +163,21 @@ impl eframe::App for MyApp {
                 }
             }
         });
+        // After the CentralPanel, draw a small overlay in the bottom-right:
+        egui::Window::new("Camera info")
+            .anchor(egui::Align2::RIGHT_BOTTOM, egui::Vec2::new(-10.0, -10.0))
+            .collapsible(false)
+            .resizable(false)
+            .title_bar(false) // hide title bar
+            .show(ctx, |ui| {
+                let dx = self.camera_x;
+                let dy = self.camera_y;
+                let dist = (dx * dx + dy * dy).sqrt();
+                ui.label(format!(
+                    "pos: ({:.2}, {:.2})\nzoom: {:.2}\ndist: {:.2}",
+                    dx, dy, self.zoom, dist
+                ));
+            });
     }
 }
 
@@ -165,48 +186,13 @@ impl eframe::App for MyApp {
 // -----------------------------------------------------------------------------
 fn main() {
     // Minimal mock data
-    let mut data = TreeData {
-        passive_tree: PassiveTree {
-            groups: HashMap::new(),
-            nodes: HashMap::new(),
-        },
-        passive_skills: HashMap::new(),
-    };
-
-    // Insert some nodes
-    data.passive_tree.nodes.insert(
-        0,
-        Node {
-            skill_id: None,
-            parent: 0,
-            radius: 0,
-            position: 0,
-            connections: vec![1],
-            name: "Center Node".to_string(),
-            is_notable: true,
-            stats: vec![("bonus".to_string(), 12.0)],
-            wx: 0.0,
-            wy: 0.0,
-            active: false,
-        },
+    let mut data = poo_tools::data::TreeData::load_tree("data/POE2_TREE.json");
+    println!(
+        "Found {} nodes and {} groups",
+        data.passive_tree.nodes.len(),
+        data.passive_tree.groups.len(),
     );
-
-    data.passive_tree.nodes.insert(
-        1,
-        Node {
-            skill_id: None,
-            parent: 0,
-            radius: 0,
-            position: 0,
-            connections: vec![0],
-            name: "Second Node".to_string(),
-            is_notable: false,
-            stats: vec![("life".to_string(), 5.0)],
-            wx: 150.0,
-            wy: 0.0,
-            active: false,
-        },
-    );
+    data.compute_positions_and_stats();
 
     // Launch eframe
     let native_opts = eframe::NativeOptions::default();
