@@ -3,6 +3,7 @@ use eframe::egui;
 use eframe::epi;
 
 use data::*;
+use poo_tools::data::PassiveTree;
 
 struct Camera {
     pos_x: f32,
@@ -260,52 +261,7 @@ impl epi::App for MyApp {
 }
 
 fn main() {
-    // For demo, just mock some data:
-    let mut data = TreeData {
-        passive_tree: PassiveTree {
-            groups: HashMap::new(),
-            nodes: HashMap::new(),
-        },
-        passive_skills: HashMap::new(),
-    };
-    data.passive_tree.groups.insert(0, Group { x: 0.0, y: 0.0 });
-    data.passive_tree
-        .groups
-        .insert(1, Group { x: 200.0, y: 50.0 });
-
-    // Insert some nodes
-    data.passive_tree.nodes.insert(
-        0,
-        Node {
-            skill_id: None,
-            parent: 0,
-            radius: 1,
-            position: 0,
-            connections: vec![1],
-            name: "Center".to_owned(),
-            is_notable: true,
-            stats: vec![("bonus".to_string(), 10.0)],
-            wx: 0.0,
-            wy: 0.0,
-            active: false,
-        },
-    );
-    data.passive_tree.nodes.insert(
-        1,
-        Node {
-            skill_id: None,
-            parent: 1,
-            radius: 1,
-            position: 4,
-            connections: vec![0],
-            name: "Linked".to_owned(),
-            is_notable: false,
-            stats: vec![("life".to_string(), 5.0)],
-            wx: 0.0,
-            wy: 0.0,
-            active: false,
-        },
-    );
+   let data = PassiveTree::load_data
 
     let app = MyApp::new(data);
     let opts = eframe::NativeOptions::default();
