@@ -156,7 +156,7 @@ impl EventHandler for TreeVisualization {
                 NODE_COLOR
             };
             let center = [sx, sy];
-            let circle = Mesh::new_circle(ctx, DrawMode::fill(), center, node_size as f32, 0.2, c)?;
+            let circle = Mesh::new_circle(ctx, DrawMode::fill(), center, node_size, 0.2, c)?;
             canvas.draw(&circle, DrawParam::default());
         }
         
@@ -177,8 +177,8 @@ impl EventHandler for TreeVisualization {
                 let txt = Text::new(TextFragment::new(format!("{}\n{}", node.name, stats)).color(Color::WHITE));
                 let dim = txt.measure(ctx)?;
                 let r = Rect::new(
-                    (sx + 8.0) as f32,
-                    (sy - 4.0) as f32,
+                    sx + 8.0,
+                    sy - 4.0,
                     (dim.x + 8.0) as f32,
                     (dim.y + 8.0) as f32,
                 );
@@ -215,7 +215,7 @@ impl EventHandler for TreeVisualization {
 
     fn mouse_button_down_event(&mut self, _ctx: &mut Context, btn: MouseButton, x: f32, y: f32) -> GameResult {
         if btn==MouseButton::Left {
-            let (sw,sh)=( _ctx.gfx.drawable_size() );
+            let (sw,sh)=_ctx.gfx.drawable_size();
             let (wx,wy)=self.screen_to_world(x,y,sw,sh);
             // set active
             for (&id,node) in self.data.passive_tree.nodes.iter_mut() {
