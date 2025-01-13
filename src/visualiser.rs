@@ -4,7 +4,11 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use crate::{config::parse_color, data::PassiveTree};
+use crate::config::UserConfig;
+use crate::{
+    config::{parse_color, UserCharacter},
+    data::PassiveTree,
+};
 
 impl eframe::App for TreeVis {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -89,17 +93,17 @@ impl eframe::App for TreeVis {
                 let node_size = base_node_size * (1.0 + self.zoom * 0.1);
 
                 let color = if node.active {
-                    self.color_map
-                        .get("red")
-                        .map_or(egui::Color32::GRAY, |col| parse_color(col))
-                } else if node.is_notable {
-                    self.color_map
-                        .get("yellow")
-                        .map_or(egui::Color32::GRAY, |col| parse_color(col))
+                    parse_color(
+                        self.color_map
+                            .get("green")
+                            .unwrap_or(&"#29D398".to_string()),
+                    )
                 } else {
-                    self.color_map
-                        .get("blue")
-                        .map_or(egui::Color32::GRAY, |col| parse_color(col))
+                    parse_color(
+                        self.color_map
+                            .get("all_nodes")
+                            .unwrap_or(&"#3C3C3C".to_string()),
+                    )
                 };
 
                 painter.circle_filled(egui::pos2(sx, sy), node_size, color);
@@ -194,22 +198,23 @@ impl eframe::App for TreeVis {
                     dx, dy, self.zoom, dist
                 ));
             });
+
+        self.auto_save_character();
     }
 }
 
-#[derive(Default)]
 pub struct TreeVis {
     camera: RefCell<(f32, f32)>,
     zoom: f32,
     passive_tree: crate::data::PassiveTree,
     hovered_node: Option<usize>,
 
-    // 1) Fuzzy-search-related
+    // Fuzzy-search-related
     fuzzy_search_open: AtomicBool,
     search_query: String,
     search_results: Vec<usize>,
 
-    // 2) Path-finder-related
+    // Path-finder-related
     start_node_id: usize,
     target_node_id: usize,
     path: Vec<usize>,
@@ -217,9 +222,37 @@ pub struct TreeVis {
     /// Store edges of the current path
     active_edges: HashSet<(usize, usize)>,
 
-    // 3) Config-driven colours
+    // Config-driven colours
     color_map: HashMap<String, String>,
+
+    // for multi-step pathing
+    path_nodes: Vec<usize>,
+
+    current_character: Option<UserCharacter>,
+    last_save_time: std::time::Instant,
 }
+impl Default for TreeVis {
+    fn default() -> Self {
+        Self {
+            camera: RefCell::new((0.0, 0.0)),
+            zoom: 0.20,
+            passive_tree: PassiveTree::default(),
+            hovered_node: None,
+            path_nodes: Vec::new(),
+            current_character: None,
+            last_save_time: std::time::Instant::now(),
+            active_edges: HashSet::new(),
+            color_map: HashMap::new(),
+            fuzzy_search_open: AtomicBool::new(false),
+            search_query: String::new(),
+            search_results: Vec::new(),
+            start_node_id: 0,
+            target_node_id: 0,
+            path: Vec::new(),
+        }
+    }
+}
+
 // Pointery/Threaddy/Atomicy helpers:
 impl TreeVis {
     fn enable_fuzzy_search(&self) {
@@ -245,6 +278,36 @@ impl TreeVis {
         *self.camera.borrow()
     }
 
+    fn find_arbitrary_path(&mut self) {
+        if self.path_nodes.len() < 2 {
+            return; // Need at least two nodes
+        }
+
+        let mut full_path = Vec::new();
+        for pair in self.path_nodes.windows(2) {
+            if let [start, target] = pair {
+                let segment = self.passive_tree.find_shortest_path(*start, *target);
+                if full_path.is_empty() {
+                    full_path.extend(segment);
+                } else {
+                    full_path.extend(segment.iter().skip(1));
+                }
+            }
+        }
+        self.path = full_path;
+        self.update_active_edges();
+    }
+
+    fn update_active_edges(&mut self) {
+        self.active_edges.clear();
+        for window in self.path.windows(2) {
+            if let [a, b] = window {
+                self.active_edges.insert((*a, *b));
+                self.active_edges.insert((*b, *a));
+            }
+        }
+    }
+
     fn find_path(&mut self, start: usize, target: usize) {
         let path = self.passive_tree.find_shortest_path(start, target);
 
@@ -259,13 +322,12 @@ impl TreeVis {
         }
     }
 
-    pub fn new(mut data: PassiveTree, color_map: HashMap<String, String>) -> Self {
-        data.compute_positions_and_stats();
+    pub fn new(data: PassiveTree, config: UserConfig, character: Option<UserCharacter>) -> Self {
         Self {
             zoom: 0.2,
             camera: RefCell::new((0.0, 0.0)),
             passive_tree: data,
-            color_map,
+            current_character: character,
             ..Default::default()
         }
     }
@@ -317,5 +379,53 @@ impl TreeVis {
     fn go_to_node(&self, id: usize) {
         self.move_camera_to_node(id);
         self.disable_fuzzy_search();
+    }
+    fn select_node(&mut self, node_id: usize) {
+        if let Some(character) = &mut self.current_character {
+            if !character.activated_node_ids.contains(&node_id) {
+                character.activated_node_ids.push(node_id);
+                self.save_character();
+            }
+        }
+    }
+
+    fn save_character(&mut self) {
+        if let Some(character) = &self.current_character {
+            character.save_to_toml("data/last_character.toml");
+            self.last_save_time = std::time::Instant::now();
+        }
+    }
+
+    fn auto_save_character(&mut self) {
+        if let Some(character) = &self.current_character {
+            if self.last_save_time.elapsed().as_secs() >= 5 {
+                self.save_character();
+            }
+        }
+    }
+
+    pub fn load_character(&mut self, path: &str) {
+        self.current_character = UserCharacter::load_from_toml(path);
+    }
+
+    fn highlight_activated_nodes(&self, painter: &egui::Painter) {
+        if let Some(character) = &self.current_character {
+            for &node_id in &character.activated_node_ids {
+                if let Some(node) = self.passive_tree.nodes.get(&node_id) {
+                    painter.circle_filled(
+                        egui::pos2(
+                            self.world_to_screen_x(node.wx),
+                            self.world_to_screen_y(node.wy),
+                        ),
+                        10.0, // slightly larger size
+                        parse_color(
+                            self.color_map
+                                .get("green")
+                                .unwrap_or(&"#29D398".to_string()),
+                        ),
+                    );
+                }
+            }
+        }
     }
 }
