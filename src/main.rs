@@ -88,16 +88,16 @@ impl TreeVis {
     }
 
     fn screen_to_world_x(&self, sx: f32) -> f64 {
-        ((sx - 400.0) / self.zoom + self.camera_x as f32) as f64
+        ((sx - 400.0) / self.zoom + self.camera_x) as f64
     }
     fn screen_to_world_y(&self, sy: f32) -> f64 {
-        ((sy - 300.0) / self.zoom + self.camera_y as f32) as f64
+        ((sy - 300.0) / self.zoom + self.camera_y) as f64
     }
 
     fn update_hover(&mut self, mx: f64, my: f64) {
         let mut best_dist = f64::MAX;
         let mut best_id = None;
-        for (&id, node) in &self.data.passive_tree.nodes {
+        for (&id, node) in &self.data.nodes {
             let dx = node.wx - mx;
             let dy = node.wy - my;
             let dist = (dx * dx + dy * dy).sqrt();
@@ -109,14 +109,14 @@ impl TreeVis {
         self.hovered_node = best_id;
     }
 
-    // when user double-clicks a result
-    fn go_to_node(&mut self, id: usize) {
-        if let Some(node) = self.data.passive_tree.nodes.get(&id) {
-            // center camera on node
-            self.camera_x = node.wx as f32;
-            self.camera_y = node.wy as f32;
-        }
-        self.fuzzy_search_open = false;
+    fn go_to_node(&self, id: usize) {
+        // if let Some(node) = self.data.nodes.get(&id) {
+        //     // center camera on node
+        //     self.camera_x = node.wx as f32;
+        //     self.camera_y = node.wy as f32;
+        // }
+        // self.fuzzy_search_open = false;
+        //  not implemented!() would require double immutable borrow so, smart ptr
     }
 }
 
@@ -133,6 +133,7 @@ impl eframe::App for TreeVis {
 
             // WASD movement
             let step = 20.0 / self.zoom;
+            //TODO: config
             if ui.input(|i| i.key_down(egui::Key::W)) {
                 self.camera_y -= step;
             }
@@ -149,8 +150,8 @@ impl eframe::App for TreeVis {
             // mouse wheel zoom
             let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
             if scroll_delta != 0.0 {
-                self.zoom += 0.001 * scroll_delta;
-                self.zoom = self.zoom.clamp(0.1, 100.0);
+                self.zoom += 0.001 * scroll_delta; // TODO: CONST
+                self.zoom = self.zoom.clamp(0.01, 100.0); // TODO: CONST
             }
 
             // Check mouse hover
@@ -162,7 +163,7 @@ impl eframe::App for TreeVis {
                     // toggle node active on click
                     if ui.input(|i| i.pointer.primary_clicked()) {
                         if let Some(id) = self.hovered_node {
-                            if let Some(node) = self.data.passive_tree.nodes.get_mut(&id) {
+                            if let Some(node) = self.data.nodes.get_mut(&id) {
                                 node.active = !node.active;
                             }
                         }
@@ -172,9 +173,9 @@ impl eframe::App for TreeVis {
 
             // Draw edges
             let path_edges = path_to_edge_set(&self.path);
-            for (&nid, node) in &self.data.passive_tree.nodes {
+            for (&nid, node) in &self.data.nodes {
                 for &other_id in &node.connections {
-                    if let Some(other) = self.data.passive_tree.nodes.get(&other_id) {
+                    if let Some(other) = self.data.nodes.get(&other_id) {
                         let sx1 = self.world_to_screen_x(node.wx) + rect.min.x;
                         let sy1 = self.world_to_screen_y(node.wy) + rect.min.y;
                         let sx2 = self.world_to_screen_x(other.wx) + rect.min.x;
@@ -193,7 +194,7 @@ impl eframe::App for TreeVis {
 
             // Draw nodes
             let base_node_size = 6.0;
-            for (id, node) in &self.data.passive_tree.nodes {
+            for (_id, node) in &self.data.nodes {
                 let sx = self.world_to_screen_x(node.wx) + rect.min.x;
                 let sy = self.world_to_screen_y(node.wy) + rect.min.y;
                 let node_size = base_node_size * (1.0 + self.zoom * 0.1);
@@ -221,15 +222,11 @@ impl eframe::App for TreeVis {
 
             // Hover text
             if let Some(id) = self.hovered_node {
-                if let Some(node) = self.data.passive_tree.nodes.get(&id) {
+                if let Some(node) = self.data.nodes.get(&id) {
                     let sx = self.world_to_screen_x(node.wx) + rect.min.x;
                     let sy = self.world_to_screen_y(node.wy) + rect.min.y;
-                    let info_text = format!(
-                        "\nID:{}\n{}\n{:?}",
-                        node.skill_id.clone().unwrap(),
-                        node.name,
-                        node.stats
-                    );
+                    let info_text =
+                        format!("\nID:{}\n{}\n{:?}", node.node_id, node.name, node.stats);
                     painter.text(
                         egui::pos2(sx + 10.0, sy - 10.0),
                         egui::Align2::LEFT_TOP,
@@ -263,11 +260,10 @@ impl eframe::App for TreeVis {
                     }
                     egui::CollapsingHeader::new("Results").show(ui, |ui| {
                         for &id in &self.search_results {
-                            let node = &self.data.passive_tree.nodes[&id];
-                            // Double-click to go to node
+                            let node = &self.data.nodes[&id];
                             if ui.selectable_label(false, &node.name).double_clicked() {
-                                // self.go_to_node(id);
-                                println!("Double clicked {0}, {1:#?}", node.name, node.skill_id)
+                                //FIXME: this one needs mut for the camera controls bro..
+                                self.go_to_node(id);
                             }
                         }
                     });
@@ -283,7 +279,7 @@ impl eframe::App for TreeVis {
             ui.add(egui::DragValue::new(&mut self.target_node_id));
             if ui.button("Find Path").clicked() {
                 self.path = Self::find_path(
-                    &mut self.data.passive_tree,
+                    &mut self.data,
                     &mut self.explored_paths,
                     self.start_node_id,
                     self.target_node_id,
@@ -296,6 +292,7 @@ impl eframe::App for TreeVis {
             });
         });
 
+        //DEBUG:
         // Optional overlay with camera info
         egui::Window::new("Camera info")
             .anchor(egui::Align2::RIGHT_BOTTOM, egui::Vec2::new(-10.0, -10.0))
@@ -314,18 +311,14 @@ impl eframe::App for TreeVis {
     }
 }
 
-//-----------------------------------------------------------------------------------
-// main (same file or separate)
-//-----------------------------------------------------------------------------------
 fn main() {
     // Load data
     let mut data = poo_tools::data::PassiveTree::load_tree("data/POE2_TREE.json");
-    data.compute_positions_and_stats();
 
     println!(
         "Found {} nodes and {} groups",
-        data.passive_tree.nodes.len(),
-        data.passive_tree.groups.len(),
+        data.nodes.len(),
+        data.groups.len(),
     );
 
     let config_str = std::fs::read_to_string("tree_config.toml").unwrap();
@@ -343,7 +336,7 @@ fn main() {
 
     let native_opts = eframe::NativeOptions::default();
     _ = eframe::run_native(
-        "Egui + data.rs (f32 fix)",
+        "POE2_TREE debug vis tool",
         native_opts,
         Box::new(|_cc| {
             // pass color_map into TreeVis::new

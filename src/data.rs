@@ -310,9 +310,9 @@ fn find_path_with_limit(
         if let Some(node) = tree.nodes.get(&current) {
             for &neighbor in &node.connections {
                 // If we haven’t visited `neighbor` yet
-                if !came_from.contains_key(&neighbor) {
+                if let std::collections::hash_map::Entry::Vacant(e) = came_from.entry(neighbor) {
                     // Record that we reached `neighbor` from `current`
-                    came_from.insert(neighbor, current);
+                    e.insert(current);
 
                     // If we found the target, reconstruct path and return
                     if neighbor == target {
@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn debug_print_paths() {
-        let mut tree = PassiveTree::load_tree("data/POE2_TREE.json");
+        let tree = PassiveTree::load_tree("data/POE2_TREE.json");
 
         tree.debug_print_paths(49220, 20);
     }
@@ -449,7 +449,7 @@ mod tests {
         } else {
             println!("Path found: {:?}", path);
             for node_id in path.iter() {
-                let n = tree.nodes.get(&node_id).unwrap();
+                let n = tree.nodes.get(node_id).unwrap();
                 if !n.name.contains("Attribute") {
                     print!("(ID:{} NAME: {}) ->", node_id, n.name);
                 } else {
@@ -507,7 +507,7 @@ mod tests {
         } else {
             println!("Path found: {:?}", path);
             for node_id in path.iter() {
-                let n = tree.nodes.get(&node_id).unwrap();
+                let n = tree.nodes.get(node_id).unwrap();
                 println!("(ID:{} NAME: {})", node_id, n.name);
             }
         }
