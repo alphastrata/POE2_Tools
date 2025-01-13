@@ -83,7 +83,7 @@ impl eframe::App for TreeVis {
 
             // Draw nodes
             let base_node_size = 6.0;
-            for (_id, node) in &self.passive_tree.nodes {
+            for node in self.passive_tree.nodes.values() {
                 let sx = self.world_to_screen_x(node.wx) + rect.min.x;
                 let sy = self.world_to_screen_y(node.wy) + rect.min.y;
                 let node_size = base_node_size * (1.0 + self.zoom * 0.1);

@@ -1,12 +1,8 @@
-use poo_tools::data::PassiveTree;
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    sync::atomic::{AtomicBool, Ordering},
-};
+use poo_tools::{data::PassiveTree, visualiser::TreeVis};
+use std::collections::HashMap;
 
 fn main() {
-    let data = poo_tools::data::PassiveTree::load_tree("data/POE2_TREE.json");
+    let data = PassiveTree::load_tree("data/POE2_TREE.json");
 
     println!(
         "Found {} nodes and {} groups",
