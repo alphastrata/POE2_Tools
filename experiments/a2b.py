@@ -61,7 +61,7 @@ def enrich_tree(tree: Tree, skills: dict) -> None:
             }
 
 
-def find_all_paths(tree: Tree, start_node: str, end_node: str, max_steps: int = 7) -> List[List[str]]:
+def find_all_paths(tree: Tree, start_node: str, end_node: str, max_steps: int = 123) -> List[List[str]]:
     """
     Find all paths between start_node and end_node using DFS, printing each attempted path.
     """

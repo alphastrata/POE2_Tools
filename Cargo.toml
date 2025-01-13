@@ -4,18 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-path = "src/ggez_vis.rs"
-name = "gvis"
-
-
-[[bin]]
 path = "src/egui_vis.rs"
 name = "evis"
-
-
-[[bin]]
-path = "src/tree_utils.rs"
-name = "tree"
 
 [dependencies]
 anyhow = "1.0.95"
