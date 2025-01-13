@@ -3,7 +3,6 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     default::Default,
-    hash::Hash,
     sync::atomic::{AtomicBool, Ordering},
 };
 

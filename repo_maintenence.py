@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 def add_relative_path_comment(directory):
     for root, _, files in os.walk(directory):
@@ -13,4 +14,12 @@ def add_relative_path_comment(directory):
                     with open(filepath, 'w') as f:
                         f.writelines(content)
 
-add_relative_path_comment('.')
+                        f.writelines(content)
+
+def save_project_structure(directory):
+    with open("project_structure.txt", "w") as outfile:
+        subprocess.run(["lsd", "--tree", "--depth", "2"], cwd=directory, stdout=outfile, text=True)
+
+project_dir = os.getcwd()
+add_relative_path_comment(project_dir)
+save_project_structure(project_dir)
