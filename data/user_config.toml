@@ -31,3 +31,9 @@ camera_reset_home = ["esc"]
 search_for_node_by_name = ["f"]
 exit = ["q"]
 load_character_nodes = ["l"]
+
+#TODO: base_node_size
+#TODO: default camera_zoom
+#TODO: zoom sensitivity
+#TODO: transate_sensitivity
+#TODO: lock_camera_when_typing

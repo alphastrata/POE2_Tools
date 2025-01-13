@@ -1,6 +1,8 @@
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    default::Default,
+    hash::Hash,
     sync::atomic::{AtomicBool, Ordering},
 };
 
@@ -12,25 +14,53 @@ use crate::{
 
 impl eframe::App for TreeVis {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Main draw area:
+        // Main menu bar for File -> Open
+        egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
+            egui::menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open").clicked() {
+                        // Open file dialog (blocking)
+                        if let Some(path) = rfd::FileDialog::new().pick_file() {
+                            if let Some(character) =
+                                UserCharacter::load_from_toml(path.to_str().unwrap())
+                            {
+                                self.current_character = Some(character);
+                            }
+                        }
+                    }
+                });
+            });
+        });
+
+        // Main draw area
         egui::CentralPanel::default().show(ctx, |ui| {
             let available = ui.available_size();
             let (rect, _resp) = ui.allocate_at_least(available, egui::Sense::drag());
             let painter = ui.painter_at(rect);
 
-            // WASD movement
-            let step = 20.0 / self.zoom;
-            if ui.input(|i| i.key_down(egui::Key::W)) {
-                self.camera.borrow_mut().1 -= step;
-            }
-            if ui.input(|i| i.key_down(egui::Key::S)) {
-                self.camera.borrow_mut().1 += step;
-            }
-            if ui.input(|i| i.key_down(egui::Key::A)) {
-                self.camera.borrow_mut().0 -= step;
-            }
-            if ui.input(|i| i.key_down(egui::Key::D)) {
-                self.camera.borrow_mut().0 += step;
+            // Movement controls (disabled during fuzzy search)
+            if !self.is_fuzzy_search_open() {
+                let step = 20.0 / self.zoom;
+                if let Some(&key) = self.controls.get("move_up") {
+                    if ui.input(|i| i.key_down(key)) {
+                        self.camera.borrow_mut().1 -= step;
+                    }
+                }
+                if let Some(&key) = self.controls.get("move_down") {
+                    if ui.input(|i| i.key_down(key)) {
+                        self.camera.borrow_mut().1 += step;
+                    }
+                }
+                if let Some(&key) = self.controls.get("move_left") {
+                    if ui.input(|i| i.key_down(key)) {
+                        self.camera.borrow_mut().0 -= step;
+                    }
+                }
+                if let Some(&key) = self.controls.get("move_right") {
+                    if ui.input(|i| i.key_down(key)) {
+                        self.camera.borrow_mut().0 += step;
+                    }
+                }
             }
 
             // Mouse wheel zoom
@@ -40,7 +70,7 @@ impl eframe::App for TreeVis {
                 self.zoom = self.zoom.clamp(0.01, 100.0);
             }
 
-            // Check mouse hover
+            // Highlight hovered nodes and toggle activation
             if let Some(pos) = ui.input(|i| i.pointer.hover_pos()) {
                 if rect.contains(pos) {
                     let mx = self.screen_to_world_x(pos.x - rect.min.x);
@@ -61,13 +91,19 @@ impl eframe::App for TreeVis {
                 for &other_id in &node.connections {
                     let is_on_path = self.active_edges.contains(&(nid, other_id));
                     let stroke_color = if is_on_path {
-                        self.color_map
-                            .get("yellow")
-                            .map_or(egui::Color32::GRAY, |col| parse_color(col))
+                        parse_color(
+                            self.user_config
+                                .colors
+                                .get("yellow")
+                                .unwrap_or(&"#FFFF00".to_string()),
+                        )
                     } else {
-                        self.color_map
-                            .get("default")
-                            .map_or(egui::Color32::GRAY, |col| parse_color(col))
+                        parse_color(
+                            self.user_config
+                                .colors
+                                .get("default")
+                                .unwrap_or(&"#3C3C3C".to_string()),
+                        )
                     };
                     painter.line_segment(
                         [
@@ -94,13 +130,15 @@ impl eframe::App for TreeVis {
 
                 let color = if node.active {
                     parse_color(
-                        self.color_map
+                        self.user_config
+                            .colors
                             .get("green")
                             .unwrap_or(&"#29D398".to_string()),
                     )
                 } else {
                     parse_color(
-                        self.color_map
+                        self.user_config
+                            .colors
                             .get("all_nodes")
                             .unwrap_or(&"#3C3C3C".to_string()),
                     )
@@ -109,35 +147,31 @@ impl eframe::App for TreeVis {
                 painter.circle_filled(egui::pos2(sx, sy), node_size, color);
             }
 
-            // Hover text
-            if let Some(id) = self.hovered_node {
-                if let Some(node) = self.passive_tree.nodes.get(&id) {
-                    let sx = self.world_to_screen_x(node.wx) + rect.min.x;
-                    let sy = self.world_to_screen_y(node.wy) + rect.min.y;
-                    let info_text =
-                        format!("\nID:{}\n{}\n{:?}", node.node_id, node.name, node.stats);
-                    painter.text(
-                        egui::pos2(sx + 10.0, sy - 10.0),
-                        egui::Align2::LEFT_TOP,
-                        info_text,
-                        egui::FontId::default(),
-                        self.color_map
-                            .get("foreground")
-                            .map_or(egui::Color32::WHITE, |col| parse_color(col)),
-                    );
+            // Highlight nodes from fuzzy search
+            if self.is_fuzzy_search_open() {
+                for &node_id in &self.search_results {
+                    if let Some(node) = self.passive_tree.nodes.get(&node_id) {
+                        let sx = self.world_to_screen_x(node.wx) + rect.min.x;
+                        let sy = self.world_to_screen_y(node.wy) + rect.min.y;
+                        painter.circle_stroke(
+                            egui::pos2(sx, sy),
+                            10.0,
+                            egui::Stroke::new(
+                                2.0,
+                                parse_color(
+                                    self.user_config
+                                        .colors
+                                        .get("purple")
+                                        .unwrap_or(&"#EE64AC".to_string()),
+                                ),
+                            ),
+                        );
+                    }
                 }
             }
         });
 
-        // Zoom slider at bottom panel
-        egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label("Zoom:");
-                ui.add(egui::Slider::new(&mut self.zoom, 0.01..=100.0));
-            });
-        });
-
-        // Fuzzy search handling
+        // Fuzzy search UI
         if ctx.input(|i| i.key_pressed(egui::Key::F)) {
             self.enable_fuzzy_search();
         }
@@ -160,46 +194,6 @@ impl eframe::App for TreeVis {
                     });
                 });
         }
-
-        // Path Finder UI
-        egui::SidePanel::right("path_panel").show(ctx, |ui| {
-            ui.heading("Path Finder");
-            ui.label("Start Node:");
-            ui.add(egui::DragValue::new(&mut self.start_node_id));
-            ui.label("Target Node:");
-            ui.add(egui::DragValue::new(&mut self.target_node_id));
-
-            if ui.button("Find Path").clicked() {
-                self.find_path(self.start_node_id, self.target_node_id);
-            }
-
-            egui::CollapsingHeader::new("Path").show(ui, |ui| {
-                for &pid in &self.path {
-                    if let Some(node) = self.passive_tree.nodes.get(&pid) {
-                        ui.label(format!("ID: {} - {}", pid, node.name));
-                    } else {
-                        ui.label(format!("Unknown Node ID: {}", pid));
-                    }
-                }
-            });
-        });
-
-        // Debug overlay for camera info
-        egui::Window::new("Camera info")
-            .anchor(egui::Align2::RIGHT_BOTTOM, egui::Vec2::new(-10.0, -10.0))
-            .collapsible(false)
-            .resizable(false)
-            .title_bar(false)
-            .show(ctx, |ui| {
-                let (dx, dy) = self.camera_xy();
-                let dist = (dx * dx + dy * dy).sqrt();
-                ui.label(format!(
-                    "pos: ({:.2}, {:.2})\nzoom: {:.2}\ndist: {:.2}",
-                    dx, dy, self.zoom, dist
-                ));
-            });
-
-        self.auto_save_character();
     }
 }
 
@@ -230,6 +224,11 @@ pub struct TreeVis {
 
     current_character: Option<UserCharacter>,
     last_save_time: std::time::Instant,
+
+    user_config: UserConfig,
+
+    /// Mapped controls from self.user_config
+    controls: HashMap<String, egui::Key>,
 }
 impl Default for TreeVis {
     fn default() -> Self {
@@ -249,11 +248,12 @@ impl Default for TreeVis {
             start_node_id: 0,
             target_node_id: 0,
             path: Vec::new(),
+            user_config: UserConfig::default(),
+            controls: HashMap::new(),
         }
     }
 }
 
-// Pointery/Threaddy/Atomicy helpers:
 impl TreeVis {
     fn enable_fuzzy_search(&self) {
         self.fuzzy_search_open.store(true, Ordering::Relaxed);
