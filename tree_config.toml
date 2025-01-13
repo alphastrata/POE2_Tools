@@ -1,6 +1,19 @@
 [colors]
-"attack" = "red"
-"mana" = "blue"
-"dexterity" = "green"
-"intelligence" = "blue"
-"strength" = "red"
+
+# Gameplay-related colors mapped to Horizon palette
+"attack" = "#E95678"       # Red 
+"mana" = "#26BBD9"         # Blue 
+"dexterity" = "#29D398"    # Green
+"intelligence" = "#26BBD9" # Blue
+"strength" = "#E95678"     # Red 
+
+# Horizon color palette
+background = "#1C1E26"
+foreground = "#C7C9CB"
+red = "#E95678"
+orange = "#FAB795"
+yellow = "#FABD2F"
+green = "#29D398"
+blue = "#26BBD9"
+purple = "#EE64AC"
+cyan = "#59E3E3"
