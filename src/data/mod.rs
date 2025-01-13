@@ -544,7 +544,7 @@ mod tests {
         );
 
         // Use assertions to validate reasonable assumptions based on your real tree data
-        assert!(life_nodes.len() > 0, "Expected at least one life node");
+        assert!(!life_nodes.is_empty(), "Expected at least one life node");
         assert!(total_life > 0.0, "Total life should be greater than zero");
     }
 
@@ -572,7 +572,7 @@ mod tests {
 
         // Use assertions to validate reasonable assumptions based on your real tree data
         assert!(
-            evasion_nodes.len() > 0,
+            !evasion_nodes.is_empty(),
             "Expected at least one evasion node"
         );
         assert!(
