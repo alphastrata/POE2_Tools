@@ -1,5 +1,12 @@
-use serde::{Deserialize, Serialize};
-// src/data.rs
+pub mod consts;
+pub mod coordinates;
+pub mod skills;
+pub mod stats;
+
+use skills::PassiveSkill;
+use stats::{Operand, Stat};
+
+use coordinates::Group;
 use serde_json::Value;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -8,77 +15,13 @@ use std::{
     fs,
 };
 
-pub const ORBIT_RADII: [f64; 8] = [0.0, 82.0, 162.0, 335.0, 493.0, 662.0, 812.0, 972.0];
-pub const ORBIT_SLOTS: [usize; 8] = [1, 6, 16, 16, 40, 60, 60, 60];
-
-#[derive(Debug, Clone)]
-pub struct Group {
-    pub x: f64,
-    pub y: f64,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct PassiveSkill {
-    pub name: Option<String>,
-    pub is_notable: bool,
-    pub stats: Vec<Stat>,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct Node {
-    pub node_id: usize,
-    pub skill_id: Option<String>,
-    pub parent: usize,
-    pub radius: usize,
-    pub position: usize,
-    pub connections: Vec<usize>,
-    // Derived data
-    pub name: String,
-    pub is_notable: bool,
-    pub stats: Vec<Stat>,
-    pub wx: f64,
-    pub wy: f64,
-    pub active: bool,
-}
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Operand {
-    Add,        // Represents "+"
-    Multiply,   // Represents "x"
-    Percentage, // Represents "+%"
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum StatType {
-    Additive,
-    Percentage,
-    Grantable,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Stat {
-    pub name: String,
-    pub operand: Operand,
-    pub value: f64,
-}
-impl Stat {
-    pub fn apply(&self, other: &Stat) -> Option<f64> {
-        if self.name == other.name {
-            match self.operand {
-                Operand::Add => Some(self.value + other.value),
-                Operand::Multiply => Some(self.value * other.value),
-                Operand::Percentage => Some(self.value + (self.value * other.value / 100.0)),
-            }
-        } else {
-            None // Cannot apply operations on different stat types
-        }
-    }
-}
+use consts::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct PassiveTree {
-    pub groups: HashMap<usize, Group>,
+    pub groups: HashMap<usize, coordinates::Group>,
     pub nodes: HashMap<usize, Node>,
-    pub passive_skills: HashMap<String, PassiveSkill>,
+    pub passive_skills: HashMap<String, skills::PassiveSkill>,
 }
 
 impl PassiveTree {
@@ -231,6 +174,23 @@ impl PassiveTree {
 
         output
     }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Node {
+    pub node_id: usize,
+    pub skill_id: Option<String>,
+    pub parent: usize,
+    pub radius: usize,
+    pub position: usize,
+    pub connections: Vec<usize>,
+    // Derived data
+    pub name: String,
+    pub is_notable: bool,
+    pub stats: Vec<Stat>,
+    pub wx: f64,
+    pub wy: f64,
+    pub active: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
