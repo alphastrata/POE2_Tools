@@ -1,6 +1,6 @@
 [colors]
 
-# Gameplay-related colors mapped to Horizon palette
+# Keyword catch-alls
 "attack" = "#E95678"       # Red 
 "mana" = "#26BBD9"         # Blue 
 "dexterity" = "#29D398"    # Green
@@ -17,3 +17,16 @@ green = "#29D398"
 blue = "#26BBD9"
 purple = "#EE64AC"
 cyan = "#59E3E3"
+
+move_left = h, left_arrow
+move_right = i, right_arrow
+move_up = e, up_arrow,
+move_down = n, down_arrow,# camera controls (hjkl but for colemak for example
+
+camera_reset_home = 'esc'
+
+search_for_node_by_name = "f"
+
+exit = "q"
+
+load_character_nodes = "l"
