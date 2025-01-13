@@ -1,3 +1,4 @@
+//$ deprecated\visual.rs
 
 // src/visual.rs
 use ggez::{

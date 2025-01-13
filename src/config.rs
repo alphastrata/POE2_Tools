@@ -1,3 +1,4 @@
+//$ src\config.rs
 use std::collections::HashMap;
 
 use egui::Key;

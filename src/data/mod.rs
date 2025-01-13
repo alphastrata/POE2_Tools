@@ -1,3 +1,4 @@
+//$ src\data\mod.rs
 pub mod consts;
 pub mod coordinates;
 pub mod skills;

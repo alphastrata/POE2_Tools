@@ -1,3 +1,4 @@
+//$ src\data\skills.rs
 #[derive(Debug, Clone, Default)]
 pub struct PassiveSkill {
     pub name: Option<String>,
