@@ -36,7 +36,6 @@ impl PassiveTree {
             })
             .collect()
     }
-
     pub fn compute_positions_and_stats(&mut self) {
         for (_, node) in self.nodes.iter_mut() {
             // group pos
