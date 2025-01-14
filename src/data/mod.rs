@@ -26,6 +26,17 @@ pub struct PassiveTree {
 }
 
 impl PassiveTree {
+    pub fn get_edges(&self) -> Vec<(usize, usize)> {
+        self.nodes
+            .iter()
+            .flat_map(|(&id, node)| {
+                node.connections
+                    .iter()
+                    .map(move |connection| (id, connection.id))
+            })
+            .collect()
+    }
+
     pub fn compute_positions_and_stats(&mut self) {
         for (_, node) in self.nodes.iter_mut() {
             // group pos
