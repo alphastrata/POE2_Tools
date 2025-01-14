@@ -6,24 +6,21 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use crate::config::UserConfig;
-use crate::{
-    config::{parse_color, UserCharacter},
-    data::PassiveTree,
-};
+use crate::config::{parse_color, UserCharacter};
+use crate::{config::UserConfig, data::poe_tree::PassiveTree};
 
-impl eframe::App for TreeVis {
+impl<'p> eframe::App for TreeVis<'p> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.update_fuzzy_search(ctx);
-        self.update_hover_effects(ctx);
+        // self.update_hover_effects(ctx);
         self.update_node_selection(ctx);
-        self.handle_keyboard_input(ctx);
+        // self.handle_keyboard_input(ctx);
         self.redraw_tree(ctx);
     }
 }
 
 // Helper Functions
-impl TreeVis {
+impl<'p> TreeVis<'p> {
     fn update_fuzzy_search(&mut self, ctx: &egui::Context) {
         if self.is_fuzzy_search_open() {
             egui::Window::new("Fuzzy Search")
@@ -46,21 +43,21 @@ impl TreeVis {
         }
     }
 
-    fn update_hover_effects(&mut self, ctx: &egui::Context) {
-        if let Some(pos) = ctx.input(|i| i.pointer.hover_pos()) {
-            let mx: f32 = self.screen_to_world_x(pos.x).into();
-            let my: f32 = self.screen_to_world_y(pos.y).into();
-            self.update_hover(mx, my);
+    // fn update_hover_effects(&mut self, ctx: &egui::Context) {
+    //     if let Some(pos) = ctx.input(|i| i.pointer.hover_pos()) {
+    //         let mx: f32 = self.screen_to_world_x(pos.x).into();
+    //         let my: f32 = self.screen_to_world_y(pos.y).into();
+    //         self.update_hover(mx, my);
 
-            if let Some(hovered_id) = self.hovered_node {
-                self.passive_tree.get_edges().iter().for_each(|edge| {
-                    if edge.source == hovered_id || edge.target == hovered_id {
-                        self.active_edges.insert((edge.source, edge.target));
-                    }
-                });
-            }
-        }
-    }
+    //         if let Some(hovered_id) = self.hovered_node {
+    //             self.passive_tree.get_edges().iter().for_each(|edge| {
+    //                 if edge.source == hovered_id || edge.target == hovered_id {
+    //                     self.active_edges.insert((edge.source, edge.target));
+    //                 }
+    //             });
+    //         }
+    //     }
+    // }
 
     fn update_node_selection(&mut self, ctx: &egui::Context) {
         if ctx.input(|i| i.pointer.primary_clicked()) {
@@ -87,22 +84,22 @@ impl TreeVis {
                 painter.circle_filled(egui::pos2(sx, sy), radius, color);
             }
 
-            for (source_id, target_id) in self.passive_tree.get_edges() {
-                if let (Some(src), Some(tgt)) = (
-                    self.passive_tree.nodes.get(&source_id),
-                    self.passive_tree.nodes.get(&target_id),
-                ) {
-                    let sx = self.world_to_screen_x(src.wx);
-                    let sy = self.world_to_screen_y(src.wy);
-                    let tx = self.world_to_screen_x(tgt.wx);
-                    let ty = self.world_to_screen_y(tgt.wy);
+            // for (source_id, target_id) in self.passive_tree.get_edges() {
+            //     if let (Some(src), Some(tgt)) = (
+            //         self.passive_tree.nodes.get(&source_id),
+            //         self.passive_tree.nodes.get(&target_id),
+            //     ) {
+            //         let sx = self.world_to_screen_x(src.wx);
+            //         let sy = self.world_to_screen_y(src.wy);
+            //         let tx = self.world_to_screen_x(tgt.wx);
+            //         let ty = self.world_to_screen_y(tgt.wy);
 
-                    painter.line_segment(
-                        [egui::pos2(sx, sy), egui::pos2(tx, ty)],
-                        egui::Stroke::new(1.0, egui::Color32::from_rgb(150, 150, 150)),
-                    );
-                }
-            }
+            //         painter.line_segment(
+            //             [egui::pos2(sx, sy), egui::pos2(tx, ty)],
+            //             egui::Stroke::new(1.0, egui::Color32::from_rgb(150, 150, 150)),
+            //         );
+            //     }
+            // }
         });
     }
 
@@ -133,10 +130,10 @@ impl TreeVis {
     }
 }
 
-pub struct TreeVis {
+pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
     zoom: f32,
-    passive_tree: crate::data::PassiveTree,
+    passive_tree: PassiveTree<'p>,
     hovered_node: Option<usize>,
 
     // Fuzzy-search-related
@@ -166,7 +163,7 @@ pub struct TreeVis {
     /// Mapped controls from self.user_config
     controls: HashMap<String, egui::Key>,
 }
-impl Default for TreeVis {
+impl<'p> Default for TreeVis<'p> {
     fn default() -> Self {
         Self {
             camera: RefCell::new((0.0, 0.0)),
@@ -190,7 +187,7 @@ impl Default for TreeVis {
     }
 }
 
-impl TreeVis {
+impl<'p> TreeVis<'p> {
     fn enable_fuzzy_search(&self) {
         self.fuzzy_search_open.store(true, Ordering::Relaxed);
     }
@@ -259,13 +256,7 @@ impl TreeVis {
     }
 
     pub fn new(data: PassiveTree, config: UserConfig, character: Option<UserCharacter>) -> Self {
-        Self {
-            zoom: 0.2,
-            camera: RefCell::new((0.0, 0.0)),
-            passive_tree: data,
-            current_character: character,
-            ..Default::default()
-        }
+        todo!()
     }
 
     fn world_to_screen_x(&self, wx: f64) -> f32 {

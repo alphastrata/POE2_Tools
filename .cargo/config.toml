@@ -1,0 +1,11 @@
+[build]
+# Default target directory
+target-dir = "target"
+
+[target.'cfg(unix)']
+# For Linux builds
+target-dir = "linux_target"
+
+[target.'cfg(windows)']
+# For Windows builds
+target-dir = "windows_target"
