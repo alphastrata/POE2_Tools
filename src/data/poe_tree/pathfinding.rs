@@ -7,29 +7,30 @@ use super::stats::{Operand, Stat};
 use super::type_wrappings::{EdgeId, GroupId, NodeId};
 
 use serde_json::Value;
-use std::cmp::Ordering;
+use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::{collections::VecDeque, fs};
 
 use super::PassiveTree;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Eq, PartialEq)]
 struct NodeCost {
     node_id: NodeId,
     cost: usize,
 }
 
-// Implement ordering for BinaryHeap (min-heap behavior)
 impl Ord for NodeCost {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.cost.cmp(&self.cost) // Reverse to get min-heap
+        other.cost.cmp(&self.cost) // Reverse order for min-heap
     }
 }
+
 impl PartialOrd for NodeCost {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
+
 /// Count how many edges from `start` to `node` by walking `came_from`.
 fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usize {
     let mut dist = 0;
@@ -190,35 +191,107 @@ impl PassiveTree {
         let mut priority_queue = BinaryHeap::new();
 
         // Initialize distances
-        eprintln!("Initializing distances...");
+        for &node_id in self.nodes.keys() {
+            distances.insert(node_id, usize::MAX);
+        }
+        distances.insert(start, 0);
+
+        // Push the starting node with a cost of 0
+        priority_queue.push(Reverse(NodeCost {
+            node_id: start,
+            cost: 0,
+        }));
+
+        while let Some(Reverse(NodeCost { node_id, cost })) = priority_queue.pop() {
+            // Stop processing if we've reached the target
+            if node_id == target {
+                break;
+            }
+
+            // Skip outdated entries in the priority queue
+            if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
+                continue;
+            }
+
+            // Process all neighbors of the current node
+            for edge in self.edges.iter() {
+                let neighbor = if edge.from == node_id {
+                    edge.to
+                } else if edge.to == node_id {
+                    edge.from
+                } else {
+                    continue;
+                };
+
+                let new_cost = cost + 1; // Assuming unweighted edges
+                if new_cost < *distances.get(&neighbor).unwrap_or(&usize::MAX) {
+                    eprintln!(
+                        "Updating distance for node {:?} from {} to {}",
+                        neighbor,
+                        distances.get(&neighbor).unwrap_or(&usize::MAX),
+                        new_cost
+                    );
+                    distances.insert(neighbor, new_cost);
+                    predecessors.insert(neighbor, node_id);
+                    priority_queue.push(Reverse(NodeCost {
+                        node_id: neighbor,
+                        cost: new_cost,
+                    }));
+                }
+            }
+        }
+
+        // Reconstruct the path from `predecessors`
+        let mut path = Vec::new();
+        let mut current = target;
+        while let Some(&prev) = predecessors.get(&current) {
+            path.push(current);
+            current = prev;
+        }
+
+        // Add the start node if we reached it
+        if current == start {
+            path.push(start);
+            path.reverse();
+            eprintln!("Path found: {:?}", path);
+            return path;
+        }
+
+        // No valid path found
+        eprintln!("No path found from {:?} to {:?}", start, target);
+        Vec::new()
+    }
+}
+
+impl PassiveTree {
+    pub fn all_nodes_with_distance(&self, start: NodeId, delta: usize) -> Vec<Vec<NodeId>> {
+        let mut distances: HashMap<NodeId, usize> = HashMap::new();
+        let mut priority_queue = BinaryHeap::new();
+        let mut result: Vec<Vec<NodeId>> = vec![Vec::new(); delta + 1];
+
+        // Initialize distances
         for &node_id in self.nodes.keys() {
             distances.insert(node_id, usize::MAX);
         }
         distances.insert(start, 0);
 
         // Start with the source node
-        eprintln!("Starting from node: {:?}", start);
         priority_queue.push(NodeCost {
             node_id: start,
             cost: 0,
         });
 
         while let Some(NodeCost { node_id, cost }) = priority_queue.pop() {
-            eprintln!("Processing node: {:?} with cost: {}", node_id, cost);
-            if node_id == target {
-                eprintln!("Reached target node: {:?}", target);
-                break;
+            if cost > delta {
+                continue;
             }
 
             if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
-                eprintln!(
-                    "Skipping node: {:?} as current cost ({}) is greater than known cost ({})",
-                    node_id,
-                    cost,
-                    distances.get(&node_id).unwrap_or(&usize::MAX)
-                );
                 continue;
             }
+
+            // Add node to the corresponding distance group
+            result[cost].push(node_id);
 
             for edge in self.edges.iter() {
                 let neighbor = if edge.from == node_id {
@@ -230,20 +303,8 @@ impl PassiveTree {
                 };
 
                 let new_cost = cost + 1; // Unweighted edges
-                eprintln!(
-                    "Inspecting edge from {:?} to {:?} with new_cost: {}",
-                    node_id, neighbor, new_cost
-                );
-
                 if new_cost < *distances.get(&neighbor).unwrap_or(&usize::MAX) {
-                    eprintln!(
-                        "Updating distance for node {:?} from {} to {}",
-                        neighbor,
-                        distances.get(&neighbor).unwrap_or(&usize::MAX),
-                        new_cost
-                    );
                     distances.insert(neighbor, new_cost);
-                    predecessors.insert(neighbor, node_id);
                     priority_queue.push(NodeCost {
                         node_id: neighbor,
                         cost: new_cost,
@@ -252,24 +313,11 @@ impl PassiveTree {
             }
         }
 
-        // Reconstruct path from `predecessors`
-        let mut path = Vec::new();
-        let mut current = target;
-        eprintln!("Reconstructing path...");
-        while let Some(&prev) = predecessors.get(&current) {
-            eprintln!("Node {:?} has predecessor {:?}", current, prev);
-            path.push(current);
-            current = prev;
-            if current == start {
-                path.push(start);
-                path.reverse();
-                eprintln!("Path found: {:?}", path);
-                return path;
-            }
-        }
-
-        eprintln!("No path found from {:?} to {:?}", start, target);
-        Vec::new() // No path found
+        // Filter out empty groups
+        result
+            .into_iter()
+            .filter(|group| !group.is_empty())
+            .collect()
     }
 }
 
@@ -306,6 +354,102 @@ fn rebuild_path(came_from: &HashMap<usize, usize>, start: usize, target: usize) 
 mod test {
     use super::*;
     use std::{fs::File, io::BufReader};
+    // #[test]
+    fn frontiers() {
+        // flow of water = 49220 -> criticals11 = 4157 -> criticals3 = 34168
+        // 55088 is the +10% to crits
+        // criticals 3 = 34168 +%36 to crits within 8s (moving out from 49220)
+        // criticals14 = 20024 ->
+        // attack_damage1 = 7576 +10%
+        // attack_damage3 = 33866 +10% -> connects to Flow of Water 49220
+        // attack_speed27 = 42857 -> 7576 ->  33866
+        // flow of water -> criticals15 = 44223
+        // flow of water -> intelligence9 = 8975
+        // attack_speed46 = 14725 -> 49220
+        // attack_speed37 = 34233
+    }
+
+    #[test]
+    fn nodes_within_distance() {
+        let file = File::open("data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let u = serde_json::from_reader(reader).unwrap();
+
+        let tree = PassiveTree::from_value(&u).unwrap();
+
+        // Starting node for the test
+        let start_node = 49220;
+        let max_distance = 4;
+
+        // Get all nodes within the specified distance
+        let nodes_by_distance = tree.all_nodes_with_distance(start_node, max_distance);
+
+        // Ensure the result is not empty
+        assert!(
+            !nodes_by_distance.is_empty(),
+            "No nodes found within distance {} from node {}.",
+            max_distance,
+            start_node
+        );
+
+        // Print nodes grouped by distance with their details
+        nodes_by_distance
+            .iter()
+            .enumerate()
+            .for_each(|(distance, nodes)| {
+                if distance > 3 {
+                    println!("Distance {}: {:?}", distance, nodes);
+                    nodes.iter().enumerate().for_each(|(e, &node_id)| {
+                        if let Some(node) = tree.nodes.get(&node_id) {
+                            {
+                                println!(
+                                    "{}  Node ID: {},\n{}Pos: {}, \n{}Name: {}, \n{}Stats: {:?}",
+                                    " ".repeat(e),
+                                    node_id,
+                                    " ".repeat(e),
+                                    node.position,
+                                    " ".repeat(e),
+                                    node.name,
+                                    " ".repeat(e),
+                                    node.stats
+                                );
+                            }
+                        }
+                    });
+                    println!()
+                }
+            });
+
+        // Example assertions for further validation
+        // Ensure nodes exist at each distance
+        for distance in 0..=max_distance {
+            assert!(
+                nodes_by_distance.get(distance).is_some(),
+                "No nodes found at distance {} from node {}.",
+                distance,
+                start_node
+            );
+        }
+    }
+    #[test]
+    fn equivalent_path_lengths_to_target() {
+        let file = File::open("data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let u = serde_json::from_reader(reader).unwrap();
+
+        let tree = PassiveTree::from_value(&u).unwrap();
+
+        // Define the two expected paths
+        let path1 = vec![10364, 42736, 56045, 58329]; // Path via Attack Damage nodes
+        let path2 = vec![10364, 42736, 13419, 42076]; // Path via Critical Damage nodes
+
+        // Find the shortest path to the target for both paths
+        let actual_path1 = tree.find_shortest_path(path1[0], path1[3]);
+        let actual_path2 = tree.find_shortest_path(path2[0], path1[3]);
+
+        println!("Path 1 (via Attack Damage): {:?}", actual_path1);
+        println!("Path 2 (via Critical Damage): {:?}", actual_path2);
+    }
 
     #[test]
     fn connected_path() {
