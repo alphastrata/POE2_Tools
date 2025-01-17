@@ -9,7 +9,7 @@ use std::{
 use crate::config::{parse_color, UserCharacter};
 use crate::{config::UserConfig, data::poe_tree::PassiveTree};
 
-impl<'p> eframe::App for TreeVis<'p> {
+impl eframe::App for TreeVis<'_> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.update_fuzzy_search(ctx);
         // self.update_hover_effects(ctx);
@@ -20,7 +20,7 @@ impl<'p> eframe::App for TreeVis<'p> {
 }
 
 // Helper Functions
-impl<'p> TreeVis<'p> {
+impl TreeVis<'_> {
     fn update_fuzzy_search(&mut self, ctx: &egui::Context) {
         if self.is_fuzzy_search_open() {
             egui::Window::new("Fuzzy Search")
@@ -164,7 +164,7 @@ pub struct TreeVis<'p> {
     controls: HashMap<String, egui::Key>,
 }
 
-impl<'p> TreeVis<'p> {
+impl TreeVis<'_> {
     fn enable_fuzzy_search(&self) {
         self.fuzzy_search_open.store(true, Ordering::Relaxed);
     }

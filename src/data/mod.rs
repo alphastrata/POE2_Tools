@@ -19,8 +19,8 @@ mod tests {
         let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
 
         // Use fuzzy search to find nodes
-        let flow_ids = (&tree).fuzzy_search_nodes("flow like water");
-        let chaos_ids = (&tree).fuzzy_search_nodes("chaos inoculation");
+        let flow_ids = tree.fuzzy_search_nodes("flow like water");
+        let chaos_ids = tree.fuzzy_search_nodes("chaos inoculation");
 
         assert!(!flow_ids.is_empty(), "No node found for 'flow like water'");
         assert!(
@@ -81,8 +81,8 @@ mod tests {
         let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
 
         // Use fuzzy search to find nodes
-        let avatar_ids = (&tree).fuzzy_search_nodes("Avatar of Fire");
-        let over_exposure_ids = (&tree).fuzzy_search_nodes("Overexposure");
+        let avatar_ids = tree.fuzzy_search_nodes("Avatar of Fire");
+        let over_exposure_ids = tree.fuzzy_search_nodes("Overexposure");
 
         assert!(!avatar_ids.is_empty(), "No node found for 'Avatar of Fire'");
         assert!(
@@ -129,10 +129,8 @@ mod tests {
                 if stat.name.contains("maximum_life") && matches!(stat.operand, Operand::Add) {
                     life_nodes.push(node.node_id);
                     total_life += stat.value;
-                } else {
-                    if stat.name.contains("life") {
-                        eprintln!("'life' keyword found in {}, maybe we should modify on entry to make nicer..", stat.name);
-                    }
+                } else if stat.name.contains("life") {
+                    eprintln!("'life' keyword found in {}, maybe we should modify on entry to make nicer..", stat.name);
                 }
             });
         });
@@ -163,10 +161,8 @@ mod tests {
                 {
                     evasion_nodes.push(node.node_id);
                     total_evasion_percent += stat.value;
-                } else {
-                    if stat.name.contains("evasion") {
-                        eprintln!("'evasion' keyword found in {}, maybe we should modify on entry to make nicer..", stat.name);
-                    }
+                } else if stat.name.contains("evasion") {
+                    eprintln!("'evasion' keyword found in {}, maybe we should modify on entry to make nicer..", stat.name);
                 }
             });
         });
