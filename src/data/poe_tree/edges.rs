@@ -1,12 +1,32 @@
 //$ src/data/poe_tree/edges.rs
+
+use std::hash::{Hash, Hasher};
+
 use super::type_wrappings::NodeId;
 use super::{consts::*, PassiveTree};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct Edge {
     // id: EdgeId,
     pub from: NodeId,
     pub to: NodeId,
+}
+impl PartialEq for Edge {
+    fn eq(&self, other: &Self) -> bool {
+        (self.from == other.from && self.to == other.to)
+            || (self.from == other.to && self.to == other.from)
+    }
+}
+
+impl Eq for Edge {}
+
+impl Hash for Edge {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let min = std::cmp::min(self.from, self.to);
+        let max = std::cmp::max(self.from, self.to);
+        min.hash(state);
+        max.hash(state);
+    }
 }
 
 impl Edge {
