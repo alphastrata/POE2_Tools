@@ -25,12 +25,12 @@ impl Edge {
     }
 }
 
-impl<'data> PassiveTree<'data> {
+impl PassiveTree {
     pub fn get_edges(&self) -> Vec<(NodeId, NodeId)> {
         self.edges.iter().map(|edge| (edge.from, edge.to)).collect()
     }
 
-    pub fn compute_positions_and_stats(&'data mut self) {
+    pub(crate) fn compute_positions_and_stats(&mut self) {
         for (_, node) in self.nodes.iter_mut() {
             // Compute world positions (wx, wy) using the group and radius information
             if let Some(group) = self.groups.get(&node.parent) {
@@ -50,7 +50,7 @@ impl<'data> PassiveTree<'data> {
             if let Some(skill) = self.passive_skills.get(&node.skill_id) {
                 node.name = skill.name.clone().unwrap_or_default();
                 node.is_notable = skill.is_notable;
-                node.stats = &skill.stats; // Use the skill stats reference
+                node.stats = skill.stats.clone();
             }
         }
     }

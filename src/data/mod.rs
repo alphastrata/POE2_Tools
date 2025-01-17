@@ -11,7 +11,7 @@ mod tests {
 
     #[test]
     fn test_path_between_flow_like_water_and_chaos_inoculation() {
-        let (mut tree, _value) = PassiveTree::from_file("data/POE2_TREE.json");
+        let (mut tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
 
         // Use fuzzy search to find nodes
         let flow_ids = (&tree).fuzzy_search_nodes("flow like water");
@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn test_bidirectional_edges() {
-        let (tree, _value) = PassiveTree::from_file("data/POE2_TREE.json");
+        let (tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
 
         for edge in &tree.edges {
             let reverse_edge = Edge {
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_path_between_avatar_of_fire_and_over_exposure() {
-        let (tree, _value) = PassiveTree::from_file("data/POE2_TREE.json");
+        let (tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
 
         // Use fuzzy search to find nodes
         let avatar_ids = (&tree).fuzzy_search_nodes("Avatar of Fire");
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_collect_life_nodes_from_real_tree() {
-        let (tree, _value) = PassiveTree::from_file("data/POE2_TREE.json");
+        let (tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
 
         let mut life_nodes = Vec::new();
         let mut total_life = 0.0;
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_collect_evasion_percentage_nodes_from_real_tree() {
-        let (tree, _value) = PassiveTree::from_file("data/POE2_TREE.json");
+        let (tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
 
         let mut evasion_nodes = Vec::new();
         let mut total_evasion_percent = 0.0;

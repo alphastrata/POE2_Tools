@@ -13,7 +13,7 @@ impl<'p> eframe::App for TreeVis<'p> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.update_fuzzy_search(ctx);
         // self.update_hover_effects(ctx);
-        self.update_node_selection(ctx);
+        // self.update_node_selection(ctx);
         // self.handle_keyboard_input(ctx);
         self.redraw_tree(ctx);
     }
@@ -59,13 +59,13 @@ impl<'p> TreeVis<'p> {
     //     }
     // }
 
-    fn update_node_selection(&mut self, ctx: &egui::Context) {
-        if ctx.input(|i| i.pointer.primary_clicked()) {
-            if let Some(node_id) = self.hovered_node {
-                self.toggle_node_selection(node_id);
-            }
-        }
-    }
+    // fn update_node_selection(&mut self, ctx: &egui::Context) {
+    //     if ctx.input(|i| i.pointer.primary_clicked()) {
+    //         if let Some(node_id) = self.hovered_node {
+    //             self.toggle_node_selection(node_id);
+    //         }
+    //     }
+    // }
 
     fn redraw_tree(&self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -103,18 +103,18 @@ impl<'p> TreeVis<'p> {
         });
     }
 
-    fn toggle_node_selection(&mut self, node_id: usize) {
-        if let Some(character) = &mut self.current_character {
-            if character.activated_node_ids.contains(&node_id) {
-                character.activated_node_ids.retain(|&nid| nid != node_id);
-            } else {
-                character.activated_node_ids.push(node_id);
-            }
-        }
-        if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
-            node.active = !node.active;
-        }
-    }
+    // fn toggle_node_selection(&mut self, node_id: usize) {
+    //     if let Some(character) = &mut self.current_character {
+    //         if character.activated_node_ids.contains(&node_id) {
+    //             character.activated_node_ids.retain(|&nid| nid != node_id);
+    //         } else {
+    //             character.activated_node_ids.push(node_id);
+    //         }
+    //     }
+    //     if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
+    //         node.active = !node.active;
+    //     }
+    // }
 
     fn update_hover(&mut self, mx: f32, my: f32) {
         self.hovered_node = self
@@ -133,7 +133,7 @@ impl<'p> TreeVis<'p> {
 pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
     zoom: f32,
-    passive_tree: PassiveTree<'p>,
+    passive_tree: &'p PassiveTree,
     hovered_node: Option<usize>,
 
     // Fuzzy-search-related
@@ -162,29 +162,6 @@ pub struct TreeVis<'p> {
 
     /// Mapped controls from self.user_config
     controls: HashMap<String, egui::Key>,
-}
-impl<'p> Default for TreeVis<'p> {
-    fn default() -> Self {
-        Self {
-            camera: RefCell::new((0.0, 0.0)),
-            zoom: 0.20,
-            passive_tree: PassiveTree::default(),
-            hovered_node: None,
-            path_nodes: Vec::new(),
-            current_character: None,
-            last_save_time: std::time::Instant::now(),
-            active_edges: HashSet::new(),
-            color_map: HashMap::new(),
-            fuzzy_search_open: AtomicBool::new(false),
-            search_query: String::new(),
-            search_results: Vec::new(),
-            start_node_id: 0,
-            target_node_id: 0,
-            path: Vec::new(),
-            user_config: UserConfig::default(),
-            controls: HashMap::new(),
-        }
-    }
 }
 
 impl<'p> TreeVis<'p> {

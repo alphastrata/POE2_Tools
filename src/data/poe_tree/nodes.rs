@@ -4,7 +4,8 @@ use super::type_wrappings::{EdgeId, GroupId, NodeId};
 use super::{consts::*, PassiveTree};
 
 #[derive(Debug, Clone, Default)]
-pub struct PoeNode<'stat> {
+pub struct PoeNode {
+    // Removed lifetime parameter
     pub node_id: NodeId,
     pub skill_id: String,
     pub parent: GroupId,
@@ -12,13 +13,13 @@ pub struct PoeNode<'stat> {
     pub position: usize,
     pub name: String,
     pub is_notable: bool,
-    pub stats: &'stat [Stat],
+    pub stats: Vec<Stat>, // Now we own the stats
     pub wx: f64,
     pub wy: f64,
     pub active: bool,
 }
 
-impl<'stat> PoeNode<'stat> {
+impl PoeNode {
     pub fn distance_to(&self, other: &Self) -> f64 {
         ((self.wx - other.wx).powi(2) + (self.wy - other.wy).powi(2)).sqrt()
     }

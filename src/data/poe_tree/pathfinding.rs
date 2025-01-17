@@ -42,7 +42,7 @@ fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usiz
     }
     dist
 }
-impl<'data> PassiveTree<'data> {
+impl PassiveTree {
     pub fn find_shortest_path(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
         let mut distances: HashMap<NodeId, usize> = HashMap::new();
         let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
@@ -281,7 +281,7 @@ mod test {
 
     #[test]
     fn test_connected_path() {
-        let (mut tree, _value) = PassiveTree::from_file("data/POE2_TREE.json");
+        let (tree, value) = PassiveTree::from_value("data/POE2_TREE.json");
 
         // Node IDs for the test
         let node_a = 4;

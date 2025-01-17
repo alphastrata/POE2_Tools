@@ -1,3 +1,5 @@
+use std::{fs::File, io::BufReader};
+
 //$ src/main.rs
 use poo_tools::{
     config::{UserCharacter, UserConfig},
@@ -9,8 +11,11 @@ fn main() {
     // Load the user config
     let config: UserConfig = UserConfig::load_from_file("data/user_config.toml");
 
-    // Load the passive tree data
-    let (passive_tree, val) = PassiveTree::from_file("data/POE2_TREE.json");
+    let file = File::open("data/POE2_Tree.json").unwrap();
+    let reader = BufReader::new(file);
+    let u = serde_json::from_reader(reader).unwrap();
+
+    let passive_tree = PassiveTree::from_value(u);
 
     // Load the character data, defaulting to `None` if the file is missing or invalid
     let character = UserCharacter::load_from_toml("character.toml");
