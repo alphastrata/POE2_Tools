@@ -7,11 +7,16 @@ pub mod prelude {
 
 #[cfg(test)]
 mod tests {
+    use std::{fs::File, io::BufReader};
+
     use crate::data::poe_tree::{edges::Edge, stats::Operand, PassiveTree};
 
     #[test]
     fn test_path_between_flow_like_water_and_chaos_inoculation() {
-        let (mut tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
+        let file = File::open("data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let u = serde_json::from_reader(reader).unwrap();
+        let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
 
         // Use fuzzy search to find nodes
         let flow_ids = (&tree).fuzzy_search_nodes("flow like water");
@@ -48,7 +53,10 @@ mod tests {
 
     #[test]
     fn test_bidirectional_edges() {
-        let (tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
+        let file = File::open("data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let u = serde_json::from_reader(reader).unwrap();
+        let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
 
         for edge in &tree.edges {
             let reverse_edge = Edge {
@@ -67,7 +75,10 @@ mod tests {
 
     #[test]
     fn test_path_between_avatar_of_fire_and_over_exposure() {
-        let (tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
+        let file = File::open("data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let u = serde_json::from_reader(reader).unwrap();
+        let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
 
         // Use fuzzy search to find nodes
         let avatar_ids = (&tree).fuzzy_search_nodes("Avatar of Fire");
@@ -103,19 +114,22 @@ mod tests {
 
     #[test]
     fn test_collect_life_nodes_from_real_tree() {
-        let (tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
+        let file = File::open("data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let u = serde_json::from_reader(reader).unwrap();
+        let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
 
         let mut life_nodes = Vec::new();
         let mut total_life = 0.0;
 
-        for node in tree.nodes.values() {
-            for stat in node.stats {
+        tree.nodes.values().for_each(|node| {
+            node.stats.iter().for_each(|stat| {
                 if stat.name.contains("Maximum Life") && matches!(stat.operand, Operand::Add) {
                     life_nodes.push(node.node_id);
                     total_life += stat.value;
                 }
-            }
-        }
+            });
+        });
 
         println!(
             "Life Nodes Count: {}, Total Life Added: {}",
@@ -129,19 +143,22 @@ mod tests {
 
     #[test]
     fn test_collect_evasion_percentage_nodes_from_real_tree() {
-        let (tree, _value) = PassiveTree::from_value("data/POE2_TREE.json");
+        let file = File::open("data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let u = serde_json::from_reader(reader).unwrap();
 
+        let tree = PassiveTree::from_value(&u).unwrap();
         let mut evasion_nodes = Vec::new();
         let mut total_evasion_percent = 0.0;
 
-        for node in tree.nodes.values() {
-            for stat in node.stats {
+        tree.nodes.values().for_each(|node| {
+            node.stats.iter().for_each(|stat| {
                 if stat.name.contains("Evasion") && matches!(stat.operand, Operand::Percentage) {
                     evasion_nodes.push(node.node_id);
                     total_evasion_percent += stat.value;
                 }
-            }
-        }
+            });
+        });
 
         println!(
             "Evasion Nodes Count: {}, Total Evasion Percentage: {}",

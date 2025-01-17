@@ -278,10 +278,15 @@ fn rebuild_path(came_from: &HashMap<usize, usize>, start: usize, target: usize) 
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::{fs::File, io::BufReader};
 
     #[test]
     fn test_connected_path() {
-        let (tree, value) = PassiveTree::from_value("data/POE2_TREE.json");
+        let file = File::open("data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let u = serde_json::from_reader(reader).unwrap();
+
+        let tree = PassiveTree::from_value(&u).unwrap();
 
         // Node IDs for the test
         let node_a = 4;

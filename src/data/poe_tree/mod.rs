@@ -28,68 +28,73 @@ pub struct PassiveTree {
 }
 
 impl PassiveTree {
-    pub fn from_value(val: &Value) -> Self {
-        // First, build groups
-        let groups: HashMap<GroupId, coordinates::Group> = val["passive_tree"]["groups"]
-            .as_object()
+    pub fn from_value(val: &Value) -> Result<Self, serde_json::Error> {
+        // First, build groups with error handling
+        let groups: HashMap<GroupId, coordinates::Group> = val
+            .get("passive_tree")
+            .and_then(|tree| tree.get("groups"))
+            .and_then(|groups| groups.as_object())
             .map(|obj| {
                 obj.iter()
-                    .flat_map(|(gid, gval)| {
-                        Some((
-                            gid.parse::<usize>().ok()?,
-                            coordinates::Group {
-                                x: gval["x"].as_f64()?,
-                                y: gval["y"].as_f64()?,
-                            },
-                        ))
+                    .filter_map(|(gid, gval)| {
+                        let gid = gid.parse::<usize>().ok()?;
+                        let x = gval.get("x")?.as_f64()?;
+                        let y = gval.get("y")?.as_f64()?;
+                        Some((gid, coordinates::Group { x, y }))
                     })
                     .collect()
             })
             .unwrap_or_default();
 
-        // Build passive skills map
-        let passive_skills: HashMap<String, skills::PassiveSkill> = val["passive_skills"]
-            .as_object()
+        // Build passive skills map with proper error handling
+        let passive_skills: HashMap<String, skills::PassiveSkill> = val
+            .get("passive_skills")
+            .and_then(|skills| skills.as_object())
             .map(|obj| {
                 obj.iter()
                     .filter_map(|(skill_id, skill_val)| {
-                        // Convert skill_val to PassiveSkill - implementation depends on your PassiveSkill structure
-                        let skill = serde_json::from_value(skill_val.clone()).unwrap();
-                        Some((skill_id.clone(), skill))
+                        match serde_json::from_value(skill_val.clone()) {
+                            Ok(skill) => Some((skill_id.clone(), skill)),
+                            Err(e) => {
+                                eprintln!("Failed to parse skill {}: {}", skill_id, e);
+                                None
+                            }
+                        }
                     })
                     .collect()
             })
             .unwrap_or_default();
 
-        // Build nodes
-        let nodes: HashMap<NodeId, PoeNode> = val["passive_tree"]["nodes"]
-            .as_object()
+        // Build nodes with better error handling and null checks
+        let nodes: HashMap<NodeId, PoeNode> = val
+            .get("passive_tree")
+            .and_then(|tree| tree.get("nodes"))
+            .and_then(|nodes| nodes.as_object())
             .map(|obj| {
                 obj.iter()
                     .filter_map(|(node_id, nval)| {
                         let node_id = node_id.parse::<usize>().ok()?;
-                        let skill_id = nval["skill_id"].as_str()?.to_string();
-                        let parent = nval["parent"].as_u64().unwrap_or(0) as usize;
-                        let radius = nval["radius"].as_u64().unwrap_or(0) as u8;
-                        let position = nval["position"].as_u64().unwrap_or(0) as usize;
+                        let skill_id = nval.get("skill_id")?.as_str()?.to_string();
+                        let parent =
+                            nval.get("parent").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                        let radius = nval.get("radius").and_then(|v| v.as_u64()).unwrap_or(0) as u8;
+                        let position =
+                            nval.get("position").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
 
-                        // Calculate world position
-                        let (wx, wy) = if let Some(group) = groups.get(&parent) {
-                            calculate_world_position(group, radius, position)
-                        } else {
-                            (0.0, 0.0)
-                        };
+                        // Calculate world position with null safety
+                        let (wx, wy) = groups
+                            .get(&parent)
+                            .map(|group| calculate_world_position(group, radius, position))
+                            .unwrap_or((0.0, 0.0));
 
-                        // Get skill details - now we clone the data we need
+                        // Get skill details with proper null handling
                         let skill = passive_skills.get(&skill_id);
                         let name = skill
                             .and_then(|s| s.name.as_ref())
                             .cloned()
                             .unwrap_or_default();
                         let is_notable = skill.map(|s| s.is_notable).unwrap_or(false);
-                        let stats = skill
-                            .map(|s| s.stats.clone()) // Clone the stats
-                            .unwrap_or_default();
+                        let stats = skill.map(|s| s.stats.clone()).unwrap_or_default();
 
                         Some((
                             node_id,
@@ -112,33 +117,36 @@ impl PassiveTree {
             })
             .unwrap_or_default();
 
-        // Build edges
-        let edges = val["passive_tree"]["nodes"]
-            .as_object()
+        // Build edges with proper error handling
+        let edges: HashSet<Edge> = val
+            .get("passive_tree")
+            .and_then(|tree| tree.get("nodes"))
+            .and_then(|nodes| nodes.as_object())
             .map(|obj| {
                 obj.iter()
                     .flat_map(|(from_id, node)| {
-                        let from_id = from_id.parse::<usize>().unwrap_or_default();
-                        node["connections"].as_array().unwrap().iter().filter_map(
-                            move |connection| {
-                                let to_id = connection.as_u64()? as usize;
-                                Some(Edge {
+                        let from_id = from_id.parse::<usize>().ok().unwrap_or_default();
+                        node.get("connections")
+                            .and_then(|cons| cons.as_array())
+                            .unwrap()
+                            .iter()
+                            .filter_map(move |connection| {
+                                connection.as_u64().map(|to_id| Edge {
                                     from: from_id,
-                                    to: to_id,
+                                    to: to_id as usize,
                                 })
-                            },
-                        )
+                            })
                     })
                     .collect()
             })
             .unwrap_or_default();
 
-        PassiveTree {
+        Ok(PassiveTree {
             groups,
             nodes,
             edges,
             passive_skills,
-        }
+        })
     }
 }
 
