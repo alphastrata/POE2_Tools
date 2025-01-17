@@ -43,68 +43,6 @@ fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usiz
     dist
 }
 impl PassiveTree {
-    pub fn find_shortest_path(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
-        let mut distances: HashMap<NodeId, usize> = HashMap::new();
-        let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
-        let mut priority_queue = BinaryHeap::new();
-
-        // Initialize distances
-        for &node_id in self.nodes.keys() {
-            distances.insert(node_id, usize::MAX);
-        }
-        distances.insert(start, 0);
-
-        // Start with the source node
-        priority_queue.push(NodeCost {
-            node_id: start,
-            cost: 0,
-        });
-
-        while let Some(NodeCost { node_id, cost }) = priority_queue.pop() {
-            if node_id == target {
-                break;
-            }
-
-            if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
-                continue;
-            }
-
-            for edge in self.edges.iter() {
-                let neighbor = if edge.from == node_id {
-                    edge.to
-                } else if edge.to == node_id {
-                    edge.from
-                } else {
-                    continue;
-                };
-
-                let new_cost = cost + 1; // Unweighted edges
-                if new_cost < *distances.get(&neighbor).unwrap_or(&usize::MAX) {
-                    distances.insert(neighbor, new_cost);
-                    predecessors.insert(neighbor, node_id);
-                    priority_queue.push(NodeCost {
-                        node_id: neighbor,
-                        cost: new_cost,
-                    });
-                }
-            }
-        }
-
-        // Reconstruct path from `predecessors`
-        let mut path = Vec::new();
-        let mut current = target;
-        while let Some(&prev) = predecessors.get(&current) {
-            path.push(current);
-            current = prev;
-            if current == start {
-                path.push(start);
-                path.reverse();
-                return path;
-            }
-        }
-
-        Vec::new() // No path found
-    }
     pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<usize> {
         _fuzzy_search_nodes(self, query)
     }
@@ -246,6 +184,96 @@ impl PassiveTree {
     }
 }
 
+impl PassiveTree {
+    pub fn find_shortest_path(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
+        let mut distances: HashMap<NodeId, usize> = HashMap::new();
+        let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
+        let mut priority_queue = BinaryHeap::new();
+
+        // Initialize distances
+        eprintln!("Initializing distances...");
+        for &node_id in self.nodes.keys() {
+            distances.insert(node_id, usize::MAX);
+        }
+        distances.insert(start, 0);
+
+        // Start with the source node
+        eprintln!("Starting from node: {:?}", start);
+        priority_queue.push(NodeCost {
+            node_id: start,
+            cost: 0,
+        });
+
+        while let Some(NodeCost { node_id, cost }) = priority_queue.pop() {
+            eprintln!("Processing node: {:?} with cost: {}", node_id, cost);
+            if node_id == target {
+                eprintln!("Reached target node: {:?}", target);
+                break;
+            }
+
+            if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
+                eprintln!(
+                    "Skipping node: {:?} as current cost ({}) is greater than known cost ({})",
+                    node_id,
+                    cost,
+                    distances.get(&node_id).unwrap_or(&usize::MAX)
+                );
+                continue;
+            }
+
+            for edge in self.edges.iter() {
+                let neighbor = if edge.from == node_id {
+                    edge.to
+                } else if edge.to == node_id {
+                    edge.from
+                } else {
+                    continue;
+                };
+
+                let new_cost = cost + 1; // Unweighted edges
+                eprintln!(
+                    "Inspecting edge from {:?} to {:?} with new_cost: {}",
+                    node_id, neighbor, new_cost
+                );
+
+                if new_cost < *distances.get(&neighbor).unwrap_or(&usize::MAX) {
+                    eprintln!(
+                        "Updating distance for node {:?} from {} to {}",
+                        neighbor,
+                        distances.get(&neighbor).unwrap_or(&usize::MAX),
+                        new_cost
+                    );
+                    distances.insert(neighbor, new_cost);
+                    predecessors.insert(neighbor, node_id);
+                    priority_queue.push(NodeCost {
+                        node_id: neighbor,
+                        cost: new_cost,
+                    });
+                }
+            }
+        }
+
+        // Reconstruct path from `predecessors`
+        let mut path = Vec::new();
+        let mut current = target;
+        eprintln!("Reconstructing path...");
+        while let Some(&prev) = predecessors.get(&current) {
+            eprintln!("Node {:?} has predecessor {:?}", current, prev);
+            path.push(current);
+            current = prev;
+            if current == start {
+                path.push(start);
+                path.reverse();
+                eprintln!("Path found: {:?}", path);
+                return path;
+            }
+        }
+
+        eprintln!("No path found from {:?} to {:?}", start, target);
+        Vec::new() // No path found
+    }
+}
+
 fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<usize> {
     let mut prev_node = 0;
     data.nodes
@@ -289,8 +317,8 @@ mod test {
         let tree = PassiveTree::from_value(&u).unwrap();
 
         // Node IDs for the test
-        let node_a = 4;
-        let node_b = 11578;
+        let node_a = 63064; // 54413, 32683, 40068, 48198
+        let node_b = 48198;
 
         // Check if the nodes are connected
         let are_connected = tree.are_nodes_connected(node_a, node_b);

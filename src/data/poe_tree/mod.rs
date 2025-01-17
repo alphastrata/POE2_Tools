@@ -120,29 +120,75 @@ impl PassiveTree {
             })
             .unwrap_or_default();
 
-        // Build edges with proper error handling
-        let edges: HashSet<Edge> = val
-            .get("passive_tree")
-            .and_then(|tree| tree.get("nodes"))
-            .and_then(|nodes| nodes.as_object())
-            .map(|obj| {
-                obj.iter()
-                    .flat_map(|(from_id, node)| {
-                        let from_id = from_id.parse::<usize>().ok().unwrap_or_default();
-                        node.get("connections")
-                            .and_then(|cons| cons.as_array())
-                            .unwrap()
-                            .iter()
-                            .filter_map(move |connection| {
-                                connection.as_u64().map(|to_id| Edge {
-                                    from: from_id,
-                                    to: to_id as usize,
-                                })
+        let edges: HashSet<Edge> = match val.get("passive_tree") {
+            Some(tree) => match tree.get("nodes") {
+                Some(nodes) => match nodes.as_object() {
+                    Some(obj) => {
+                        obj.iter()
+                            .flat_map(|(from_id, node)| {
+                                let from_id = match from_id.parse::<usize>() {
+                                    Ok(id) => id,
+                                    Err(e) => {
+                                        eprintln!("Failed to parse from_id `{}`: {}", from_id, e);
+                                        panic!("Invalid from_id in data");
+                                    }
+                                };
+
+                                match node.get("connections") {
+                                    /*
+                                     "connections": [ {"id": 29361,"radius": 3},{"id": 65437,"radius": -5}...]
+                                    */
+                                    Some(cons) => match cons.as_array() {
+                                        Some(array) => array.iter().filter_map(move |connection| {
+                                            match connection.get("id").and_then(|id| id.as_u64()) {
+                                                Some(to_id) => Some(Edge {
+                                                    from: from_id,
+                                                    to: to_id as usize,
+                                                }),
+                                                None => {
+                                                    eprintln!(
+                                                        "Invalid connection in node `{}`: {:?}",
+                                                        from_id, connection
+                                                    );
+                                                    dbg!(cons, array);
+                                                    None
+                                                }
+                                            }
+                                        }),
+                                        None => {
+                                            eprintln!(
+                "Connections field is not an array in node `{}`: {:?}",
+                from_id, cons
+            );
+                                            panic!()
+                                        }
+                                    },
+                                    None => {
+                                        eprintln!(
+                                            "Missing connections field in node `{}`: {:?}",
+                                            from_id, node
+                                        );
+                                        panic!()
+                                    }
+                                }
                             })
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
+                            .collect()
+                    }
+                    None => {
+                        eprintln!("Nodes field is not an object: {:?}", nodes);
+                        panic!("Invalid nodes structure in data");
+                    }
+                },
+                None => {
+                    eprintln!("Missing nodes field in tree: {:?}", tree);
+                    panic!("Invalid tree structure in data");
+                }
+            },
+            None => {
+                eprintln!("Missing passive_tree field in val: {:?}", val);
+                panic!("Invalid passive_tree structure in data");
+            }
+        };
 
         Ok(PassiveTree {
             groups,

@@ -12,7 +12,7 @@ mod tests {
     use crate::data::poe_tree::{edges::Edge, stats::Operand, PassiveTree};
 
     #[test]
-    fn test_path_between_flow_like_water_and_chaos_inoculation() {
+    fn path_between_flow_like_water_and_chaos_inoculation() {
         let file = File::open("data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
@@ -52,7 +52,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bidirectional_edges() {
+    fn bidirectional_edges() {
         let file = File::open("data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
@@ -74,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn test_path_between_avatar_of_fire_and_over_exposure() {
+    fn path_between_avatar_of_fire_and_over_exposure() {
         let file = File::open("data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
@@ -82,12 +82,12 @@ mod tests {
 
         // Use fuzzy search to find nodes
         let avatar_ids = (&tree).fuzzy_search_nodes("Avatar of Fire");
-        let over_exposure_ids = (&tree).fuzzy_search_nodes("Over Exposure");
+        let over_exposure_ids = (&tree).fuzzy_search_nodes("Overexposure");
 
         assert!(!avatar_ids.is_empty(), "No node found for 'Avatar of Fire'");
         assert!(
             !over_exposure_ids.is_empty(),
-            "No node found for 'Over Exposure'"
+            "No node found for 'OverExposure'"
         );
 
         let start_id = avatar_ids[0];
@@ -109,11 +109,11 @@ mod tests {
             }
         }
         // Update this value based on expected path length after refactoring
-        assert_eq!(path.len(), 95, "Path length mismatch");
+        assert_eq!(path.len(), 27, "Path length mismatch");
     }
 
     #[test]
-    fn test_collect_life_nodes_from_real_tree() {
+    fn collect_life_nodes_from_real_tree() {
         let file = File::open("data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
@@ -142,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    fn test_collect_evasion_percentage_nodes_from_real_tree() {
+    fn collect_evasion_percentage_nodes_from_real_tree() {
         let file = File::open("data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
