@@ -57,6 +57,9 @@ impl PassiveTree {
                             Ok(skill) => Some((skill_id.clone(), skill)),
                             Err(e) => {
                                 eprintln!("Failed to parse skill {}: {}", skill_id, e);
+                                eprintln!("{:#?}", skill_val);
+                                panic!();
+                                #[allow(unreachable_code)]
                                 None
                             }
                         }
