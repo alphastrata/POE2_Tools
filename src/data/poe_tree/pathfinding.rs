@@ -1,6 +1,7 @@
-//$ src\data\poe_tree\pathfinding.rs
+//$ src/data/poe_tree/pathfinding.rs
 use super::consts::*;
 use super::coordinates::Group;
+use super::edges::Edge;
 use super::skills::PassiveSkill;
 use super::stats::{Operand, Stat};
 use super::type_wrappings::{EdgeId, GroupId, NodeId};
@@ -29,81 +30,6 @@ impl PartialOrd for NodeCost {
         Some(self.cmp(other))
     }
 }
-
-impl<'data> PassiveTree<'data> {
-    pub fn find_shortest_path(&self, start: usize, target: usize) -> Vec<NodeId> {
-        // let mut distances: HashMap<usize, usize> = HashMap::new();
-        // let mut predecessors: HashMap<usize, usize> = HashMap::new();
-        // let mut priority_queue = BinaryHeap::new();
-
-        // // Initialize distances
-        // for &node_id in self.nodes.keys() {
-        //     distances.insert(node_id, usize::MAX);
-        // }
-        // distances.insert(start, 0);
-
-        // // Start with the source node
-        // priority_queue.push(NodeCost {
-        //     node_id: start,
-        //     cost: 0,
-        // });
-
-        // while let Some(NodeCost { node_id, cost }) = priority_queue.pop() {
-        //     // Stop if we reached the target
-        //     if node_id == target {
-        //         break;
-        //     }
-
-        //     // Skip if this path is not optimal
-        //     if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
-        //         continue;
-        //     }
-
-        //     // Explore neighbors
-        //     if let Some(node) = self.nodes.get(&node_id) {
-        //         for &neighbor in &node.connections {
-        //             let new_cost = cost + 1; // Assume unweighted edges (cost = 1)
-        //             if new_cost < *distances.get(&neighbor).unwrap_or(&usize::MAX) {
-        //                 distances.insert(neighbor, new_cost);
-        //                 predecessors.insert(neighbor, node_id);
-        //                 priority_queue.push(NodeCost {
-        //                     node_id: neighbor,
-        //                     cost: new_cost,
-        //                 });
-        //             }
-        //         }
-        //     }
-
-        // }
-
-        // Reconstruct path from `predecessors`
-        // let mut path = Vec::new();
-        // let mut current = target;
-        // while let Some(&prev) = predecessors.get(&current) {
-        //     path.push(current);
-        //     current = prev;
-        //     if current == start {
-        //         path.push(start);
-        //         path.reverse();
-        //         return path;
-        //     }
-        // }
-
-        Vec::new() // No path found
-    }
-
-    pub fn find_path_with_limit(
-        &self,
-        start: usize,
-        target: usize,
-        explored_paths: &mut Vec<Vec<usize>>,
-    ) -> Vec<usize> {
-        // find_path_with_limit(self, start, target)
-
-        vec![]
-    }
-}
-
 /// Count how many edges from `start` to `node` by walking `came_from`.
 fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usize {
     let mut dist = 0;
@@ -117,14 +43,221 @@ fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usiz
     dist
 }
 impl<'data> PassiveTree<'data> {
+    pub fn find_shortest_path(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
+        let mut distances: HashMap<NodeId, usize> = HashMap::new();
+        let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
+        let mut priority_queue = BinaryHeap::new();
+
+        // Initialize distances
+        for &node_id in self.nodes.keys() {
+            distances.insert(node_id, usize::MAX);
+        }
+        distances.insert(start, 0);
+
+        // Start with the source node
+        priority_queue.push(NodeCost {
+            node_id: start,
+            cost: 0,
+        });
+
+        while let Some(NodeCost { node_id, cost }) = priority_queue.pop() {
+            if node_id == target {
+                break;
+            }
+
+            if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
+                continue;
+            }
+
+            for edge in self.edges.iter() {
+                let neighbor = if edge.from == node_id {
+                    edge.to
+                } else if edge.to == node_id {
+                    edge.from
+                } else {
+                    continue;
+                };
+
+                let new_cost = cost + 1; // Unweighted edges
+                if new_cost < *distances.get(&neighbor).unwrap_or(&usize::MAX) {
+                    distances.insert(neighbor, new_cost);
+                    predecessors.insert(neighbor, node_id);
+                    priority_queue.push(NodeCost {
+                        node_id: neighbor,
+                        cost: new_cost,
+                    });
+                }
+            }
+        }
+
+        // Reconstruct path from `predecessors`
+        let mut path = Vec::new();
+        let mut current = target;
+        while let Some(&prev) = predecessors.get(&current) {
+            path.push(current);
+            current = prev;
+            if current == start {
+                path.push(start);
+                path.reverse();
+                return path;
+            }
+        }
+
+        Vec::new() // No path found
+    }
     pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<usize> {
         _fuzzy_search_nodes(self, query)
+    }
+    pub fn create_paths(&self, nodes: Vec<&str>) -> Result<Vec<NodeId>, String> {
+        let mut path = Vec::new();
+        let mut last_node_id: Option<NodeId> = None;
+
+        for name_or_id in nodes {
+            let node_id = self.find_node_by_name_or_id(name_or_id)?;
+            if let Some(last_id) = last_node_id {
+                if !self.are_nodes_connected(last_id, node_id) {
+                    return Err(format!("No connection between {} and {}", last_id, node_id));
+                }
+            }
+            path.push(node_id);
+            last_node_id = Some(node_id);
+        }
+
+        Ok(path)
+    }
+    pub fn are_nodes_connected(&self, node_a: NodeId, node_b: NodeId) -> bool {
+        self.edges.contains(&Edge::new(node_a, node_b, self))
+            || self.edges.contains(&Edge::new(node_b, node_a, self))
+    }
+    pub fn find_node_by_name_or_id(&self, identifier: &str) -> Result<NodeId, String> {
+        // Try finding by NodeId first
+        if let Ok(node_id) = identifier.parse::<NodeId>() {
+            if self.nodes.contains_key(&node_id) {
+                return Ok(node_id);
+            }
+        }
+
+        // Fuzzy match by name
+        let matches: Vec<_> = self
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.name.contains(identifier))
+            .map(|(id, _)| *id)
+            .collect();
+
+        match matches.len() {
+            1 => Ok(matches[0]),
+            0 => Err(format!("No node found matching '{}'", identifier)),
+            _ => Err(format!(
+                "Ambiguous identifier '{}', multiple nodes match",
+                identifier
+            )),
+        }
+    }
+    pub fn frontier_nodes_lazy<'a>(
+        &'a self,
+        path: &'a [NodeId],
+    ) -> impl Iterator<Item = NodeId> + 'a {
+        let active_set: HashSet<NodeId> = path.iter().cloned().collect();
+
+        self.edges.iter().filter_map(move |edge| {
+            // Determine the neighboring node
+            let (from, to) = (edge.from, edge.to);
+
+            if active_set.contains(&from) && !active_set.contains(&to) && !self.nodes[&to].active {
+                Some(to)
+            } else if active_set.contains(&to)
+                && !active_set.contains(&from)
+                && !self.nodes[&from].active
+            {
+                Some(from)
+            } else {
+                None
+            }
+        })
+    }
+    pub fn frontier_node_details_lazy<'a>(
+        &'a self,
+        frontier_nodes: impl Iterator<Item = NodeId> + 'a,
+    ) -> impl Iterator<Item = (NodeId, Vec<Stat>)> + 'a {
+        frontier_nodes.filter_map(move |node_id| {
+            self.nodes
+                .get(&node_id)
+                .map(|node| (node_id, node.stats.to_vec()))
+        })
+    }
+    pub fn create_paths_lazy<'a>(
+        &'a self,
+        nodes: Vec<&'a str>,
+    ) -> impl Iterator<Item = Result<NodeId, String>> + 'a {
+        let mut last_node_id: Option<NodeId> = None;
+
+        nodes.into_iter().map(move |name_or_id| {
+            let node_id = self.find_node_by_name_or_id(name_or_id)?;
+            if let Some(last_id) = last_node_id {
+                // Check connection via PassiveTree.edges
+                let edge = Edge::new(last_id, node_id, self);
+                if !self.edges.contains(&edge) {
+                    return Err(format!("No connection between {} and {}", last_id, node_id));
+                }
+            }
+            last_node_id = Some(node_id);
+            Ok(node_id)
+        })
+    }
+    pub fn find_path_with_limit(
+        &self,
+        start: NodeId,
+        target: NodeId,
+        explored_paths: &mut Vec<Vec<NodeId>>,
+    ) -> Vec<NodeId> {
+        let mut visited = HashSet::new();
+        let mut stack = vec![(start, vec![start])];
+
+        while let Some((current, path)) = stack.pop() {
+            if current == target {
+                explored_paths.push(path.clone());
+                return path;
+            }
+
+            if visited.contains(&current) {
+                continue;
+            }
+            visited.insert(current);
+
+            for edge in self.edges.iter() {
+                let neighbor = if edge.from == current {
+                    edge.to
+                } else if edge.to == current {
+                    edge.from
+                } else {
+                    continue;
+                };
+
+                if !visited.contains(&neighbor) {
+                    let mut new_path = path.clone();
+                    new_path.push(neighbor);
+                    stack.push((neighbor, new_path));
+                }
+            }
+        }
+
+        Vec::new() // No path found
     }
 }
 
 fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<usize> {
+    let mut prev_node = 0;
     data.nodes
         .iter()
+        .map(|(nid, node)| {
+            println!(
+                "Inspecting {nid}\t{:?} named:{} FROM {prev_node} ",
+                node.skill_id, node.name
+            );
+            prev_node = *nid;
+            (nid, node)
+        })
         .filter(|(_, node)| node.name.to_lowercase().contains(&query.to_lowercase()))
         .map(|(id, _)| *id)
         .collect()
@@ -141,147 +274,44 @@ fn rebuild_path(came_from: &HashMap<usize, usize>, start: usize, target: usize) 
     path.reverse();
     path
 }
-//$ src\data\poe_tree\pathfinding.rs
-use super::consts::*;
-use super::coordinates::Group;
-use super::skills::PassiveSkill;
-use super::stats::{Operand, Stat};
-use serde_json::Value;
 
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::{collections::VecDeque, fs};
+#[cfg(test)]
+mod test {
+    use super::*;
 
-use super::PassiveTree;
-pub type GroupId = usize;
-pub type NodeId = usize;
+    #[test]
+    fn test_connected_path() {
+        let (mut tree, _value) = PassiveTree::from_file("data/POE2_TREE.json");
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-struct NodeCost {
-    node_id: NodeId,
-    cost: usize,
-}
+        // Node IDs for the test
+        let node_a = 4;
+        let node_b = 11578;
 
-// Implement ordering for BinaryHeap (min-heap behavior)
-impl Ord for NodeCost {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.cost.cmp(&self.cost) // Reverse to get min-heap
+        // Check if the nodes are connected
+        let are_connected = tree.are_nodes_connected(node_a, node_b);
+        assert!(
+            are_connected,
+            "Nodes {} and {} should be connected, but they are not.",
+            node_a, node_b
+        );
+
+        // Find the shortest path between the nodes
+        let path = tree.find_shortest_path(node_a, node_b);
+        assert!(
+            !path.is_empty(),
+            "No path found between {} and {}.",
+            node_a,
+            node_b
+        );
+
+        // Verify the path contains the correct nodes
+        assert_eq!(
+            path,
+            vec![node_a, node_b],
+            "Path between {} and {} is incorrect: {:?}",
+            node_a,
+            node_b,
+            path
+        );
     }
-}
-impl PartialOrd for NodeCost {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<'data> PassiveTree<'data> {
-    pub fn find_shortest_path(&self, start: usize, target: usize) -> Vec<NodeId> {
-        // let mut distances: HashMap<usize, usize> = HashMap::new();
-        // let mut predecessors: HashMap<usize, usize> = HashMap::new();
-        // let mut priority_queue = BinaryHeap::new();
-
-        // // Initialize distances
-        // for &node_id in self.nodes.keys() {
-        //     distances.insert(node_id, usize::MAX);
-        // }
-        // distances.insert(start, 0);
-
-        // // Start with the source node
-        // priority_queue.push(NodeCost {
-        //     node_id: start,
-        //     cost: 0,
-        // });
-
-        // while let Some(NodeCost { node_id, cost }) = priority_queue.pop() {
-        //     // Stop if we reached the target
-        //     if node_id == target {
-        //         break;
-        //     }
-
-        //     // Skip if this path is not optimal
-        //     if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
-        //         continue;
-        //     }
-
-        //     // Explore neighbors
-        //     if let Some(node) = self.nodes.get(&node_id) {
-        //         for &neighbor in &node.connections {
-        //             let new_cost = cost + 1; // Assume unweighted edges (cost = 1)
-        //             if new_cost < *distances.get(&neighbor).unwrap_or(&usize::MAX) {
-        //                 distances.insert(neighbor, new_cost);
-        //                 predecessors.insert(neighbor, node_id);
-        //                 priority_queue.push(NodeCost {
-        //                     node_id: neighbor,
-        //                     cost: new_cost,
-        //                 });
-        //             }
-        //         }
-        //     }
-
-        // }
-
-        // Reconstruct path from `predecessors`
-        // let mut path = Vec::new();
-        // let mut current = target;
-        // while let Some(&prev) = predecessors.get(&current) {
-        //     path.push(current);
-        //     current = prev;
-        //     if current == start {
-        //         path.push(start);
-        //         path.reverse();
-        //         return path;
-        //     }
-        // }
-
-        Vec::new() // No path found
-    }
-
-    pub fn find_path_with_limit(
-        &self,
-        start: usize,
-        target: usize,
-        explored_paths: &mut Vec<Vec<usize>>,
-    ) -> Vec<usize> {
-        // find_path_with_limit(self, start, target)
-
-        vec![]
-    }
-}
-
-/// Count how many edges from `start` to `node` by walking `came_from`.
-fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usize {
-    let mut dist = 0;
-    while let Some(&parent) = came_from.get(&node) {
-        if parent == node {
-            break; // Reached the start
-        }
-        node = parent;
-        dist += 1;
-    }
-    dist
-}
-impl<'data> PassiveTree<'data> {
-    pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<usize> {
-        _fuzzy_search_nodes(self, query)
-    }
-}
-
-fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<usize> {
-    data.nodes
-        .iter()
-        .filter(|(_, node)| node.name.to_lowercase().contains(&query.to_lowercase()))
-        .map(|(id, _)| *id)
-        .collect()
-}
-/// Rebuild the path backward from `target` to `start`, then reverse it.
-fn rebuild_path(came_from: &HashMap<usize, usize>, start: usize, target: usize) -> Vec<usize> {
-    let mut path = Vec::new();
-    let mut current = target;
-    while current != start {
-        path.push(current);
-        current = came_from[&current];
-    }
-    path.push(start);
-    path.reverse();
-    path
 }

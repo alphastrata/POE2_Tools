@@ -1,7 +1,7 @@
-//$ src\main.rs
+//$ src/main.rs
 use poo_tools::{
     config::{UserCharacter, UserConfig},
-    data::PassiveTree,
+    data::prelude::PassiveTree,
     visualiser::TreeVis,
 };
 
@@ -10,7 +10,7 @@ fn main() {
     let config: UserConfig = UserConfig::load_from_file("data/user_config.toml");
 
     // Load the passive tree data
-    let passive_tree = PassiveTree::load_tree("data/POE2_TREE.json");
+    let (passive_tree, val) = PassiveTree::from_file("data/POE2_TREE.json");
 
     // Load the character data, defaulting to `None` if the file is missing or invalid
     let character = UserCharacter::load_from_toml("character.toml");

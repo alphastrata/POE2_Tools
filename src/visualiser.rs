@@ -1,4 +1,4 @@
-//$ src\visualiser.rs
+//$ src/visualiser.rs
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},

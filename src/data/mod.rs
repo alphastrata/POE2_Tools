@@ -1,24 +1,21 @@
-//$ src\data\mod.rs
+//$ src/data/mod.rs
 pub mod poe_tree;
 
 pub mod prelude {
-    pub use poe_tree::PassiveTree;
+    pub use super::poe_tree::PassiveTree;
 }
 
 #[cfg(test)]
 mod tests {
-    use poe_tree::PassiveTree;
-
-    use super::*;
+    use crate::data::poe_tree::{edges::Edge, stats::Operand, PassiveTree};
 
     #[test]
     fn test_path_between_flow_like_water_and_chaos_inoculation() {
         let (mut tree, _value) = PassiveTree::from_file("data/POE2_TREE.json");
-        tree.compute_positions_and_stats();
 
         // Use fuzzy search to find nodes
-        let flow_ids = fuzzy_search_nodes(&tree, "flow like water");
-        let chaos_ids = fuzzy_search_nodes(&tree, "chaos inoculation");
+        let flow_ids = (&tree).fuzzy_search_nodes("flow like water");
+        let chaos_ids = (&tree).fuzzy_search_nodes("chaos inoculation");
 
         assert!(!flow_ids.is_empty(), "No node found for 'flow like water'");
         assert!(
@@ -46,6 +43,7 @@ mod tests {
         }
         // Update this value based on expected path length after refactoring
         assert_eq!(path.len(), 15, "Path length mismatch");
+        println!("{:#?}", path);
     }
 
     #[test]
@@ -72,8 +70,8 @@ mod tests {
         let (tree, _value) = PassiveTree::from_file("data/POE2_TREE.json");
 
         // Use fuzzy search to find nodes
-        let avatar_ids = fuzzy_search_nodes(&tree, "Avatar of Fire");
-        let over_exposure_ids = fuzzy_search_nodes(&tree, "Over Exposure");
+        let avatar_ids = (&tree).fuzzy_search_nodes("Avatar of Fire");
+        let over_exposure_ids = (&tree).fuzzy_search_nodes("Over Exposure");
 
         assert!(!avatar_ids.is_empty(), "No node found for 'Avatar of Fire'");
         assert!(
