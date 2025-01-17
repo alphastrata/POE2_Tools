@@ -124,9 +124,15 @@ mod tests {
 
         tree.nodes.values().for_each(|node| {
             node.stats.iter().for_each(|stat| {
-                if stat.name.contains("Maximum Life") && matches!(stat.operand, Operand::Add) {
+                //NOTE: we should do 'something' to allow any of ["Maximum Life", "max life", 'maximum life', "maximum_life"] to work..
+                // maybe a stat.name.supported_patterns_of($needle) -> bool, replacing ' ' with '_' should probs get us 99% of the way there
+                if stat.name.contains("maximum_life") && matches!(stat.operand, Operand::Add) {
                     life_nodes.push(node.node_id);
                     total_life += stat.value;
+                } else {
+                    if stat.name.contains("life") {
+                        eprintln!("'life' keyword found in {}, maybe we should modify on entry to make nicer..", stat.name);
+                    }
                 }
             });
         });
@@ -153,9 +159,14 @@ mod tests {
 
         tree.nodes.values().for_each(|node| {
             node.stats.iter().for_each(|stat| {
-                if stat.name.contains("Evasion") && matches!(stat.operand, Operand::Percentage) {
+                if stat.name.contains("evasion_rating") && matches!(stat.operand, Operand::Percentage)
+                {
                     evasion_nodes.push(node.node_id);
                     total_evasion_percent += stat.value;
+                } else {
+                    if stat.name.contains("evasion") {
+                        eprintln!("'evasion' keyword found in {}, maybe we should modify on entry to make nicer..", stat.name);
+                    }
                 }
             });
         });
