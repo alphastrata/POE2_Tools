@@ -31,6 +31,6 @@ fn main() {
     _ = eframe::run_native(
         "POE2_TREE debug vis tool",
         native_opts,
-        Box::new(|_cc| Ok(Box::new(TreeVis::new(tree, config, character)))),
+        Box::new(|_cc| Ok(Box::new(TreeVis::new(&tree, config, character)))),
     );
 }

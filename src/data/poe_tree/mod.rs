@@ -202,7 +202,9 @@ impl PassiveTree {
 fn calculate_world_position(group: &coordinates::Group, radius: u8, position: usize) -> (f64, f64) {
     let radius = ORBIT_RADII.get(radius as usize).copied().unwrap_or(0.0);
     let slots = ORBIT_SLOTS.get(radius as usize).copied().unwrap_or(1) as f64;
-    let angle = position as f64 * (2.0 * std::f64::consts::PI / slots);
+    // let angle = position as f64 * (2.0 * std::f64::consts::PI / slots);
+    let angle =
+        position as f64 * (2.0 * std::f64::consts::PI / slots) - (std::f64::consts::PI / 2.0);
 
     (
         group.x + radius * angle.cos(),

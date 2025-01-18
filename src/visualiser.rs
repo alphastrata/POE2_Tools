@@ -11,14 +11,14 @@ use crate::{config::UserConfig, data::poe_tree::PassiveTree};
 
 impl<'p> eframe::App for TreeVis<'p> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.update_fuzzy_search(ctx);
-        // self.update_hover_effects(ctx);
-        // self.update_node_selection(ctx);
-        // self.handle_keyboard_input(ctx);
+        // Handle mouse interactions
+        self.handle_mouse(ctx);
+        // Redraw the tree
         self.redraw_tree(ctx);
+        // Draw debug bar
+        self.draw_debug_bar(ctx);
     }
 }
-
 // Helper Functions
 impl<'p> TreeVis<'p> {
     fn update_fuzzy_search(&mut self, ctx: &egui::Context) {
@@ -43,79 +43,6 @@ impl<'p> TreeVis<'p> {
         }
     }
 
-    // fn update_hover_effects(&mut self, ctx: &egui::Context) {
-    //     if let Some(pos) = ctx.input(|i| i.pointer.hover_pos()) {
-    //         let mx: f32 = self.screen_to_world_x(pos.x).into();
-    //         let my: f32 = self.screen_to_world_y(pos.y).into();
-    //         self.update_hover(mx, my);
-
-    //         if let Some(hovered_id) = self.hovered_node {
-    //             self.passive_tree.get_edges().iter().for_each(|edge| {
-    //                 if edge.source == hovered_id || edge.target == hovered_id {
-    //                     self.active_edges.insert((edge.source, edge.target));
-    //                 }
-    //             });
-    //         }
-    //     }
-    // }
-
-    // fn update_node_selection(&mut self, ctx: &egui::Context) {
-    //     if ctx.input(|i| i.pointer.primary_clicked()) {
-    //         if let Some(node_id) = self.hovered_node {
-    //             self.toggle_node_selection(node_id);
-    //         }
-    //     }
-    // }
-
-    fn redraw_tree(&self, ctx: &egui::Context) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let painter = ui.painter();
-            for node in self.passive_tree.nodes.values() {
-                let sx = self.world_to_screen_x(node.wx);
-                let sy = self.world_to_screen_y(node.wy);
-                let radius = if node.active { 12.0 } else { 8.0 };
-
-                let color = if node.active {
-                    egui::Color32::from_rgb(0, 255, 0)
-                } else {
-                    egui::Color32::from_rgb(200, 200, 200)
-                };
-
-                painter.circle_filled(egui::pos2(sx, sy), radius, color);
-            }
-
-            // for (source_id, target_id) in self.passive_tree.get_edges() {
-            //     if let (Some(src), Some(tgt)) = (
-            //         self.passive_tree.nodes.get(&source_id),
-            //         self.passive_tree.nodes.get(&target_id),
-            //     ) {
-            //         let sx = self.world_to_screen_x(src.wx);
-            //         let sy = self.world_to_screen_y(src.wy);
-            //         let tx = self.world_to_screen_x(tgt.wx);
-            //         let ty = self.world_to_screen_y(tgt.wy);
-
-            //         painter.line_segment(
-            //             [egui::pos2(sx, sy), egui::pos2(tx, ty)],
-            //             egui::Stroke::new(1.0, egui::Color32::from_rgb(150, 150, 150)),
-            //         );
-            //     }
-            // }
-        });
-    }
-
-    // fn toggle_node_selection(&mut self, node_id: usize) {
-    //     if let Some(character) = &mut self.current_character {
-    //         if character.activated_node_ids.contains(&node_id) {
-    //             character.activated_node_ids.retain(|&nid| nid != node_id);
-    //         } else {
-    //             character.activated_node_ids.push(node_id);
-    //         }
-    //     }
-    //     if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
-    //         node.active = !node.active;
-    //     }
-    // }
-
     fn update_hover(&mut self, mx: f32, my: f32) {
         self.hovered_node = self
             .passive_tree
@@ -127,6 +54,80 @@ impl<'p> TreeVis<'p> {
                 (dx * dx + dy * dy).sqrt() < 10.0 // Hover threshold
             })
             .map(|(id, _)| *id);
+    }
+}
+impl<'p> TreeVis<'p> {
+    pub fn auto_fit(&mut self) {
+        let (min_x, max_x) = self
+            .passive_tree
+            .nodes
+            .values()
+            .map(|node| node.wx)
+            .fold((f64::MAX, f64::MIN), |(min, max), x| {
+                (min.min(x), max.max(x))
+            });
+
+        let (min_y, max_y) = self
+            .passive_tree
+            .nodes
+            .values()
+            .map(|node| node.wy)
+            .fold((f64::MAX, f64::MIN), |(min, max), y| {
+                (min.min(y), max.max(y))
+            });
+
+        let width = max_x - min_x;
+        let height = max_y - min_y;
+
+        self.zoom = (1.0 / width as f32).min(1.0 / height as f32) * 0.9; // Adjust zoom for screen size
+        self.camera = RefCell::new((
+            (min_x + max_x) as f32 / 2.0, // Center camera
+            (min_y + max_y) as f32 / 2.0,
+        ));
+    }
+}
+impl<'p> TreeVis<'p> {
+    pub fn redraw_tree(&self, ctx: &egui::Context) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let painter = ui.painter();
+
+            // Draw edges
+            for edge in &self.passive_tree.edges {
+                if let (Some(source), Some(target)) = (
+                    self.passive_tree.nodes.get(&edge.from),
+                    self.passive_tree.nodes.get(&edge.to),
+                ) {
+                    let sx = self.world_to_screen_x(source.wx);
+                    let sy = self.world_to_screen_y(source.wy);
+                    let tx = self.world_to_screen_x(target.wx);
+                    let ty = self.world_to_screen_y(target.wy);
+
+                    painter.line_segment(
+                        [egui::pos2(sx, sy), egui::pos2(tx, ty)],
+                        egui::Stroke::new(1.0, egui::Color32::GRAY),
+                    );
+                }
+            }
+
+            // Draw nodes
+            for node in self.passive_tree.nodes.values() {
+                let sx = self.world_to_screen_x(node.wx);
+                let sy = self.world_to_screen_y(node.wy);
+                let radius = if node.active { 12.0 } else { 8.0 };
+                let color = if node.active {
+                    egui::Color32::from_rgb(0, 255, 0)
+                } else {
+                    egui::Color32::from_rgb(200, 200, 200)
+                };
+
+                // println!(
+                //     "Drawing node {}: World ({}, {}), Screen ({}, {})",
+                //     node.node_id, node.wx, node.wy, sx, sy
+                // );
+
+                painter.circle_filled(egui::pos2(sx, sy), radius, color);
+            }
+        });
     }
 }
 
@@ -232,46 +233,51 @@ impl<'p> TreeVis<'p> {
         }
     }
 
-    pub fn new(data: PassiveTree, config: UserConfig, character: Option<UserCharacter>) -> Self {
-        todo!()
+    pub fn new(
+        passive_tree: &'p PassiveTree,
+        user_config: UserConfig,
+        current_character: Option<UserCharacter>,
+    ) -> Self {
+        // Initialize controls from the user configuration
+        // let controls = user_config
+        //     .controls
+        //     .iter()
+        //     .map(|(action, key)| (action.clone(), *key))
+        //     .collect();
+
+        let mut vis = Self {
+            camera: RefCell::new((0.0, 0.0)), // Start camera at origin
+            zoom: 0.02,                       // Default zoom level
+            passive_tree,
+            hovered_node: None, // No node hovered initially
+
+            // Fuzzy-search-related
+            fuzzy_search_open: AtomicBool::new(false), // Search not open initially
+            search_query: String::new(),               // Empty search query
+            search_results: Vec::new(),                // No search results initially
+
+            // Path-finder-related
+            start_node_id: 0,             // Default to the root or initial node
+            target_node_id: 0,            // Default to no target node
+            path: Vec::new(),             // No path initially
+            active_edges: HashSet::new(), // No edges highlighted initially
+
+            // Config-driven colours
+            color_map: HashMap::new(),
+
+            // Multi-step pathing
+            path_nodes: Vec::new(), // No intermediate nodes
+
+            current_character,
+            last_save_time: std::time::Instant::now(), // Set to the current time
+
+            user_config,
+            controls: HashMap::new(),
+        };
+
+        vis.initialize_camera_and_zoom();
+        vis
     }
-
-    fn world_to_screen_x(&self, wx: f64) -> f32 {
-        ((wx as f32) - self.camera_x()) * self.zoom + 400.0
-    }
-
-    fn world_to_screen_y(&self, wy: f64) -> f32 {
-        ((wy as f32) - self.camera_y()) * self.zoom + 300.0
-    }
-
-    fn screen_to_world_x(&self, sx: f32) -> f64 {
-        ((sx - 400.0) / self.zoom + self.camera_x()) as f64
-    }
-
-    fn screen_to_world_y(&self, sy: f32) -> f64 {
-        ((sy - 300.0) / self.zoom + self.camera_y()) as f64
-    }
-
-    // fn update_hover(&mut self, mx: f64, my: f64) {
-    //     let search_radius = 10.0; // Adjustable hover radius //TODO: CONST/CONFIG
-    //     let mut best_dist = f64::MAX; //TODO: lazy once cell on the max distance of the two furthest nodes + a delta...
-    //     let mut best_id = None;
-
-    //     // Iterate over nodes, but filter based on approximate location first
-    //     for (&id, node) in self.passive_tree.nodes.iter() {
-    //         if (node.wx - mx).abs() > search_radius || (node.wy - my).abs() > search_radius {
-    //             continue; // Skip nodes too far
-    //         }
-    //         let dx = node.wx - mx;
-    //         let dy = node.wy - my;
-    //         let dist = (dx * dx + dy * dy).sqrt();
-    //         if dist < search_radius && dist < best_dist {
-    //             best_dist = dist;
-    //             best_id = Some(id);
-    //         }
-    //     }
-    //     self.hovered_node = best_id;
-    // }
 
     fn move_camera_to_node(&self, node_id: usize) {
         if let Some(node) = self.passive_tree.nodes.get(&node_id) {
@@ -331,5 +337,110 @@ impl<'p> TreeVis<'p> {
                 }
             }
         }
+    }
+}
+
+impl<'p> TreeVis<'p> {
+    const ZOOM_MIN: f32 = 0.0; // Minimum zoom level
+    const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
+    const ZOOM_STEP: f32 = 0.0001; // Step size for zoom changes
+
+    pub fn handle_mouse(&mut self, ctx: &egui::Context) {
+        ctx.input(|input| {
+            if input.raw_scroll_delta.y != 0.0 {
+                let raw_scroll = input.raw_scroll_delta.y;
+                let mouse_pos = input.pointer.hover_pos().unwrap_or_default();
+                self.adjust_zoom(raw_scroll, mouse_pos);
+            }
+        });
+    }
+
+    /// Adjust the zoom level based on raw scroll input.
+    fn adjust_zoom(&mut self, scroll: f32, mouse_pos: egui::Pos2) {
+        let new_zoom = (self.zoom + scroll * Self::ZOOM_STEP).clamp(Self::ZOOM_MIN, Self::ZOOM_MAX);
+
+        if (new_zoom - self.zoom).abs() > f32::EPSILON {
+            // Calculate the scaling factor
+            let _scale = new_zoom / self.zoom;
+
+            // Adjust the camera to center zooming around the mouse position
+            let screen_center_x = self.camera.borrow().0 + mouse_pos.x / self.zoom;
+            let screen_center_y = self.camera.borrow().1 + mouse_pos.y / self.zoom;
+
+            let new_camera_x = screen_center_x - mouse_pos.x / new_zoom;
+            let new_camera_y = screen_center_y - mouse_pos.y / new_zoom;
+
+            // Update camera and zoom
+            *self.camera.borrow_mut() = (new_camera_x, new_camera_y);
+            self.zoom = new_zoom;
+        }
+    }
+}
+impl<'p> TreeVis<'p> {
+    /// Precompute debug bar contents to avoid borrow conflicts
+    fn get_debug_bar_contents(&self, ctx: &egui::Context) -> (String, String, String) {
+        // Get mouse position
+        let mouse_pos = ctx.input(|input| input.pointer.hover_pos().unwrap_or_default());
+        let mouse_info = format!("Mouse: ({:.2}, {:.2})", mouse_pos.x, mouse_pos.y);
+
+        // Get zoom level
+        let zoom_info = format!("Zoom: {:.2}", self.zoom);
+
+        // Get hovered node
+        let hovered_node_info = if let Some(hovered_node_id) = self.hovered_node {
+            format!("Hovered Node: {}", hovered_node_id)
+        } else {
+            "Hovered Node: None".to_string()
+        };
+
+        (mouse_info, zoom_info, hovered_node_info)
+    }
+
+    /// Draw the debug information bar
+    pub fn draw_debug_bar(&self, ctx: &egui::Context) {
+        let (mouse_info, zoom_info, hovered_node_info) = self.get_debug_bar_contents(ctx);
+
+        egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(mouse_info);
+                ui.separator();
+                ui.label(zoom_info);
+                ui.separator();
+                ui.label(hovered_node_info);
+            });
+        });
+    }
+    fn initialize_camera_and_zoom(&mut self) {
+        let (min_x, max_x) = self
+            .passive_tree
+            .nodes
+            .values()
+            .map(|node| node.wx)
+            .fold((f64::MAX, f64::MIN), |(min, max), x| {
+                (min.min(x), max.max(x))
+            });
+
+        let (min_y, max_y) = self
+            .passive_tree
+            .nodes
+            .values()
+            .map(|node| node.wy)
+            .fold((f64::MAX, f64::MIN), |(min, max), y| {
+                (min.min(y), max.max(y))
+            });
+
+        let width = max_x - min_x;
+        let height = max_y - min_y;
+
+        self.zoom = (1.0 / width as f32).min(1.0 / height as f32) * 800.0;
+        *self.camera.borrow_mut() = ((min_x + max_x) as f32 / 2.0, (min_y + max_y) as f32 / 2.0);
+    }
+
+    pub fn world_to_screen_x(&self, wx: f64) -> f32 {
+        ((wx as f32 - self.camera.borrow().0) * self.zoom + 500.0) as f32
+    }
+
+    pub fn world_to_screen_y(&self, wy: f64) -> f32 {
+        ((wy as f32 - self.camera.borrow().1) * self.zoom + 500.0) as f32
     }
 }
