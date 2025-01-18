@@ -5,7 +5,6 @@ use super::{consts::*, PassiveTree};
 
 #[derive(Debug, Clone, Default)]
 pub struct PoeNode {
-    // Removed lifetime parameter
     pub node_id: NodeId,
     pub skill_id: String,
     pub parent: GroupId,
@@ -13,7 +12,7 @@ pub struct PoeNode {
     pub position: usize,
     pub name: String,
     pub is_notable: bool,
-    pub stats: Vec<Stat>, // Now we own the stats
+    pub stats: Vec<Stat>,
     pub wx: f64,
     pub wy: f64,
     pub active: bool,

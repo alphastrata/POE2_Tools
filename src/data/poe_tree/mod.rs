@@ -18,9 +18,9 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
 };
+
 #[derive(Debug, Clone, Default)]
 pub struct PassiveTree {
-    // Removed lifetime parameter since we'll own our data
     pub groups: HashMap<GroupId, coordinates::Group>,
     pub nodes: HashMap<NodeId, PoeNode>,
     pub edges: HashSet<Edge>,
@@ -28,8 +28,11 @@ pub struct PassiveTree {
 }
 
 impl PassiveTree {
+    /// The main parser for the POE2_Tree.json we found...
+    /// NOTE this panics! intentionally, if there's a problem parsing I want to know and be pointed to the place we need to fixs
     pub fn from_value(val: &Value) -> Result<Self, serde_json::Error> {
-        // First, build groups with error handling
+        //TODO: this is pretty nasty...
+
         let groups: HashMap<GroupId, coordinates::Group> = val
             .get("passive_tree")
             .and_then(|tree| tree.get("groups"))
@@ -46,7 +49,6 @@ impl PassiveTree {
             })
             .unwrap_or_default();
 
-        // Build passive skills map with proper error handling
         let passive_skills: HashMap<String, skills::PassiveSkill> = val
             .get("passive_skills")
             .and_then(|skills| skills.as_object())
@@ -68,7 +70,6 @@ impl PassiveTree {
             })
             .unwrap_or_default();
 
-        // Build nodes with better error handling and null checks
         let nodes: HashMap<NodeId, PoeNode> = val
             .get("passive_tree")
             .and_then(|tree| tree.get("nodes"))
@@ -207,80 +208,8 @@ impl PassiveTree {
     }
 }
 
-// fn calculate_world_position(group: &coordinates::Group, radius: u8, position: usize) -> (f64, f64) {
-//     // Constants for predefined angles
-//     const ANGLES_16: [f64; 16] = [
-//         0.0, 30.0, 45.0, 60.0, 90.0, 120.0, 135.0, 150.0, 180.0, 210.0, 225.0, 240.0, 270.0, 300.0,
-//         315.0, 330.0,
-//     ];
-//     const ANGLES_40: [f64; 40] = [
-//         0.0, 10.0, 20.0, 30.0, 40.0, 45.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0,
-//         130.0, 135.0, 140.0, 150.0, 160.0, 170.0, 180.0, 190.0, 200.0, 210.0, 220.0, 225.0, 230.0,
-//         240.0, 250.0, 260.0, 270.0, 280.0, 290.0, 300.0, 310.0, 315.0, 320.0, 330.0, 340.0, 350.0,
-//     ];
-
-//     // Determine radius index and corresponding value
-//     let r = radius - 1;
-//     let radius = match ORBIT_RADII.get(r as usize) {
-//         Some(&r) => r,
-//         None => panic!(
-//             "Failed to retrieve a r={} for slots at position {} with coordinates ({}, {})",
-//             r, position, group.x, group.y
-//         ),
-//     };
-
-//     // Determine slots for the given radius
-//     let slots = match ORBIT_SLOTS.get(radius as usize) {
-//         Some(&s) => s,
-//         None => {
-//             eprintln!(
-//                 "Failed to retrieve a r={} for slots at position {} with coordinates ({}, {})",
-//                 radius, position, group.x, group.y
-//             );
-//             eprintln!("Supplying Default");
-//             60
-//         }
-//     } as f64;
-
-//     // Calculate the angle
-//     let angle = if slots == 16.0 {
-//         ANGLES_16[position % 16]
-//     } else if slots == 40.0 {
-//         ANGLES_40[position % 40]
-//     } else {
-//         // Default angle calculation
-//         360.0 * position as f64 / slots
-//     };
-
-//     let angle_radians = angle.to_radians();
-
-//     //opt1
-//     // let angle = position as f64 * (2.0 * std::f64::consts::PI / slots);
-
-//     //opt2
-//     // let angle =
-//     //     position as f64 * (2.0 * std::f64::consts::PI / slots) - (std::f64::consts::PI / 2.0);
-
-//     //opt3
-//     // let angle = position as f64 * (2.0 * std::f64::consts::PI / slots)
-//     //     - (std::f64::consts::PI / 2.0)
-//     //     - 90.0;
-
-//     //opt4
-//     // let angle = position as f64 * (2.0 * std::f64::consts::PI / slots) - 90.0;
-
-//     (
-//         group.x + radius * angle_radians.cos(),
-//         group.y + radius * angle_radians.sin(),
-//     )
-// }
-/// Calculate the world position (wx, wy) for a node.
-pub fn calculate_world_position(
-    group: &coordinates::Group,
-    radius: u8,
-    position: usize,
-) -> (f64, f64) {
-    // Validate radius to ensure it's within the range of ORBIT_RADII
+/// Make the world position (wx, wy) for a node.
+fn calculate_world_position(group: &coordinates::Group, radius: u8, position: usize) -> (f64, f64) {
     let r = radius as usize;
     let radius_value = ORBIT_RADII.get(r).unwrap_or_else(|| {
         panic!(
@@ -289,7 +218,6 @@ pub fn calculate_world_position(
         )
     });
 
-    // Validate slots to ensure there are valid divisions for this orbit
     let slots = ORBIT_SLOTS.get(r).copied().unwrap_or_else(|| {
         eprintln!(
             "Failed to retrieve slots for r={} with position={} and group coordinates=({}, {})",
@@ -300,6 +228,8 @@ pub fn calculate_world_position(
     }) as f64;
 
     // Calculate the angle in radians
+    //TODO: f16, or f32?
+
     let angle = match slots as usize {
         16 => {
             // Use predefined angles for 16-slot orbits
@@ -320,12 +250,12 @@ pub fn calculate_world_position(
             PREDEFINED_40[position % 40].to_radians()
         }
         _ => {
-            // Uniform angle division for other cases
+            // Uniform angle division for ALL other cases
             (2.0 * std::f64::consts::PI * position as f64 / slots) - (std::f64::consts::PI / 2.0)
         }
     };
 
-    // Calculate world coordinates using polar-to-Cartesian transformation
+    //polar-to-Cartesian
     (
         group.x + radius_value * angle.cos(),
         group.y + radius_value * angle.sin(),
