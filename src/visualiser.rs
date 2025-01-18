@@ -694,8 +694,6 @@ impl TreeVis<'_> {
     }
 
     pub fn check_and_activate_edges(&mut self) {
-        use std::collections::HashSet;
-
         let mut visited_edges: HashSet<(NodeId, NodeId)> = HashSet::new();
         let active_nodes: Vec<_> = self
             .passive_tree
@@ -705,8 +703,10 @@ impl TreeVis<'_> {
             .map(|(id, _)| *id)
             .collect();
 
-        if active_nodes.len() < 2 {
-            log::debug!("Not enough active nodes to check edges.");
+        // Don't recompute paths and edges unless we've increased the number of nodes
+        let current_active_count = active_nodes.len();
+        let previous_active_count = ACTIVE_NODE_COUNT.load(Ordering::Relaxed);
+        if current_active_count <= previous_active_count {
             return;
         }
 
@@ -728,6 +728,7 @@ impl TreeVis<'_> {
                 ControlFlow::Continue::<()>(())
             })
         });
+        self.active_edges = visited_edges;
 
         log::debug!("Edge activation completed.");
     }
