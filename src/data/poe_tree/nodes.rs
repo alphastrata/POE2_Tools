@@ -60,11 +60,6 @@ impl PoeNode {
     ];
 
     pub fn base_color(&self, config: &UserConfig) -> egui::Color32 {
-        //TODO: get from config
-        if self.active {
-            return egui::Color32::from_rgb(41, 211, 152); // Green
-        }
-
         let name = self.name.to_lowercase();
         if Self::INTELLIGENCE_KEYWORDS
             .iter()

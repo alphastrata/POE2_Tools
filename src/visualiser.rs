@@ -49,7 +49,7 @@ pub struct TreeVis<'p> {
 impl<'p> eframe::App for TreeVis<'p> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // data updates:
-        check_and_activate_path(self.passive_tree, 10364);
+        self.check_and_activate_path();
 
         // IO
         self.handle_mouse(ctx);
@@ -71,6 +71,8 @@ impl<'p> eframe::App for TreeVis<'p> {
 
         // drawing
         self.redraw_tree(ctx);
+        // TODO: maybe we highlight in the redraw_tree() call?
+        self.draw_active_node_highlight(ctx);
 
         //TODO: draw rhs menu
 
@@ -274,8 +276,8 @@ impl<'p> TreeVis<'p> {
         //     .collect();
 
         let mut vis = Self {
-            camera: RefCell::new((0.0, 0.0)), // Start camera at origin
-            zoom: 0.02,
+            camera: RefCell::new((700.0, 700.0)),
+            zoom: 0.07,
             passive_tree,
             hovered_node: None, // No node hovered initially
 
@@ -303,7 +305,7 @@ impl<'p> TreeVis<'p> {
             controls: HashMap::new(),
         };
 
-        vis.initialize_camera_and_zoom();
+        // vis.initialize_camera_and_zoom();
         vis
     }
 
@@ -516,62 +518,74 @@ impl<'p> TreeVis<'p> {
     pub fn click_node(&mut self, node_id: NodeId) {
         if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
             node.active = !node.active;
+            if node.active {
+                if !self.path.contains(&node_id) {
+                    self.path.push(node_id);
+                }
+            } else {
+                self.path.retain(|&id| id != node_id);
+            }
+            log::debug!("Node {} active state toggled to: {}", node_id, node.active);
+            log::debug!("Current path nodes: {:?}", self.path);
         }
     }
 
-    pub fn check_and_activate_path(&mut self, start_node_id: NodeId) {
-        let active_nodes: Vec<_> = self
-            .passive_tree
-            .nodes
-            .iter()
-            .filter(|(_, node)| node.active)
-            .map(|(id, _)| *id)
-            .collect();
+    pub fn check_and_activate_path(&mut self) {
+        use std::time::Instant;
 
-        if active_nodes.len() == 2 {
-            let (first, second) = (active_nodes[0], active_nodes[1]);
+        if self.path.len() == 2 {
+            let (first, second) = (self.path[0], self.path[1]);
 
+            // Check if the nodes are already directly connected
             if !self.passive_tree.edges.iter().any(|edge| {
                 (edge.start == first && edge.end == second)
                     || (edge.start == second && edge.end == first)
             }) {
-                let v = self
-                    .passive_tree
-                    .find_path(start_node_id, second)
-                    .into_iter();
+                let start_time = Instant::now();
 
-                v.for_each(|node_id| {
-                    if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
-                        node.active = true;
+                // Use pathfinding to find a route between the nodes
+                let path = self.passive_tree.find_path(first, second);
+
+                if path.is_empty() {
+                    log::debug!("No path found between {} and {}", first, second);
+                } else {
+                    log::debug!("Path found: {:?}, activating nodes...", path);
+
+                    // Activate all nodes along the path
+                    for node_id in path.iter() {
+                        if let Some(node) = self.passive_tree.nodes.get_mut(node_id) {
+                            node.active = true;
+                            if !self.path.contains(node_id) {
+                                self.path.push(*node_id);
+                            }
+                        }
                     }
-                });
+
+                    let duration = start_time.elapsed();
+                    log::debug!("Path activated in {:?}", duration);
+                }
             }
         }
     }
-}
 
-//TODO: the start_node_id needs to be set by the user... or char reload
-fn check_and_activate_path(tree: &mut PassiveTree, start_node_id: NodeId) {
-    let active_nodes: Vec<_> = tree
-        .nodes
-        .iter()
-        .filter(|(_, node)| node.active)
-        .map(|(id, _)| *id)
-        .collect();
+    pub fn draw_active_node_highlight(&self, ctx: &egui::Context) {
+        let painter = ctx.layer_painter(egui::LayerId::background());
+        let color = parse_color(self.user_config.colors.get("yellow").unwrap());
 
-    if active_nodes.len() == 2 {
-        let (first, second) = (active_nodes[0], active_nodes[1]);
+        for node in self.passive_tree.nodes.values() {
+            if node.active {
+                let sx = self.world_to_screen_x(node.wx);
+                let sy = self.world_to_screen_y(node.wy);
 
-        if !tree.edges.iter().any(|edge| {
-            (edge.end == first && edge.start == second) || (edge.end == second && edge.end == first)
-        }) {
-            let v = tree.find_path(start_node_id, second).into_iter();
+                let mut radius = Self::BASE_RADIUS / self.current_zoom_level();
+                radius *= 1.04; // Increase diameter by 4%
 
-            v.for_each(|node_id| {
-                if let Some(node) = tree.nodes.get_mut(&node_id) {
-                    node.active = true;
-                }
-            });
+                painter.circle_stroke(
+                    egui::pos2(sx, sy),
+                    radius,
+                    egui::Stroke::new(2.0, color), // Customize stroke width and color
+                );
+            }
         }
     }
 }
