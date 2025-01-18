@@ -1,4 +1,4 @@
-//$ src/visualiser.rs
+//$ src\visualiser.rs
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -45,9 +45,19 @@ pub struct TreeVis<'p> {
 
 impl<'p> eframe::App for TreeVis<'p> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // IO
         self.handle_mouse(ctx);
-        self.redraw_tree(ctx);
+        self.update_active_edges();
+
+        //DEBUG:
         self.draw_debug_bar(ctx);
+
+        // drawing
+        self.redraw_tree(ctx);
+
+        //TODO: draw rhs menu
+
+        //todo: draw top menu (open tree, char etc..)
     }
 }
 // Helper Functions
@@ -170,13 +180,7 @@ impl<'p> TreeVis<'p> {
                 }
 
                 //TODO: get from config
-                let color = if node.name.to_lowercase().contains("flow like water") {
-                    egui::Color32::from_rgb(0, 8, 212) // Blue for specific node
-                } else if node.active {
-                    egui::Color32::from_rgb(0, 222, 8) // Green for active nodes
-                } else {
-                    egui::Color32::from_rgb(128, 138, 138) // Default gray
-                };
+                let color = node.base_color(&self.user_config);
 
                 painter.circle_filled(egui::pos2(sx, sy), radius, color);
             });
@@ -390,16 +394,18 @@ impl<'p> TreeVis<'p> {
         let mut closest_node = None;
         let mut closest_distance = f32::MAX;
 
-        for node in self.passive_tree.nodes.values() {
+        self.passive_tree.nodes.values().for_each(|node| {
             let sx = self.world_to_screen_x(node.wx);
             let sy = self.world_to_screen_y(node.wy);
 
             let distance = ((mouse_pos.x - sx).powi(2) + (mouse_pos.y - sy).powi(2)).sqrt();
+
+            //todo: from config
             if distance < 15.0 && distance < closest_distance {
                 closest_node = Some(node.node_id);
                 closest_distance = distance;
             }
-        }
+        });
 
         self.hovered_node = closest_node;
     }

@@ -1,6 +1,6 @@
+//$ src\main.rs
 use std::{fs::File, io::BufReader};
 
-//$ src/main.rs
 use poo_tools::{
     config::{UserCharacter, UserConfig},
     data::prelude::PassiveTree,

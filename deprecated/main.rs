@@ -1,2 +1,2 @@
-//$ deprecated/main.rs
+//$ deprecated\main.rs
 fn main() {}

@@ -1,4 +1,4 @@
-//$ src/data/poe_tree/mod.rs
+//$ src\data\poe_tree\mod.rs
 pub mod consts;
 pub mod coordinates;
 pub mod edges;
@@ -91,7 +91,7 @@ impl PassiveTree {
                             groups.get(&parent).iter().for_each(|group| {
                                 match calculate_world_position(group, radius, position) {
                                     result => {
-                                        eprintln!("{:?}", nval);
+                                        // eprintln!("{:?}", nval);
                                         wx_wy = result;
                                     }
                                 }

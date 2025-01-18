@@ -1,4 +1,4 @@
-//$ src/data/poe_tree/pathfinding.rs
+//$ src\data\poe_tree\pathfinding.rs
 use super::consts::*;
 use super::coordinates::Group;
 use super::edges::Edge;

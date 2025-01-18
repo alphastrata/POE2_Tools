@@ -1,6 +1,6 @@
+//$ src\data\poe_tree\stats.rs
 use std::collections::HashMap;
 
-//$ src/data/poe_tree/stats.rs
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

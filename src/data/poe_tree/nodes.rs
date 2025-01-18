@@ -1,4 +1,6 @@
-//$ src/data/poe_tree/nodes.rs
+//$ src\data\poe_tree\nodes.rs
+use crate::config::{parse_color, UserConfig};
+
 use super::stats::{Operand, Stat};
 use super::type_wrappings::{EdgeId, GroupId, NodeId};
 use super::{consts::*, PassiveTree};
@@ -29,5 +31,54 @@ impl PoeNode {
 
     pub fn path_to_target(&self, target: NodeId, tree: &PassiveTree) -> Vec<NodeId> {
         tree.find_shortest_path(self.node_id, target)
+    }
+}
+
+impl PoeNode {
+    pub const INTELLIGENCE_KEYWORDS: [&'static str; 6] = [
+        "intelligence",
+        "energy shield",
+        "lightning",
+        "spell damage",
+        "critical strike chance",
+        "critical damage",
+    ];
+    pub const DEXTERITY_KEYWORDS: [&'static str; 6] = [
+        "evasion",
+        "dexterity",
+        "movement speed",
+        "attack speed",
+        "skill speed",
+        "spell speed",
+    ];
+    pub const STRENGTH_KEYWORDS: [&'static str; 5] = [
+        "attack damage",
+        "melee damage",
+        "physical damage",
+        "maximum life",
+        "life on kill",
+    ];
+
+    pub fn base_color(&self, config: &UserConfig) -> egui::Color32 {
+        //TODO: get from config
+        if self.active {
+            return egui::Color32::from_rgb(41, 211, 152); // Green
+        }
+
+        let name = self.name.to_lowercase();
+        if Self::INTELLIGENCE_KEYWORDS
+            .iter()
+            .any(|&kw| name.contains(kw))
+        {
+            return parse_color(config.colors.get("intelligence").unwrap());
+        }
+        if Self::DEXTERITY_KEYWORDS.iter().any(|&kw| name.contains(kw)) {
+            return parse_color(config.colors.get("dexterity").unwrap());
+        }
+        if Self::STRENGTH_KEYWORDS.iter().any(|&kw| name.contains(kw)) {
+            return parse_color(config.colors.get("strength").unwrap());
+        }
+
+        parse_color(config.colors.get("all_nodes").unwrap())
     }
 }

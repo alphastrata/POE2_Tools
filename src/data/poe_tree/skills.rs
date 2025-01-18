@@ -1,8 +1,8 @@
+//$ src\data\poe_tree\skills.rs
 use serde::{Deserialize, Serialize};
 
 use super::stats::{deserialize_stats, Stat};
 
-//$ src/data/poe_tree/skills.rs
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PassiveSkill {
     pub name: Option<String>,
