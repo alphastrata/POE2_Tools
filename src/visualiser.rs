@@ -4,6 +4,7 @@ use std::{
     collections::{HashMap, HashSet},
     default::Default,
     sync::atomic::{AtomicBool, Ordering},
+    time::Instant,
 };
 
 use log::debug;
@@ -13,7 +14,40 @@ use crate::{
     config::{parse_color, UserCharacter},
     data::poe_tree::type_wrappings::NodeId,
 };
+impl eframe::App for TreeVis<'_> {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // data updates:
+        self.check_and_activate_path();
 
+        // IO
+        self.handle_mouse(ctx);
+
+        //DEBUG:
+        self.draw_debug_bar(ctx);
+
+        ctx.input(|input| {
+            if let Some(hovered) = self.hovered_node {
+                if input.pointer.primary_clicked() {
+                    self.click_node(hovered);
+                }
+            }
+
+            if input.key_pressed(egui::Key::Escape) {
+                std::process::exit(0);
+            }
+        });
+
+        // drawing
+        self.redraw_tree(ctx);
+        // TODO: maybe we highlight in the redraw_tree() call?
+        self.draw_color_and_highlights(ctx);
+
+        //TODO: draw rhs menu
+        self.draw_rhs_menu(ctx);
+
+        //todo: draw top menu (open tree, char etc..)
+    }
+}
 pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
     zoom: f32,
@@ -48,39 +82,6 @@ pub struct TreeVis<'p> {
     controls: HashMap<String, egui::Key>,
 }
 
-impl eframe::App for TreeVis<'_> {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // data updates:
-        self.check_and_activate_path();
-
-        // IO
-        self.handle_mouse(ctx);
-
-        //DEBUG:
-        self.draw_debug_bar(ctx);
-
-        ctx.input(|input| {
-            if let Some(hovered) = self.hovered_node {
-                if input.pointer.primary_clicked() {
-                    self.click_node(hovered);
-                }
-            }
-
-            if input.key_pressed(egui::Key::Escape) {
-                std::process::exit(0);
-            }
-        });
-
-        // drawing
-        self.redraw_tree(ctx);
-        // TODO: maybe we highlight in the redraw_tree() call?
-        self.draw_active_node_highlight(ctx);
-
-        //TODO: draw rhs menu
-
-        //todo: draw top menu (open tree, char etc..)
-    }
-}
 // Helper Functions
 impl<'p> TreeVis<'p> {
     // Camera consts
@@ -276,8 +277,6 @@ impl<'p> TreeVis<'p> {
         //     .iter()
         //     .map(|(action, key)| (action.clone(), *key))
         //     .collect();
-
-        
 
         // vis.initialize_camera_and_zoom();
         Self {
@@ -532,9 +531,10 @@ impl TreeVis<'_> {
         }
     }
 
-    pub fn draw_active_node_highlight(&self, ctx: &egui::Context) {
+    pub fn draw_color_and_highlights(&self, ctx: &egui::Context) {
         let painter = ctx.layer_painter(egui::LayerId::background());
-        let color = parse_color(self.user_config.colors.get("yellow").unwrap());
+        let active_color = parse_color(self.user_config.colors.get("yellow").unwrap());
+        let search_color = parse_color(self.user_config.colors.get("purple").unwrap());
         let zoom = 1.0 + self.zoom;
 
         self.passive_tree.nodes.values().for_each(|node| {
@@ -555,17 +555,34 @@ impl TreeVis<'_> {
                 painter.circle_stroke(
                     egui::pos2(sx, sy),
                     radius / self.current_zoom_level(),
-                    egui::Stroke::new(3.0, color), // Customize stroke width and color
+                    egui::Stroke::new(3.0, active_color),
+                );
+            } else if self.search_results.contains(&node.node_id) {
+                let sx = self.world_to_screen_x(node.wx);
+                let sy = self.world_to_screen_y(node.wy);
+
+                let mut radius = Self::BASE_RADIUS / zoom;
+
+                if node.is_notable {
+                    radius *= Self::NOTABLE_MULTIPLIER;
+                } else if !node.name.chars().any(|c| c.is_ascii_digit()) {
+                    radius *= Self::NAMELESS_MULTIPLIER;
+                }
+
+                radius *= 0.05;
+
+                painter.circle_stroke(
+                    egui::pos2(sx, sy),
+                    radius / self.current_zoom_level(),
+                    egui::Stroke::new(3.0, search_color),
                 );
             }
         });
     }
 }
-
-impl TreeVis<'_> {
+impl<'p> TreeVis<'p> {
     pub fn check_and_activate_path(&mut self) {
-        use std::time::Instant;
-
+        let mut visited_nodes: HashSet<NodeId> = HashSet::new();
         let active_nodes: Vec<_> = self
             .passive_tree
             .nodes
@@ -574,15 +591,17 @@ impl TreeVis<'_> {
             .map(|(id, _)| *id)
             .collect();
 
-        // log::debug!("Active nodes: {:?}", active_nodes);
-
         let mut updated_nodes = false;
 
-        // Check paths between all pairs of active nodes
         for i in 0..active_nodes.len() {
             for j in (i + 1)..active_nodes.len() {
                 let start = active_nodes[i];
                 let end = active_nodes[j];
+
+                // Skip if both nodes have already been part of a valid path
+                if visited_nodes.contains(&start) && visited_nodes.contains(&end) {
+                    continue;
+                }
 
                 log::debug!("Checking path between {} and {}", start, end);
 
@@ -603,6 +622,7 @@ impl TreeVis<'_> {
                                     node.active = true;
                                     updated_nodes = true;
                                 }
+                                visited_nodes.insert(*node_id);
                             }
                         }
 
@@ -615,11 +635,70 @@ impl TreeVis<'_> {
             }
         }
 
-        // Log a message if new nodes were activated
         if updated_nodes {
             log::debug!("Nodes activated along paths.");
-            // } else {
-            //     log::debug!("No new nodes activated.");
         }
+    }
+
+    fn clear_active_nodes(&mut self) {
+        for node in self.passive_tree.nodes.values_mut() {
+            node.active = false;
+        }
+        self.path.clear();
+        self.active_edges.clear();
+        log::info!("Cleared all active nodes and paths.");
+    }
+}
+
+impl<'p> TreeVis<'p> {
+    pub fn draw_rhs_menu(&mut self, ctx: &egui::Context) {
+        egui::SidePanel::right("rhs_menu").show(ctx, |ui| {
+            ui.heading("Menu");
+
+            // Inline Buttons
+            ui.horizontal(|ui| {
+                if ui.button("New").clicked() {
+                    log::info!("New button clicked");
+                    // Implement New action logic here
+                }
+
+                if ui.button("Load").clicked() {
+                    log::info!("Load button clicked");
+                    // Implement Load action logic here
+                }
+
+                if ui.button("Save").clicked() {
+                    log::info!("Save button clicked");
+                    self.save_character();
+                }
+
+                if ui.button("Clear").clicked() {
+                    log::info!("Clear button clicked");
+                    self.clear_active_nodes();
+                }
+            });
+
+            // Search Functionality
+            ui.separator();
+            ui.heading("Search");
+
+            if ui.text_edit_singleline(&mut self.search_query).changed() {
+                self.search_results = self.passive_tree.fuzzy_search_nodes(&self.search_query);
+                log::debug!("Search query updated: {}", self.search_query);
+                log::debug!("Search results: {:?}", self.search_results);
+            }
+
+            if !self.search_query.is_empty() {
+                ui.label("Search results:");
+                for &node_id in &self.search_results {
+                    if let Some(node) = self.passive_tree.nodes.get(&node_id) {
+                        if ui.button(&node.name).clicked() {
+                            self.go_to_node(node_id);
+                            log::debug!("Navigated to node: {} ({})", node.name, node_id);
+                        }
+                    }
+                }
+            }
+        });
     }
 }

@@ -29,10 +29,21 @@ fn main() {
     );
 
     // Initialize the visualization
-    let native_opts = eframe::NativeOptions::default();
+
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_decorations(true) // Show OS-specific window decorations
+            .with_inner_size([1920.0, 1080.0]) // Set initial window size
+            .with_min_inner_size([800.0, 600.0]) // Set a reasonable minimum size
+            .with_transparent(false), // Disable transparency for standard window appearance
+
+        ..Default::default()
+    };
+
+    // let native_opts = eframe::NativeOptions::default();
     _ = eframe::run_native(
         "POE2_TREE debug vis tool",
-        native_opts,
+        options,
         Box::new(|_cc| Ok(Box::new(TreeVis::new(&mut tree, config, character)))),
     );
 }

@@ -32,9 +32,7 @@ impl PoeNode {
     pub fn path_to_target(&self, target: NodeId, tree: &PassiveTree) -> Vec<NodeId> {
         tree.find_shortest_path(self.node_id, target)
     }
-}
 
-impl PoeNode {
     pub const INTELLIGENCE_KEYWORDS: [&'static str; 6] = [
         "intelligence",
         "energy shield",

@@ -44,6 +44,7 @@ fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usiz
     dist
 }
 impl PassiveTree {
+    /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
     const STEP_LIMIT: i32 = 123;
 
     /// naive BFS
@@ -98,8 +99,14 @@ impl PassiveTree {
     }
 
     pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<usize> {
-        _fuzzy_search_nodes(self, query)
+        log::debug!("Performing search for query: {}", query);
+        self.nodes
+            .iter()
+            .filter(|(_, node)| node.name.to_lowercase().contains(&query.to_lowercase()))
+            .map(|(id, _)| *id)
+            .collect()
     }
+
     pub fn create_paths(&self, nodes: Vec<&str>) -> Result<Vec<NodeId>, String> {
         let mut path = Vec::new();
         let mut last_node_id: Option<NodeId> = None;
