@@ -15,7 +15,7 @@ fn main() {
     let reader = BufReader::new(file);
     let u = serde_json::from_reader(reader).unwrap();
 
-    let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
+    let mut tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
 
     // Load the character data, defaulting to `None` if the file is missing or invalid
     let character = UserCharacter::load_from_toml("character.toml");
@@ -31,6 +31,6 @@ fn main() {
     _ = eframe::run_native(
         "POE2_TREE debug vis tool",
         native_opts,
-        Box::new(|_cc| Ok(Box::new(TreeVis::new(&tree, config, character)))),
+        Box::new(|_cc| Ok(Box::new(TreeVis::new(&mut tree, config, character)))),
     );
 }

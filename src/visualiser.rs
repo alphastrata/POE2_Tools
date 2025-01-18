@@ -6,13 +6,16 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use crate::config::{parse_color, UserCharacter};
 use crate::{config::UserConfig, data::poe_tree::PassiveTree};
+use crate::{
+    config::{parse_color, UserCharacter},
+    data::poe_tree::type_wrappings::NodeId,
+};
 
 pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
     zoom: f32,
-    passive_tree: &'p PassiveTree,
+    passive_tree: &'p mut PassiveTree,
     hovered_node: Option<usize>,
 
     // Fuzzy-search-related
@@ -47,7 +50,6 @@ impl<'p> eframe::App for TreeVis<'p> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // IO
         self.handle_mouse(ctx);
-        self.update_active_edges();
 
         //DEBUG:
         self.draw_debug_bar(ctx);
@@ -228,17 +230,6 @@ impl<'p> TreeVis<'p> {
             }
         }
         self.path = full_path;
-        self.update_active_edges();
-    }
-
-    fn update_active_edges(&mut self) {
-        self.active_edges.clear();
-        for window in self.path.windows(2) {
-            if let [a, b] = window {
-                self.active_edges.insert((*a, *b));
-                self.active_edges.insert((*b, *a));
-            }
-        }
     }
 
     fn find_path(&mut self, start: usize, target: usize) {
@@ -256,7 +247,7 @@ impl<'p> TreeVis<'p> {
     }
 
     pub fn new(
-        passive_tree: &'p PassiveTree,
+        passive_tree: &'p mut PassiveTree,
         user_config: UserConfig,
         current_character: Option<UserCharacter>,
     ) -> Self {
@@ -503,5 +494,24 @@ impl<'p> TreeVis<'p> {
 
     fn world_to_screen_y(&self, wy: f64) -> f32 {
         ((wy as f32 - self.camera.borrow().1) * self.zoom + 500.0) as f32
+    }
+}
+
+impl<'p> TreeVis<'p> {
+    pub fn click_node(&mut self, node_id: NodeId) {
+        if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
+            node.active = true;
+            self.update_active_edges(node_id);
+        }
+    }
+
+    pub fn update_active_edges(&mut self, node_id: NodeId) {
+        if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
+            for edge in &self.passive_tree.edges {
+                if edge.from == node_id || edge.to == node_id {
+                    node.active = true;
+                }
+            }
+        }
     }
 }
