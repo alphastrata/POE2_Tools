@@ -44,18 +44,23 @@ fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usiz
     dist
 }
 impl PassiveTree {
+    const STEP_LIMIT: i32 = 123;
+
     /// naive BFS
     pub fn find_path(&self, start: NodeId, end: NodeId) -> Vec<NodeId> {
         use std::collections::{HashSet, VecDeque};
 
+        let mut depths = HashMap::new();
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
         let mut came_from = std::collections::HashMap::new();
 
         queue.push_back(start);
         visited.insert(start);
+        depths.insert(start, 0); // Start node at depth 0
 
         while let Some(current) = queue.pop_front() {
+            let current_depth = *depths.get(&current).unwrap_or(&0);
             if current == end {
                 let mut path = vec![end];
                 let mut step = end;
@@ -65,6 +70,11 @@ impl PassiveTree {
                 }
                 path.reverse();
                 return path;
+            }
+
+            // Stop exploring further if max steps are reached
+            if current_depth >= Self::STEP_LIMIT {
+                continue;
             }
 
             for edge in &self.edges {
