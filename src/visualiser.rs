@@ -3,10 +3,12 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     default::Default,
-    sync::atomic::{AtomicBool, Ordering},
+    ops::ControlFlow,
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
     time::Instant,
 };
 
+use egui::accesskit::Tree;
 use log::debug;
 
 use crate::{config::UserConfig, data::poe_tree::PassiveTree};
@@ -14,10 +16,13 @@ use crate::{
     config::{parse_color, UserCharacter},
     data::poe_tree::type_wrappings::NodeId,
 };
+static ACTIVE_NODE_COUNT: AtomicUsize = AtomicUsize::new(0);
+
 impl eframe::App for TreeVis<'_> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // data updates:
-        self.check_and_activate_path();
+        self.check_and_activate_nodes();
+        self.check_and_activate_edges();
 
         // IO
         self.handle_mouse(ctx);
@@ -48,6 +53,53 @@ impl eframe::App for TreeVis<'_> {
         //todo: draw top menu (open tree, char etc..)
     }
 }
+
+impl TreeVis<'_> {
+    pub fn set_start_node(&mut self, ctx: &egui::Context) {
+        if let Some((&closest_id, closest_node)) =
+            self.passive_tree.nodes.iter().min_by(|(_, a), (_, b)| {
+                let dist_a = (a.wx.powi(2) + a.wy.powi(2)).sqrt();
+                let dist_b = (b.wx.powi(2) + b.wy.powi(2)).sqrt();
+                dist_a
+                    .partial_cmp(&dist_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+        {
+            self.start_node_id = closest_id;
+            log::info!("Start node set to ID: {}", closest_id);
+
+            // Draw a small white triangle at the start node
+            let painter = ctx.layer_painter(egui::LayerId::background());
+            let sx = self.world_to_screen_x(closest_node.wx);
+            let sy = self.world_to_screen_y(closest_node.wy);
+
+            painter.add(egui::Shape::convex_polygon(
+                vec![
+                    egui::pos2(sx, sy - 5.0),       // Top point of the triangle
+                    egui::pos2(sx - 4.0, sy + 3.0), // Bottom-left point
+                    egui::pos2(sx + 4.0, sy + 3.0), // Bottom-right point
+                ],
+                egui::Color32::WHITE,
+                egui::Stroke::NONE,
+            ));
+        }
+    }
+
+    /// Draw the debug information bar
+    fn draw_debug_bar(&self, ctx: &egui::Context) {
+        let (mouse_info, zoom_info, hovered_node_info) = self.get_debug_bar_contents(ctx);
+
+        egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(mouse_info);
+                ui.separator();
+                ui.label(zoom_info);
+                ui.separator();
+                ui.label(hovered_node_info);
+            });
+        });
+    }
+}
 pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
     zoom: f32,
@@ -67,7 +119,9 @@ pub struct TreeVis<'p> {
     path_nodes: Vec<usize>,
 
     /// Store edges of the current path
+    // NOTE: mostly used for drawing.
     active_edges: HashSet<(usize, usize)>,
+    active_nodes: HashSet<usize>,
 
     // Config-driven colours
     color_map: HashMap<String, String>,
@@ -168,7 +222,7 @@ impl<'p> TreeVis<'p> {
             let zoom = 1.0 + self.zoom; // Zoom level for scaling nodes
 
             // Draw edges
-            for edge in &self.passive_tree.edges {
+            self.passive_tree.edges.iter().for_each(|edge| {
                 if let (Some(source), Some(target)) = (
                     self.passive_tree.nodes.get(&edge.start),
                     self.passive_tree.nodes.get(&edge.end),
@@ -183,7 +237,7 @@ impl<'p> TreeVis<'p> {
                         egui::Stroke::new(1.0, egui::Color32::GRAY),
                     );
                 }
-            }
+            });
 
             // Draw nodes
             self.passive_tree.nodes.values().for_each(|node| {
@@ -294,7 +348,7 @@ impl<'p> TreeVis<'p> {
             target_node_id: 0,            // Default to no target node
             path: Vec::new(),             // No path initially
             active_edges: HashSet::new(), // No edges highlighted initially
-
+            active_nodes: HashSet::new(),
             // Config-driven colours
             color_map: HashMap::new(),
 
@@ -464,21 +518,6 @@ impl<'p> TreeVis<'p> {
         (mouse_info, zoom_info, hovered_node_info)
     }
 
-    /// Draw the debug information bar
-    fn draw_debug_bar(&self, ctx: &egui::Context) {
-        let (mouse_info, zoom_info, hovered_node_info) = self.get_debug_bar_contents(ctx);
-
-        egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(mouse_info);
-                ui.separator();
-                ui.label(zoom_info);
-                ui.separator();
-                ui.label(hovered_node_info);
-            });
-        });
-    }
-
     fn initialize_camera_and_zoom(&mut self) {
         let (min_x, max_x) = self
             .passive_tree
@@ -515,7 +554,7 @@ impl<'p> TreeVis<'p> {
 }
 
 impl TreeVis<'_> {
-    pub fn click_node(&mut self, node_id: NodeId) {
+    fn click_node(&mut self, node_id: NodeId) {
         if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
             node.active = !node.active;
             if node.active {
@@ -530,7 +569,7 @@ impl TreeVis<'_> {
         }
     }
 
-    pub fn draw_color_and_highlights(&self, ctx: &egui::Context) {
+    fn draw_color_and_highlights(&self, ctx: &egui::Context) {
         let painter = ctx.layer_painter(egui::LayerId::background());
         let active_color = parse_color(self.user_config.colors.get("yellow").unwrap());
         let search_color = parse_color(self.user_config.colors.get("purple").unwrap());
@@ -579,10 +618,10 @@ impl TreeVis<'_> {
         });
     }
 }
-impl<'p> TreeVis<'p> {
-    pub fn check_and_activate_path(&mut self) {
-        let mut visited_nodes: HashSet<NodeId> = HashSet::new();
-        let active_nodes: Vec<_> = self
+
+impl TreeVis<'_> {
+    pub fn check_and_activate_nodes(&mut self) {
+        let active_nodes: HashSet<usize> = self
             .passive_tree
             .nodes
             .iter()
@@ -590,19 +629,30 @@ impl<'p> TreeVis<'p> {
             .map(|(id, _)| *id)
             .collect();
 
+        let current_active_count = active_nodes.len();
+        let previous_active_count = ACTIVE_NODE_COUNT.load(Ordering::Relaxed);
+
+        if current_active_count <= previous_active_count {
+            return;
+        }
+
+        ACTIVE_NODE_COUNT.store(current_active_count, Ordering::Relaxed);
+
+        if active_nodes.len() < 2 {
+            log::debug!("Not enough active nodes for pathfinding.");
+            return;
+        }
+
+        let mut visited_nodes: HashSet<NodeId> = HashSet::new();
         let mut updated_nodes = false;
 
-        for i in 0..active_nodes.len() {
-            for j in (i + 1)..active_nodes.len() {
-                let start = active_nodes[i];
-                let end = active_nodes[j];
-
-                // Skip if both nodes have already been part of a valid path
+        active_nodes.iter().enumerate().try_for_each(|(i, &start)| {
+            active_nodes.iter().skip(i + 1).try_for_each(|&end| {
                 if visited_nodes.contains(&start) && visited_nodes.contains(&end) {
-                    continue;
+                    return ControlFlow::Continue::<()>(());
                 }
 
-                log::debug!("Checking path between {} and {}", start, end);
+                log::debug!("Attempting to find path between {} and {}", start, end);
 
                 if !self.passive_tree.edges.iter().any(|edge| {
                     (edge.start == start && edge.end == end)
@@ -614,16 +664,15 @@ impl<'p> TreeVis<'p> {
                     if !path.is_empty() {
                         log::debug!("Path found: {:?} between {} and {}", path, start, end);
 
-                        // Activate all nodes along the path
-                        for node_id in path.iter() {
-                            if let Some(node) = self.passive_tree.nodes.get_mut(node_id) {
+                        path.iter().for_each(|&node_id| {
+                            if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
                                 if !node.active {
                                     node.active = true;
                                     updated_nodes = true;
                                 }
-                                visited_nodes.insert(*node_id);
+                                visited_nodes.insert(node_id);
                             }
-                        }
+                        });
 
                         let duration = start_time.elapsed();
                         log::debug!("Path activated in {:?}", duration);
@@ -631,14 +680,60 @@ impl<'p> TreeVis<'p> {
                         log::debug!("No path found between {} and {}", start, end);
                     }
                 }
-            }
-        }
+
+                ControlFlow::Continue::<()>(())
+            })
+        });
 
         if updated_nodes {
             log::debug!("Nodes activated along paths.");
+            self.active_nodes = active_nodes;
+        } else {
+            log::debug!("No new nodes activated.");
         }
     }
 
+    pub fn check_and_activate_edges(&mut self) {
+        use std::collections::HashSet;
+
+        let mut visited_edges: HashSet<(NodeId, NodeId)> = HashSet::new();
+        let active_nodes: Vec<_> = self
+            .passive_tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.active)
+            .map(|(id, _)| *id)
+            .collect();
+
+        if active_nodes.len() < 2 {
+            log::debug!("Not enough active nodes to check edges.");
+            return;
+        }
+
+        active_nodes.iter().enumerate().try_for_each(|(i, &start)| {
+            active_nodes.iter().skip(i + 1).try_for_each(|&end| {
+                if visited_edges.contains(&(start, end)) || visited_edges.contains(&(end, start)) {
+                    return ControlFlow::Continue::<()>(());
+                }
+
+                if self.passive_tree.edges.iter().any(|edge| {
+                    (edge.start == start && edge.end == end)
+                        || (edge.start == end && edge.end == start)
+                }) {
+                    log::debug!("Edge found and activated between {} and {}", start, end);
+
+                    visited_edges.insert((start, end));
+                }
+
+                ControlFlow::Continue::<()>(())
+            })
+        });
+
+        log::debug!("Edge activation completed.");
+    }
+}
+
+impl TreeVis<'_> {
     fn clear_active_nodes(&mut self) {
         for node in self.passive_tree.nodes.values_mut() {
             node.active = false;
@@ -647,107 +742,132 @@ impl<'p> TreeVis<'p> {
         self.active_edges.clear();
         log::info!("Cleared all active nodes and paths.");
     }
-}
 
-impl<'p> TreeVis<'p> {
-    pub fn draw_rhs_menu(&mut self, ctx: &egui::Context) {
+    fn draw_rhs_menu(&mut self, ctx: &egui::Context) {
         egui::SidePanel::right("rhs_menu").show(ctx, |ui| {
             ui.heading("Menu");
 
-            // Inline Buttons
-            ui.horizontal(|ui| {
-                if ui.button("New").clicked() {
-                    log::info!("New button clicked");
-                    // Implement New action logic here
-                }
-
-                if ui.button("Load").clicked() {
-                    log::info!("Load button clicked");
-                    // Implement Load action logic here
-                }
-
-                if ui.button("Save").clicked() {
-                    log::info!("Save button clicked");
-                    self.save_character();
-                }
-
-                if ui.button("Clear").clicked() {
-                    log::info!("Clear button clicked");
-                    self.clear_active_nodes();
-                }
-            });
+            // Top Buttons Section
+            self.draw_top_buttons(ui);
 
             // Search Functionality
-            ui.separator();
-            ui.heading("Search");
+            self.search(ui);
 
-            if ui.text_edit_singleline(&mut self.search_query).changed() {
+            // Start and Target Node Configuration
+            self.pathing(ui);
+        });
+    }
+
+    fn draw_top_buttons(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            if ui
+                .add(egui::Button::new("🆕").min_size(egui::vec2(120.0, 50.0)))
+                .on_hover_text("Create a new configuration")
+                .clicked()
+            {
+                log::info!("New button clicked");
+                // Implement New action logic here
+            }
+
+            if ui
+                .add(egui::Button::new("📂").min_size(egui::vec2(120.0, 50.0)))
+                .on_hover_text("Load an existing configuration")
+                .clicked()
+            {
+                log::info!("Load button clicked");
+                // Implement Load action logic here
+            }
+
+            if ui
+                .add(egui::Button::new("💾").min_size(egui::vec2(120.0, 50.0)))
+                .on_hover_text("Save the current configuration")
+                .clicked()
+            {
+                log::info!("Save button clicked");
+                self.save_character();
+            }
+
+            if ui
+                .add(egui::Button::new("🗑️").min_size(egui::vec2(120.0, 50.0)))
+                .on_hover_text("Clear all active nodes")
+                .clicked()
+            {
+                log::info!("Clear button clicked");
+                self.clear_active_nodes();
+            }
+        });
+    }
+
+    fn search(&mut self, ui: &mut egui::Ui) {
+        ui.separator();
+        ui.heading("🔍 Search");
+
+        if ui.text_edit_singleline(&mut self.search_query).changed() {
+            if !self.search_query.is_empty() {
                 self.search_results = self.passive_tree.fuzzy_search_nodes(&self.search_query);
                 log::debug!("Search query updated: {}", self.search_query);
                 log::debug!("Search results: {:?}", self.search_results);
+            } else {
+                self.search_results.clear();
+                log::debug!("Search query cleared, search results reset.");
             }
+        }
 
-            if !self.search_query.is_empty() {
-                ui.label("Search results:");
-                for &node_id in &self.search_results {
-                    if let Some(node) = self.passive_tree.nodes.get(&node_id) {
-                        ui.horizontal(|ui| {
-                            if ui.button(&node.name).clicked() {
-                                self.go_to_node(node_id);
-                                log::debug!("Navigated to node: {} ({})", node.name, node_id);
-                            }
+        if !self.search_query.is_empty() {
+            ui.label("Search results:");
+            for &node_id in &self.search_results {
+                if let Some(node) = self.passive_tree.nodes.get(&node_id) {
+                    ui.horizontal(|ui| {
+                        if ui.button(&node.name).clicked() {
+                            self.go_to_node(node_id);
+                            log::debug!("Navigated to node: {} ({})", node.name, node_id);
+                        }
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.button("📋").clicked() {
                                 ui.output_mut(|o| o.copied_text = node_id.to_string());
                                 log::info!("Copied Node ID {} to clipboard", node_id);
                             }
                         });
-                    }
+                    });
                 }
             }
+        }
+    }
 
-            // Start and Target Node Configuration
-            ui.separator();
-            ui.heading("Node Configuration");
+    fn pathing(&mut self, ui: &mut egui::Ui) {
+        ui.separator();
+        ui.heading("Node Configuration");
 
-            ui.horizontal(|ui| {
-                ui.label("Start Node:");
-                ui.label(self.start_node_id.to_string());
-            });
+        ui.horizontal(|ui| {
+            ui.label("Start Node:");
+            ui.label(self.start_node_id.to_string());
+        });
 
-            ui.horizontal(|ui| {
-                ui.label("Target Node:");
-                let mut target_node_str = self.target_node_id.to_string();
-                if ui.text_edit_singleline(&mut target_node_str).changed() {
-                    match target_node_str.parse::<usize>() {
-                        Ok(parsed)
-                            if self.passive_tree.is_node_within_distance(
-                                self.start_node_id,
-                                parsed,
-                                123,
-                            ) =>
-                        {
-                            self.target_node_id = parsed;
-                            log::debug!(
-                                "Target Node successfully updated: {}",
-                                self.target_node_id
-                            );
-                        }
-                        Ok(parsed) => {
-                            log::warn!(
-                                "Node {} is not within 123 steps of the start node {}",
-                                parsed,
-                                self.start_node_id
-                            );
-                        }
-                        Err(_) => {
-                            log::error!(
-                                "Invalid input: {} could not be parsed into a node ID",
-                                target_node_str
-                            );
-                        }
+        ui.horizontal(|ui| {
+            ui.label("Target Node:");
+            let mut target_node_str = self.target_node_id.to_string();
+            let response = ui.text_edit_singleline(&mut target_node_str);
+
+            // Update only when focus is lost or Enter is pressed
+            if response.lost_focus() && response.has_focus() {
+                if let Ok(parsed) = target_node_str.parse::<usize>() {
+                    if self
+                        .passive_tree
+                        .is_node_within_distance(self.start_node_id, parsed, 123)
+                    {
+                        self.target_node_id = parsed;
+                        log::debug!("Target Node updated: {}", self.target_node_id);
+                    } else {
+                        log::warn!(
+                            "Node {} is not within 123 steps of start node {}",
+                            parsed,
+                            self.start_node_id
+                        );
                     }
+                } else {
+                    log::error!("Invalid input for target node: {}", target_node_str);
                 }
-            });
+            }
         });
     }
 }
