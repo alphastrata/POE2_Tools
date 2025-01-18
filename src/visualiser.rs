@@ -177,6 +177,7 @@ impl<'p> TreeVis<'p> {
     fn is_fuzzy_search_open(&self) -> bool {
         self.fuzzy_search_open.load(Ordering::Relaxed)
     }
+
     fn camera_x(&self) -> f32 {
         self.camera.borrow().0
     }
@@ -340,6 +341,7 @@ impl<'p> TreeVis<'p> {
     }
 }
 
+// CAMERA
 impl<'p> TreeVis<'p> {
     const ZOOM_MIN: f32 = 0.0; // Minimum zoom level
     const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
@@ -352,9 +354,44 @@ impl<'p> TreeVis<'p> {
                 let mouse_pos = input.pointer.hover_pos().unwrap_or_default();
                 self.adjust_zoom(raw_scroll, mouse_pos);
             }
+
+            // Handle click-and-drag for camera translation
+            if input.pointer.primary_down() {
+                let mouse_delta = input.pointer.delta();
+                self.translate_camera(-mouse_delta.x, -mouse_delta.y);
+            }
+
+            // Update hovered node
+            if let Some(mouse_pos) = input.pointer.hover_pos() {
+                self.update_hovered_node(mouse_pos);
+            }
         });
     }
+    /// Translate the camera based on mouse drag input.
+    fn translate_camera(&mut self, dx: f32, dy: f32) {
+        let mut camera = self.camera.borrow_mut();
+        camera.0 += dx / self.zoom; // Adjust for current zoom level
+        camera.1 += dy / self.zoom;
+    }
 
+    /// Update the hovered node based on mouse position.
+    fn update_hovered_node(&mut self, mouse_pos: egui::Pos2) {
+        let mut closest_node = None;
+        let mut closest_distance = f32::MAX;
+
+        for node in self.passive_tree.nodes.values() {
+            let sx = self.world_to_screen_x(node.wx);
+            let sy = self.world_to_screen_y(node.wy);
+
+            let distance = ((mouse_pos.x - sx).powi(2) + (mouse_pos.y - sy).powi(2)).sqrt();
+            if distance < 15.0 && distance < closest_distance {
+                closest_node = Some(node.node_id);
+                closest_distance = distance;
+            }
+        }
+
+        self.hovered_node = closest_node;
+    }
     /// Adjust the zoom level based on raw scroll input.
     fn adjust_zoom(&mut self, scroll: f32, mouse_pos: egui::Pos2) {
         let new_zoom = (self.zoom + scroll * Self::ZOOM_STEP).clamp(Self::ZOOM_MIN, Self::ZOOM_MAX);
@@ -386,9 +423,16 @@ impl<'p> TreeVis<'p> {
         // Get zoom level
         let zoom_info = format!("Zoom: {:.2}", self.zoom);
 
-        // Get hovered node
+        // Get hovered node info
         let hovered_node_info = if let Some(hovered_node_id) = self.hovered_node {
-            format!("Hovered Node: {}", hovered_node_id)
+            if let Some(node) = self.passive_tree.nodes.get(&hovered_node_id) {
+                format!("Hovered Node: {:?}", node)
+            } else {
+                format!(
+                    "Hovered Node: {} (not found in passive_tree)",
+                    hovered_node_id
+                )
+            }
         } else {
             "Hovered Node: None".to_string()
         };
