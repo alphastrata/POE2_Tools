@@ -8,13 +8,13 @@ use super::{consts::*, PassiveTree};
 #[derive(Debug, Clone)]
 pub struct Edge {
     // id: EdgeId,
-    pub from: NodeId,
-    pub to: NodeId,
+    pub start: NodeId,
+    pub end: NodeId,
 }
 impl PartialEq for Edge {
     fn eq(&self, other: &Self) -> bool {
-        (self.from == other.from && self.to == other.to)
-            || (self.from == other.to && self.to == other.from)
+        (self.start == other.start && self.end == other.end)
+            || (self.start == other.end && self.end == other.start)
     }
 }
 
@@ -22,8 +22,8 @@ impl Eq for Edge {}
 
 impl Hash for Edge {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        let min = std::cmp::min(self.from, self.to);
-        let max = std::cmp::max(self.from, self.to);
+        let min = std::cmp::min(self.start, self.end);
+        let max = std::cmp::max(self.start, self.end);
         min.hash(state);
         max.hash(state);
     }
@@ -38,16 +38,25 @@ impl Edge {
         let dist_to = to_node.distance_to_origin();
 
         if dist_from <= dist_to {
-            Edge { from, to }
+            Edge {
+                start: from,
+                end: to,
+            }
         } else {
-            Edge { from: to, to: from }
+            Edge {
+                start: to,
+                end: from,
+            }
         }
     }
 }
 
 impl PassiveTree {
     pub fn get_edges(&self) -> Vec<(NodeId, NodeId)> {
-        self.edges.iter().map(|edge| (edge.from, edge.to)).collect()
+        self.edges
+            .iter()
+            .map(|edge| (edge.start, edge.end))
+            .collect()
     }
 
     pub(crate) fn compute_positions_and_stats(&mut self) {

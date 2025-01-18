@@ -48,11 +48,26 @@ pub struct TreeVis<'p> {
 
 impl<'p> eframe::App for TreeVis<'p> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // data updates:
+        check_and_activate_path(self.passive_tree, 10364);
+
         // IO
         self.handle_mouse(ctx);
 
         //DEBUG:
         self.draw_debug_bar(ctx);
+
+        ctx.input(|input| {
+            if let Some(hovered) = self.hovered_node {
+                if input.pointer.primary_clicked() {
+                    self.click_node(hovered);
+                }
+            }
+
+            if input.key_pressed(egui::Key::Escape) {
+                std::process::exit(0);
+            }
+        });
 
         // drawing
         self.redraw_tree(ctx);
@@ -151,8 +166,8 @@ impl<'p> TreeVis<'p> {
             // Draw edges
             for edge in &self.passive_tree.edges {
                 if let (Some(source), Some(target)) = (
-                    self.passive_tree.nodes.get(&edge.from),
-                    self.passive_tree.nodes.get(&edge.to),
+                    self.passive_tree.nodes.get(&edge.start),
+                    self.passive_tree.nodes.get(&edge.end),
                 ) {
                     let sx = self.world_to_screen_x(source.wx);
                     let sy = self.world_to_screen_y(source.wy);
@@ -500,18 +515,63 @@ impl<'p> TreeVis<'p> {
 impl<'p> TreeVis<'p> {
     pub fn click_node(&mut self, node_id: NodeId) {
         if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
-            node.active = true;
-            self.update_active_edges(node_id);
+            node.active = !node.active;
         }
     }
 
-    pub fn update_active_edges(&mut self, node_id: NodeId) {
-        if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
-            for edge in &self.passive_tree.edges {
-                if edge.from == node_id || edge.to == node_id {
+    pub fn check_and_activate_path(&mut self, start_node_id: NodeId) {
+        let active_nodes: Vec<_> = self
+            .passive_tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.active)
+            .map(|(id, _)| *id)
+            .collect();
+
+        if active_nodes.len() == 2 {
+            let (first, second) = (active_nodes[0], active_nodes[1]);
+
+            if !self.passive_tree.edges.iter().any(|edge| {
+                (edge.start == first && edge.end == second)
+                    || (edge.start == second && edge.end == first)
+            }) {
+                let v = self
+                    .passive_tree
+                    .find_path(start_node_id, second)
+                    .into_iter();
+
+                v.for_each(|node_id| {
+                    if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
+                        node.active = true;
+                    }
+                });
+            }
+        }
+    }
+}
+
+//TODO: the start_node_id needs to be set by the user... or char reload
+fn check_and_activate_path(tree: &mut PassiveTree, start_node_id: NodeId) {
+    let active_nodes: Vec<_> = tree
+        .nodes
+        .iter()
+        .filter(|(_, node)| node.active)
+        .map(|(id, _)| *id)
+        .collect();
+
+    if active_nodes.len() == 2 {
+        let (first, second) = (active_nodes[0], active_nodes[1]);
+
+        if !tree.edges.iter().any(|edge| {
+            (edge.end == first && edge.start == second) || (edge.end == second && edge.end == first)
+        }) {
+            let v = tree.find_path(start_node_id, second).into_iter();
+
+            v.for_each(|node_id| {
+                if let Some(node) = tree.nodes.get_mut(&node_id) {
                     node.active = true;
                 }
-            }
+            });
         }
     }
 }

@@ -44,6 +44,48 @@ fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usiz
     dist
 }
 impl PassiveTree {
+    pub fn find_path(&self, start: NodeId, end: NodeId) -> Vec<NodeId> {
+        use std::collections::{HashSet, VecDeque};
+
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        let mut came_from = std::collections::HashMap::new();
+
+        queue.push_back(start);
+        visited.insert(start);
+
+        while let Some(current) = queue.pop_front() {
+            if current == end {
+                let mut path = vec![end];
+                let mut step = end;
+                while let Some(&prev) = came_from.get(&step) {
+                    path.push(prev);
+                    step = prev;
+                }
+                path.reverse();
+                return path;
+            }
+
+            for edge in &self.edges {
+                let neighbor = if edge.start == current {
+                    edge.end
+                } else if edge.end == current {
+                    edge.start
+                } else {
+                    continue;
+                };
+
+                if !visited.contains(&neighbor) {
+                    visited.insert(neighbor);
+                    queue.push_back(neighbor);
+                    came_from.insert(neighbor, current);
+                }
+            }
+        }
+
+        vec![]
+    }
+
     pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<usize> {
         _fuzzy_search_nodes(self, query)
     }
@@ -100,7 +142,7 @@ impl PassiveTree {
 
         self.edges.iter().filter_map(move |edge| {
             // Determine the neighboring node
-            let (from, to) = (edge.from, edge.to);
+            let (from, to) = (edge.start, edge.end);
 
             if active_set.contains(&from) && !active_set.contains(&to) && !self.nodes[&to].active {
                 Some(to)
@@ -143,48 +185,7 @@ impl PassiveTree {
             Ok(node_id)
         })
     }
-    pub fn find_path_with_limit(
-        &self,
-        start: NodeId,
-        target: NodeId,
-        explored_paths: &mut Vec<Vec<NodeId>>,
-    ) -> Vec<NodeId> {
-        let mut visited = HashSet::new();
-        let mut stack = vec![(start, vec![start])];
 
-        while let Some((current, path)) = stack.pop() {
-            if current == target {
-                explored_paths.push(path.clone());
-                return path;
-            }
-
-            if visited.contains(&current) {
-                continue;
-            }
-            visited.insert(current);
-
-            for edge in self.edges.iter() {
-                let neighbor = if edge.from == current {
-                    edge.to
-                } else if edge.to == current {
-                    edge.from
-                } else {
-                    continue;
-                };
-
-                if !visited.contains(&neighbor) {
-                    let mut new_path = path.clone();
-                    new_path.push(neighbor);
-                    stack.push((neighbor, new_path));
-                }
-            }
-        }
-
-        Vec::new() // No path found
-    }
-}
-
-impl PassiveTree {
     pub fn find_shortest_path(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
         let mut distances: HashMap<NodeId, usize> = HashMap::new();
         let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
@@ -215,10 +216,10 @@ impl PassiveTree {
 
             // Process all neighbors of the current node
             for edge in self.edges.iter() {
-                let neighbor = if edge.from == node_id {
-                    edge.to
-                } else if edge.to == node_id {
-                    edge.from
+                let neighbor = if edge.start == node_id {
+                    edge.end
+                } else if edge.end == node_id {
+                    edge.start
                 } else {
                     continue;
                 };
@@ -261,9 +262,7 @@ impl PassiveTree {
         eprintln!("No path found from {:?} to {:?}", start, target);
         Vec::new()
     }
-}
 
-impl PassiveTree {
     pub fn all_nodes_with_distance(&self, start: NodeId, delta: usize) -> Vec<Vec<NodeId>> {
         let mut distances: HashMap<NodeId, usize> = HashMap::new();
         let mut priority_queue = BinaryHeap::new();
@@ -294,10 +293,10 @@ impl PassiveTree {
             result[cost].push(node_id);
 
             for edge in self.edges.iter() {
-                let neighbor = if edge.from == node_id {
-                    edge.to
-                } else if edge.to == node_id {
-                    edge.from
+                let neighbor = if edge.start == node_id {
+                    edge.end
+                } else if edge.end == node_id {
+                    edge.start
                 } else {
                     continue;
                 };

@@ -151,8 +151,8 @@ impl PassiveTree {
                                         Some(array) => array.iter().filter_map(move |connection| {
                                             match connection.get("id").and_then(|id| id.as_u64()) {
                                                 Some(to_id) => Some(Edge {
-                                                    from: from_id,
-                                                    to: to_id as usize,
+                                                    start: from_id,
+                                                    end: to_id as usize,
                                                 }),
                                                 None => {
                                                     eprintln!(

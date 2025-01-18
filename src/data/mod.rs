@@ -60,14 +60,14 @@ mod tests {
 
         for edge in &tree.edges {
             let reverse_edge = Edge {
-                from: edge.to,
-                to: edge.from,
+                start: edge.end,
+                end: edge.start,
             };
             assert!(
                 tree.edges.contains(&reverse_edge),
                 "Edge from {} to {} is not bidirectional",
-                edge.to,
-                edge.from
+                edge.end,
+                edge.start
             );
         }
         println!("All edges are bidirectional.");

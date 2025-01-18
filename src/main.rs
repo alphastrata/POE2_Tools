@@ -8,6 +8,7 @@ use poo_tools::{
 };
 
 fn main() {
+    _ = pretty_env_logger::init();
     // Load the user config
     let config: UserConfig = UserConfig::load_from_file("data/user_config.toml");
 
