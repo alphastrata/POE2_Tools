@@ -89,12 +89,8 @@ impl PassiveTree {
                         let (wx, wy) = {
                             let mut wx_wy = (0.0, 0.0);
                             groups.get(&parent).iter().for_each(|group| {
-                                match calculate_world_position(group, radius, position) {
-                                    result => {
-                                        // eprintln!("{:?}", nval);
-                                        wx_wy = result;
-                                    }
-                                }
+                                let result = calculate_world_position(group, radius, position);
+                                wx_wy = result;
                             });
                             wx_wy
                         };

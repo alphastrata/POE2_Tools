@@ -450,8 +450,8 @@ mod test {
         let tree = PassiveTree::from_value(&u).unwrap();
 
         // Define the two expected paths
-        let path1 = vec![10364, 42736, 56045, 58329]; // Path via Attack Damage nodes
-        let path2 = vec![10364, 42736, 13419, 42076]; // Path via Critical Damage nodes
+        let path1 = [10364, 42736, 56045, 58329]; // Path via Attack Damage nodes
+        let path2 = [10364, 42736, 13419, 42076]; // Path via Critical Damage nodes
 
         // Find the shortest path to the target for both paths
         let actual_path1 = tree.find_shortest_path(path1[0], path1[3]);

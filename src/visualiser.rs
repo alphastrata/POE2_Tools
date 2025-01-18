@@ -48,7 +48,7 @@ pub struct TreeVis<'p> {
     controls: HashMap<String, egui::Key>,
 }
 
-impl<'p> eframe::App for TreeVis<'p> {
+impl eframe::App for TreeVis<'_> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // data updates:
         self.check_and_activate_path();
@@ -196,7 +196,7 @@ impl<'p> TreeVis<'p> {
                     radius *= Self::NOTABLE_MULTIPLIER;
                 }
 
-                if !node.name.chars().any(|c| c.is_digit(10)) {
+                if !node.name.chars().any(|c| c.is_ascii_digit()) {
                     radius *= Self::NAMELESS_MULTIPLIER;
                 }
 
@@ -277,7 +277,10 @@ impl<'p> TreeVis<'p> {
         //     .map(|(action, key)| (action.clone(), *key))
         //     .collect();
 
-        let mut vis = Self {
+        
+
+        // vis.initialize_camera_and_zoom();
+        Self {
             camera: RefCell::new((700.0, 700.0)),
             zoom: 0.07,
             passive_tree,
@@ -305,10 +308,7 @@ impl<'p> TreeVis<'p> {
 
             user_config,
             controls: HashMap::new(),
-        };
-
-        // vis.initialize_camera_and_zoom();
-        vis
+        }
     }
 
     fn move_camera_to_node(&self, node_id: usize) {
@@ -508,15 +508,15 @@ impl<'p> TreeVis<'p> {
     }
 
     fn world_to_screen_x(&self, wx: f64) -> f32 {
-        ((wx as f32 - self.camera.borrow().0) * self.zoom + 500.0) as f32
+        (wx as f32 - self.camera.borrow().0) * self.zoom + 500.0
     }
 
     fn world_to_screen_y(&self, wy: f64) -> f32 {
-        ((wy as f32 - self.camera.borrow().1) * self.zoom + 500.0) as f32
+        (wy as f32 - self.camera.borrow().1) * self.zoom + 500.0
     }
 }
 
-impl<'p> TreeVis<'p> {
+impl TreeVis<'_> {
     pub fn click_node(&mut self, node_id: NodeId) {
         if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
             node.active = !node.active;
@@ -546,11 +546,11 @@ impl<'p> TreeVis<'p> {
 
                 if node.is_notable {
                     radius *= Self::NOTABLE_MULTIPLIER;
-                } else if !node.name.chars().any(|c| c.is_digit(10)) {
+                } else if !node.name.chars().any(|c| c.is_ascii_digit()) {
                     radius *= Self::NAMELESS_MULTIPLIER;
                 }
 
-                radius = radius * 0.05;
+                radius *= 0.05;
 
                 painter.circle_stroke(
                     egui::pos2(sx, sy),
@@ -562,7 +562,7 @@ impl<'p> TreeVis<'p> {
     }
 }
 
-impl<'p> TreeVis<'p> {
+impl TreeVis<'_> {
     pub fn check_and_activate_path(&mut self) {
         use std::time::Instant;
 
