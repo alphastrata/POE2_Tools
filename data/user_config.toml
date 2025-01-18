@@ -8,6 +8,7 @@ intelligence = "#26BBD9"    # Blue
 strength = "#E95678"        # Red
 all_nodes = "#3C3C3C"       # Dark grey
 activated_nodes = "#29D398" # Green
+activated_edges = "#22A882" # Green
 
 # UI Colors
 background = "#1C1E26"

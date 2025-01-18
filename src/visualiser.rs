@@ -216,52 +216,6 @@ impl<'p> TreeVis<'p> {
         self.zoom
     }
 
-    fn redraw_tree(&self, ctx: &egui::Context) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let painter = ui.painter();
-            let zoom = 1.0 + self.zoom; // Zoom level for scaling nodes
-
-            // Draw edges
-            self.passive_tree.edges.iter().for_each(|edge| {
-                if let (Some(source), Some(target)) = (
-                    self.passive_tree.nodes.get(&edge.start),
-                    self.passive_tree.nodes.get(&edge.end),
-                ) {
-                    let sx = self.world_to_screen_x(source.wx);
-                    let sy = self.world_to_screen_y(source.wy);
-                    let tx = self.world_to_screen_x(target.wx);
-                    let ty = self.world_to_screen_y(target.wy);
-
-                    painter.line_segment(
-                        [egui::pos2(sx, sy), egui::pos2(tx, ty)],
-                        egui::Stroke::new(1.0, egui::Color32::GRAY),
-                    );
-                }
-            });
-
-            // Draw nodes
-            self.passive_tree.nodes.values().for_each(|node| {
-                let sx = self.world_to_screen_x(node.wx);
-                let sy = self.world_to_screen_y(node.wy);
-
-                let mut radius = Self::BASE_RADIUS / zoom;
-
-                if node.is_notable {
-                    radius *= Self::NOTABLE_MULTIPLIER;
-                }
-
-                if !node.name.chars().any(|c| c.is_ascii_digit()) {
-                    radius *= Self::NAMELESS_MULTIPLIER;
-                }
-
-                //TODO: get from config
-                let color = node.base_color(&self.user_config);
-
-                painter.circle_filled(egui::pos2(sx, sy), radius, color);
-            });
-        });
-    }
-
     fn enable_fuzzy_search(&self) {
         self.fuzzy_search_open.store(true, Ordering::Relaxed);
     }
@@ -731,6 +685,71 @@ impl TreeVis<'_> {
         self.active_edges = visited_edges;
 
         log::debug!("Edge activation completed.");
+    }
+
+    pub fn redraw_tree(&self, ctx: &egui::Context) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let painter = ui.painter();
+
+            self.draw_edges(&painter);
+            self.draw_nodes(&painter);
+        });
+    }
+
+    fn draw_edges(&self, painter: &egui::Painter) {
+        let activated_edge_color = parse_color(
+            self.user_config
+                .colors
+                .get("activated_edges")
+                .expect("You MUST supply an .active_edges key in your toml with a valid colour"),
+        );
+        let default_edge_color = egui::Color32::GRAY;
+
+        self.passive_tree.edges.iter().for_each(|edge| {
+            if let (Some(source), Some(target)) = (
+                self.passive_tree.nodes.get(&edge.start),
+                self.passive_tree.nodes.get(&edge.end),
+            ) {
+                let sx = self.world_to_screen_x(source.wx);
+                let sy = self.world_to_screen_y(source.wy);
+                let tx = self.world_to_screen_x(target.wx);
+                let ty = self.world_to_screen_y(target.wy);
+
+                let color = if self.active_edges.contains(&(edge.start, edge.end)) {
+                    activated_edge_color
+                } else {
+                    default_edge_color
+                };
+
+                painter.line_segment(
+                    [egui::pos2(sx, sy), egui::pos2(tx, ty)],
+                    egui::Stroke::new(1.5, color),
+                );
+            }
+        });
+    }
+
+    fn draw_nodes(&self, painter: &egui::Painter) {
+        let zoom = 1.0 + self.zoom; // Zoom level for scaling nodes
+
+        self.passive_tree.nodes.values().for_each(|node| {
+            let sx = self.world_to_screen_x(node.wx);
+            let sy = self.world_to_screen_y(node.wy);
+
+            let mut radius = Self::BASE_RADIUS / zoom;
+
+            if node.is_notable {
+                radius *= Self::NOTABLE_MULTIPLIER;
+            }
+
+            if !node.name.chars().any(|c| c.is_ascii_digit()) {
+                radius *= Self::NAMELESS_MULTIPLIER;
+            }
+
+            let color = node.base_color(&self.user_config);
+
+            painter.circle_filled(egui::pos2(sx, sy), radius, color);
+        });
     }
 }
 
