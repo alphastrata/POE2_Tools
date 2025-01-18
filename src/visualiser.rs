@@ -63,15 +63,14 @@ pub struct TreeVis<'p> {
     start_node_id: usize,
     target_node_id: usize,
     path: Vec<usize>,
+    // for multi-step pathing
+    path_nodes: Vec<usize>,
 
     /// Store edges of the current path
     active_edges: HashSet<(usize, usize)>,
 
     // Config-driven colours
     color_map: HashMap<String, String>,
-
-    // for multi-step pathing
-    path_nodes: Vec<usize>,
 
     current_character: Option<UserCharacter>,
     last_save_time: std::time::Instant,
@@ -692,13 +691,51 @@ impl<'p> TreeVis<'p> {
                 ui.label("Search results:");
                 for &node_id in &self.search_results {
                     if let Some(node) = self.passive_tree.nodes.get(&node_id) {
-                        if ui.button(&node.name).clicked() {
-                            self.go_to_node(node_id);
-                            log::debug!("Navigated to node: {} ({})", node.name, node_id);
-                        }
+                        ui.horizontal(|ui| {
+                            if ui.button(&node.name).clicked() {
+                                self.go_to_node(node_id);
+                                log::debug!("Navigated to node: {} ({})", node.name, node_id);
+                            }
+                            if ui.button("📋").clicked() {
+                                ui.output_mut(|o| o.copied_text = node_id.to_string());
+                                log::info!("Copied Node ID {} to clipboard", node_id);
+                            }
+                        });
                     }
                 }
             }
+
+            // Start and Target Node Configuration
+            ui.separator();
+            ui.heading("Node Configuration");
+
+            ui.horizontal(|ui| {
+                ui.label("Start Node:");
+                ui.label(self.start_node_id.to_string());
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Target Node:");
+                let mut target_node_str = self.target_node_id.to_string();
+                if ui.text_edit_singleline(&mut target_node_str).changed() {
+                    if let Ok(parsed) = target_node_str.parse::<usize>() {
+                        if self.passive_tree.is_node_within_distance(
+                            self.start_node_id,
+                            parsed,
+                            123,
+                        ) {
+                            self.target_node_id = parsed;
+                            log::debug!("Target Node updated: {}", self.target_node_id);
+                        } else {
+                            log::warn!(
+                                "Node {} is not within 123 steps of start node {}",
+                                parsed,
+                                self.start_node_id
+                            );
+                        }
+                    }
+                }
+            });
         });
     }
 }
