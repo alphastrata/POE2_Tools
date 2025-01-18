@@ -44,6 +44,7 @@ fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usiz
     dist
 }
 impl PassiveTree {
+    /// naive BFS
     pub fn find_path(&self, start: NodeId, end: NodeId) -> Vec<NodeId> {
         use std::collections::{HashSet, VecDeque};
 

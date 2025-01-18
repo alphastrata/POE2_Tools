@@ -6,6 +6,8 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+use log::debug;
+
 use crate::{config::UserConfig, data::poe_tree::PassiveTree};
 use crate::{
     config::{parse_color, UserCharacter},
@@ -530,62 +532,94 @@ impl<'p> TreeVis<'p> {
         }
     }
 
-    pub fn check_and_activate_path(&mut self) {
-        use std::time::Instant;
-
-        if self.path.len() == 2 {
-            let (first, second) = (self.path[0], self.path[1]);
-
-            // Check if the nodes are already directly connected
-            if !self.passive_tree.edges.iter().any(|edge| {
-                (edge.start == first && edge.end == second)
-                    || (edge.start == second && edge.end == first)
-            }) {
-                let start_time = Instant::now();
-
-                // Use pathfinding to find a route between the nodes
-                let path = self.passive_tree.find_path(first, second);
-
-                if path.is_empty() {
-                    log::debug!("No path found between {} and {}", first, second);
-                } else {
-                    log::debug!("Path found: {:?}, activating nodes...", path);
-
-                    // Activate all nodes along the path
-                    for node_id in path.iter() {
-                        if let Some(node) = self.passive_tree.nodes.get_mut(node_id) {
-                            node.active = true;
-                            if !self.path.contains(node_id) {
-                                self.path.push(*node_id);
-                            }
-                        }
-                    }
-
-                    let duration = start_time.elapsed();
-                    log::debug!("Path activated in {:?}", duration);
-                }
-            }
-        }
-    }
-
     pub fn draw_active_node_highlight(&self, ctx: &egui::Context) {
         let painter = ctx.layer_painter(egui::LayerId::background());
         let color = parse_color(self.user_config.colors.get("yellow").unwrap());
+        let zoom = 1.0 + self.zoom;
 
-        for node in self.passive_tree.nodes.values() {
+        self.passive_tree.nodes.values().for_each(|node| {
             if node.active {
                 let sx = self.world_to_screen_x(node.wx);
                 let sy = self.world_to_screen_y(node.wy);
 
-                let mut radius = Self::BASE_RADIUS / self.current_zoom_level();
-                radius *= 1.04; // Increase diameter by 4%
+                let mut radius = Self::BASE_RADIUS / zoom;
+
+                if node.is_notable {
+                    radius *= Self::NOTABLE_MULTIPLIER;
+                } else if !node.name.chars().any(|c| c.is_digit(10)) {
+                    radius *= Self::NAMELESS_MULTIPLIER;
+                }
+
+                radius = radius * 0.05;
 
                 painter.circle_stroke(
                     egui::pos2(sx, sy),
-                    radius,
-                    egui::Stroke::new(2.0, color), // Customize stroke width and color
+                    radius / self.current_zoom_level(),
+                    egui::Stroke::new(3.0, color), // Customize stroke width and color
                 );
             }
+        });
+    }
+}
+
+impl<'p> TreeVis<'p> {
+    pub fn check_and_activate_path(&mut self) {
+        use std::time::Instant;
+
+        let active_nodes: Vec<_> = self
+            .passive_tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.active)
+            .map(|(id, _)| *id)
+            .collect();
+
+        // log::debug!("Active nodes: {:?}", active_nodes);
+
+        let mut updated_nodes = false;
+
+        // Check paths between all pairs of active nodes
+        for i in 0..active_nodes.len() {
+            for j in (i + 1)..active_nodes.len() {
+                let start = active_nodes[i];
+                let end = active_nodes[j];
+
+                log::debug!("Checking path between {} and {}", start, end);
+
+                if !self.passive_tree.edges.iter().any(|edge| {
+                    (edge.start == start && edge.end == end)
+                        || (edge.start == end && edge.end == start)
+                }) {
+                    let start_time = Instant::now();
+                    let path = self.passive_tree.find_path(start, end);
+
+                    if !path.is_empty() {
+                        log::debug!("Path found: {:?} between {} and {}", path, start, end);
+
+                        // Activate all nodes along the path
+                        for node_id in path.iter() {
+                            if let Some(node) = self.passive_tree.nodes.get_mut(node_id) {
+                                if !node.active {
+                                    node.active = true;
+                                    updated_nodes = true;
+                                }
+                            }
+                        }
+
+                        let duration = start_time.elapsed();
+                        log::debug!("Path activated in {:?}", duration);
+                    } else {
+                        log::debug!("No path found between {} and {}", start, end);
+                    }
+                }
+            }
+        }
+
+        // Log a message if new nodes were activated
+        if updated_nodes {
+            log::debug!("Nodes activated along paths.");
+            // } else {
+            //     log::debug!("No new nodes activated.");
         }
     }
 }
