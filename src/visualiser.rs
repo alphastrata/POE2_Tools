@@ -86,10 +86,24 @@ impl<'p> TreeVis<'p> {
         ));
     }
 }
+
+impl<'p> TreeVis<'p> {
+    const SCALE_FACTOR: f32 = 1.0; // Scaling factor for notable nodes or nodes without digits in the name
+
+    fn current_zoom_level(&self) -> f32 {
+        self.zoom
+    }
+}
 impl<'p> TreeVis<'p> {
     pub fn redraw_tree(&self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let painter = ui.painter();
+            let zoom = 1.0 + self.zoom; // Zoom level for scaling nodes
+
+            // Node size constants
+            const BASE_RADIUS: f32 = 8.0;
+            const NOTABLE_MULTIPLIER: f32 = 1.5; // Scale notable nodes
+            const NAMELESS_MULTIPLIER: f32 = 1.0; // Scale nameless nodes
 
             // Draw edges
             for edge in &self.passive_tree.edges {
@@ -113,17 +127,24 @@ impl<'p> TreeVis<'p> {
             for node in self.passive_tree.nodes.values() {
                 let sx = self.world_to_screen_x(node.wx);
                 let sy = self.world_to_screen_y(node.wy);
-                let radius = if node.active { 12.0 } else { 8.0 };
-                let color = if node.active {
-                    egui::Color32::from_rgb(0, 255, 0)
-                } else {
-                    egui::Color32::from_rgb(200, 200, 200)
-                };
 
-                // println!(
-                //     "Drawing node {}: World ({}, {}), Screen ({}, {})",
-                //     node.node_id, node.wx, node.wy, sx, sy
-                // );
+                let mut radius = BASE_RADIUS / zoom;
+
+                if node.is_notable {
+                    radius *= NOTABLE_MULTIPLIER;
+                }
+
+                if !node.name.chars().any(|c| c.is_digit(10)) {
+                    radius *= NAMELESS_MULTIPLIER;
+                }
+
+                let color = if node.name.to_lowercase().contains("flow like water") {
+                    egui::Color32::from_rgb(0, 8, 212) // Blue for specific node
+                } else if node.active {
+                    egui::Color32::from_rgb(0, 222, 8) // Green for active nodes
+                } else {
+                    egui::Color32::from_rgb(128, 138, 138) // Default gray
+                };
 
                 painter.circle_filled(egui::pos2(sx, sy), radius, color);
             }
@@ -248,7 +269,7 @@ impl<'p> TreeVis<'p> {
 
         let mut vis = Self {
             camera: RefCell::new((0.0, 0.0)), // Start camera at origin
-            zoom: 0.02,                       // Default zoom level
+            zoom: 0.02,
             passive_tree,
             hovered_node: None, // No node hovered initially
 
