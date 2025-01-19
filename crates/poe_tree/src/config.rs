@@ -1,4 +1,4 @@
-//$ src/config.rs
+//$ crates/poe_tree/src/config.rs
 use std::collections::HashMap;
 
 use egui::Key;

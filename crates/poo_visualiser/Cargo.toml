@@ -1,0 +1,8 @@
+#$ crates/poo_visualiser/Cargo.toml
+[package]
+name = "poo-visualiser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+poo_tree = { workspace = true }

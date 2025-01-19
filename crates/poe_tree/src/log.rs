@@ -1,4 +1,4 @@
-//$ src/log.rs
+//$ crates/poe_tree/src/log.rs
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 use chrono::{NaiveDateTime, Utc};

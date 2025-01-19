@@ -1,4 +1,4 @@
-//$ src/data/mod.rs
+//$ crates/poe_tree/src/data/mod.rs
 pub mod poe_tree;
 
 pub mod prelude {

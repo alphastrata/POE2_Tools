@@ -5,27 +5,31 @@ import re
 def add_relative_path_comment(directory):
     for root, _, files in os.walk(directory):
         for file in files:
-            if file.endswith(".rs"):
+            if file.endswith(".rs") or file.endswith(".toml"):
                 filepath = os.path.join(root, file)
                 relative_path = os.path.relpath(filepath, directory)
+
+                # Determine the comment prefix based on file type
+                comment_prefix = "//" if file.endswith(".rs") else "#"
 
                 # Read file content
                 with open(filepath, 'r') as f:
                     content = f.readlines()
 
-                # Remove any existing `//$` comments
+                # Remove any existing relative path comments
                 content = [
                     line for line in content
-                    if not re.match(r"^//\$ .*", line.strip())
+                    if not line.startswith(f"{comment_prefix}$ ")
                 ]
 
                 # Add the new relative path comment
-                expected_comment = f"//$ {relative_path}\n"
+                expected_comment = f"{comment_prefix}$ {relative_path}\n"
                 content.insert(0, expected_comment)
 
                 # Write updated content back to the file
                 with open(filepath, 'w') as f:
                     f.writelines(content)
+
 
 def save_project_structure(directory):
     with open("project_structure.txt", "w") as outfile:

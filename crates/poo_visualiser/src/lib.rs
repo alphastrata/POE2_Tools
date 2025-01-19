@@ -1,157 +1,34 @@
-//$ src/visualiser/mod.rs
+//$ crates/poo_visualiser/src/lib.rs
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    default::Default,
-    ops::ControlFlow,
-    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
-    time::Instant,
+    sync::atomic::{AtomicBool, AtomicUsize},
 };
-
-use crate::{config::UserConfig, data::poe_tree::PassiveTree};
-use crate::{
-    config::{parse_color, UserCharacter},
-    data::poe_tree::type_wrappings::NodeId,
-};
-static ACTIVE_NODE_COUNT: AtomicUsize = AtomicUsize::new(0);
-
-struct NonInteractiveAreas {}
-pub struct TreeVis<'p> {
-    camera: RefCell<(f32, f32)>,
-    zoom: f32,
-    passive_tree: &'p mut PassiveTree,
-    hovered_node: Option<usize>,
-
-    // Fuzzy-search-related
-    fuzzy_search_open: AtomicBool,
-    search_query: String,
-    search_results: Vec<usize>,
-
-    // Path-finder-related
-    start_node_id: usize,
-    target_node_id: usize,
-    highlighted_path: Vec<usize>,
-
-    /// Store edges of the current path
-    // NOTE: mostly used for drawing.
-    active_edges: HashSet<(usize, usize)>,
-    active_nodes: HashSet<usize>,
-
-    // Config-driven colours
-    current_character: Option<UserCharacter>,
-    last_save_time: std::time::Instant,
-
-    user_config: UserConfig,
-
-    /// Mapped controls from self.user_config
-    #[allow(unused)]
-    controls: HashMap<String, egui::Key>,
-
-    requires_activation_check: bool,
-}
-
-impl eframe::App for TreeVis<'_> {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // IO
-        self.handle_mouse(ctx);
-
-        if self.requires_activation_check {
-            self.check_and_activate_nodes();
-            self.check_and_activate_edges();
-            self.requires_activation_check = false;
-        }
-
-        //DEBUG:
-        self.draw_debug_bar(ctx);
-
-        // Example: Process node hovering
-        if let Some(hovered_node_id) = self.get_hovered_node(ctx) {
-            self.hover_node(hovered_node_id);
-        }
-
-        // Example: Check and activate nodes if target node changes
-        if let Some(target_node_id) = self.get_target_node() {
-            self.select_node(target_node_id);
-        }
-
-        ctx.input(|input| {
-            if let Some(hovered) = self.hovered_node {
-                if input.pointer.primary_clicked() {
-                    self.click_node(hovered);
-                }
-            }
-
-            if input.key_pressed(egui::Key::Escape) {
-                std::process::exit(0);
-            }
-        });
-
-        // drawing
-        self.redraw_tree(ctx);
-        // TODO: maybe we highlight in the redraw_tree() call?
-        self.draw_color_and_highlights(ctx);
-
-        //TODO: draw rhs menu
-        self.draw_rhs_menu(ctx);
-
-        //todo: draw top menu (open tree, char etc..)
-    }
-}
 
 impl TreeVis<'_> {
-    pub fn set_start_node(&mut self, ctx: &egui::Context) {
-        if let Some((&closest_id, closest_node)) =
-            self.passive_tree.nodes.iter().min_by(|(_, a), (_, b)| {
-                let dist_a = (a.wx.powi(2) + a.wy.powi(2)).sqrt();
-                let dist_b = (b.wx.powi(2) + b.wy.powi(2)).sqrt();
-                dist_a
-                    .partial_cmp(&dist_b)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-        {
-            self.start_node_id = closest_id;
-            log::info!("Start node set to ID: {}", closest_id);
-
-            // Draw a small white triangle at the start node
-            let painter = ctx.layer_painter(egui::LayerId::background());
-            let sx = self.world_to_screen_x(closest_node.wx);
-            let sy = self.world_to_screen_y(closest_node.wy);
-
-            painter.add(egui::Shape::convex_polygon(
-                vec![
-                    egui::pos2(sx, sy - 5.0),       // Top point of the triangle
-                    egui::pos2(sx - 4.0, sy + 3.0), // Bottom-left point
-                    egui::pos2(sx + 4.0, sy + 3.0), // Bottom-right point
-                ],
-                egui::Color32::WHITE,
-                egui::Stroke::NONE,
-            ));
-        }
-    }
+    pub(crate) const ACTIVE_NODE_COUNT: AtomicUsize = AtomicUsize::new(0);
+    pub(crate) const BASE_RADIUS: f32 = 8.0;
+    pub(crate) const NOTABLE_MULTIPLIER: f32 = 1.5; // Scale notable nodes
+    pub(crate) const NAMELESS_MULTIPLIER: f32 = 1.0; // Scale nameless nodes
+    pub(crate) const CAMERA_OFFSET: (f32, f32) = (-2_600.0, -1_300.0);
 }
-
 pub mod camera {
     use std::{
         cell::RefCell,
         collections::{HashMap, HashSet},
-        sync::atomic::{AtomicBool, AtomicUsize},
+        sync::atomic::AtomicBool,
     };
 
-    use crate::{config::UserConfig, data::poe_tree::PassiveTree};
-    use crate::{
-        config::{parse_color, UserCharacter},
-        data::poe_tree::type_wrappings::NodeId,
-    };
-    static ACTIVE_NODE_COUNT: AtomicUsize = AtomicUsize::new(0);
     use super::*;
+    use crate::{
+        config::{UserCharacter, UserConfig},
+        data::poe_tree::PassiveTree,
+    };
+
     // Helper Functions
     impl<'p> TreeVis<'p> {
         // Node size constants
-        pub(crate) const BASE_RADIUS: f32 = 8.0;
-        pub(crate) const NOTABLE_MULTIPLIER: f32 = 1.5; // Scale notable nodes
-        pub(crate) const NAMELESS_MULTIPLIER: f32 = 1.0; // Scale nameless nodes
 
-        pub(crate) const CAMERA_OFFSET: (f32, f32) = (-2_600.0, -1_300.0);
         pub fn new(
             passive_tree: &'p mut PassiveTree,
             user_config: UserConfig,
@@ -280,11 +157,6 @@ pub mod camera {
 pub mod drawing {
     use std::{default::Default, sync::atomic::AtomicUsize};
 
-    use crate::{
-        config::{parse_color, UserCharacter},
-        data::poe_tree::type_wrappings::NodeId,
-    };
-    pub(crate) static ACTIVE_NODE_COUNT: AtomicUsize = AtomicUsize::new(0);
     use super::*;
     // drawing{
     pub mod rhs_menu {
@@ -694,6 +566,38 @@ pub mod background_services {
     pub(crate) static ACTIVE_NODE_COUNT: AtomicUsize = AtomicUsize::new(0);
     use super::*;
 
+    impl TreeVis<'_> {
+        pub fn set_start_node(&mut self, ctx: &egui::Context) {
+            if let Some((&closest_id, closest_node)) =
+                self.passive_tree.nodes.iter().min_by(|(_, a), (_, b)| {
+                    let dist_a = (a.wx.powi(2) + a.wy.powi(2)).sqrt();
+                    let dist_b = (b.wx.powi(2) + b.wy.powi(2)).sqrt();
+                    dist_a
+                        .partial_cmp(&dist_b)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+            {
+                self.start_node_id = closest_id;
+                log::info!("Start node set to ID: {}", closest_id);
+
+                // Draw a small white triangle at the start node
+                let painter = ctx.layer_painter(egui::LayerId::background());
+                let sx = self.world_to_screen_x(closest_node.wx);
+                let sy = self.world_to_screen_y(closest_node.wy);
+
+                painter.add(egui::Shape::convex_polygon(
+                    vec![
+                        egui::pos2(sx, sy - 5.0),       // Top point of the triangle
+                        egui::pos2(sx - 4.0, sy + 3.0), // Bottom-left point
+                        egui::pos2(sx + 4.0, sy + 3.0), // Bottom-right point
+                    ],
+                    egui::Color32::WHITE,
+                    egui::Stroke::NONE,
+                ));
+            }
+        }
+    }
+
     // Checkers bg systemts
     impl TreeVis<'_> {
         pub(crate) fn check_and_activate_nodes(&mut self) {
@@ -1000,5 +904,88 @@ pub mod io {
             self.active_edges.clear();
             log::info!("Cleared all active nodes and paths.");
         }
+    }
+}
+
+pub(crate) struct NonInteractiveAreas {}
+pub struct TreeVis<'p> {
+    camera: RefCell<(f32, f32)>,
+    zoom: f32,
+    passive_tree: &'p mut PassiveTree,
+    hovered_node: Option<usize>,
+
+    // Fuzzy-search-related
+    fuzzy_search_open: AtomicBool,
+    search_query: String,
+    search_results: Vec<usize>,
+
+    // Path-finder-related
+    start_node_id: usize,
+    target_node_id: usize,
+    highlighted_path: Vec<usize>,
+
+    /// Store edges of the current path
+    // NOTE: mostly used for drawing.
+    active_edges: HashSet<(usize, usize)>,
+    active_nodes: HashSet<usize>,
+
+    // Config-driven colours
+    current_character: Option<UserCharacter>,
+    last_save_time: std::time::Instant,
+
+    user_config: UserConfig,
+
+    /// Mapped controls from self.user_config
+    #[allow(unused)]
+    controls: HashMap<String, egui::Key>,
+
+    requires_activation_check: bool,
+}
+
+impl eframe::App for TreeVis<'_> {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // IO
+        self.handle_mouse(ctx);
+
+        if self.requires_activation_check {
+            self.check_and_activate_nodes();
+            self.check_and_activate_edges();
+            self.requires_activation_check = false;
+        }
+
+        //DEBUG:
+        self.draw_debug_bar(ctx);
+
+        // Example: Process node hovering
+        if let Some(hovered_node_id) = self.get_hovered_node(ctx) {
+            self.hover_node(hovered_node_id);
+        }
+
+        // Example: Check and activate nodes if target node changes
+        if let Some(target_node_id) = self.get_target_node() {
+            self.select_node(target_node_id);
+        }
+
+        ctx.input(|input| {
+            if let Some(hovered) = self.hovered_node {
+                if input.pointer.primary_clicked() {
+                    self.click_node(hovered);
+                }
+            }
+
+            if input.key_pressed(egui::Key::Escape) {
+                std::process::exit(0);
+            }
+        });
+
+        // drawing
+        self.redraw_tree(ctx);
+        // TODO: maybe we highlight in the redraw_tree() call?
+        self.draw_color_and_highlights(ctx);
+
+        //TODO: draw rhs menu
+        self.draw_rhs_menu(ctx);
+
+        //todo: draw top menu (open tree, char etc..)
     }
 }

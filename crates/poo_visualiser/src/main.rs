@@ -1,4 +1,4 @@
-//$ src/main.rs
+//$ crates/poo_visualiser/src/main.rs
 use std::{fs::File, io::BufReader};
 
 use poo_tools::{
@@ -43,7 +43,7 @@ fn main() {
     };
 
     _ = eframe::run_native(
-        "POE2_TREE debug vis tool",
+        "poo-tools",
         options,
         Box::new(|_cc| Ok(Box::new(TreeVis::new(&mut tree, config, character)))),
     );

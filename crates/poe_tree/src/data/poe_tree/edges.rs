@@ -1,4 +1,4 @@
-//$ src/data/poe_tree/edges.rs
+//$ crates/poe_tree/src/data/poe_tree/edges.rs
 
 use std::hash::{Hash, Hasher};
 

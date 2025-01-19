@@ -1,3 +1,5 @@
+#$ data/character.toml
+//$ data/character.toml
 name = "jengablox"
 activated_node_ids = []
 date_created = "2025-01-13T12:34:56Z"

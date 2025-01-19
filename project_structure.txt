@@ -36,6 +36,10 @@
 ├── Cargo.lock
 ├── Cargo.toml
 ├── config.toml
+├── crates
+│   ├── poe_tree
+│   ├── poo_visualiser
+│   └── visualiser
 ├── data
 │   ├── base-only.json
 │   ├── character.toml
@@ -111,13 +115,7 @@
 ├── project_structure.txt
 ├── repo_maintenence.py
 ├── src
-│   ├── config.rs
-│   ├── data
-│   ├── lib.rs
-│   ├── log.rs
-│   ├── main.rs
-│   └── visualiser
+│   └── lib.rs
 └── target
-    ├── CACHEDIR.TAG
     ├── debug
     └── release

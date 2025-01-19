@@ -1,4 +1,4 @@
-//$ src/data/poe_tree/nodes.rs
+//$ crates/poe_tree/src/data/poe_tree/nodes.rs
 use crate::config::{parse_color, UserConfig};
 
 use super::stats::Stat;
