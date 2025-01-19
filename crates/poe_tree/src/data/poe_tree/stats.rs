@@ -38,7 +38,7 @@ impl Stat {
 }
 
 // Custom deserializer for the stats field
-pub(crate) fn deserialize_stats<'de, D>(deserializer: D) -> Result<Vec<Stat>, D::Error>
+pub fn deserialize_stats<'de, D>(deserializer: D) -> Result<Vec<Stat>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {

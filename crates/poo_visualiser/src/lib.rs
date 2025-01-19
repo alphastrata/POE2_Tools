@@ -62,7 +62,7 @@ pub mod camera {
             }
         }
 
-        pub(crate) fn move_camera_to_node(&self, node_id: usize) {
+        pub fn move_camera_to_node(&self, node_id: usize) {
             if let Some(node) = self.passive_tree.nodes.get(&node_id) {
                 let mut camera = self.camera.borrow_mut();
                 camera.0 = node.wx as f32;
@@ -76,12 +76,12 @@ pub mod camera {
                 );
             }
         }
-        pub(crate) fn go_to_node(&self, id: usize) {
+        pub fn go_to_node(&self, id: usize) {
             self.move_camera_to_node(id);
             // self.disable_fuzzy_search();
         }
 
-        pub(crate) fn save_character(&mut self) {
+        pub fn save_character(&mut self) {
             if let Some(character) = &self.current_character {
                 character.save_to_toml("data/last_character.toml");
                 self.last_save_time = std::time::Instant::now();
@@ -89,7 +89,7 @@ pub mod camera {
         }
 
         #[allow(unused)]
-        pub(crate) fn auto_save_character(&mut self) {
+        pub fn auto_save_character(&mut self) {
             if let Some(character) = &self.current_character {
                 if self.last_save_time.elapsed().as_secs() >= 5 {
                     self.save_character();
@@ -104,19 +104,19 @@ pub mod camera {
         pub(crate) const ZOOM_MIN: f32 = 0.0; // Minimum zoom level
         pub(crate) const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
         pub(crate) const ZOOM_STEP: f32 = 0.0001; // Step size for zoom changes
-        pub(crate) fn current_zoom_level(&self) -> f32 {
+        pub fn current_zoom_level(&self) -> f32 {
             self.zoom
         }
 
         /// Translate the camera based on mouse drag input.
-        pub(crate) fn translate_camera(&mut self, dx: f32, dy: f32) {
+        pub fn translate_camera(&mut self, dx: f32, dy: f32) {
             let mut camera = self.camera.borrow_mut();
             camera.0 += dx / self.zoom; // Adjust for current zoom level
             camera.1 += dy / self.zoom;
         }
 
         /// Adjust the zoom level based on raw scroll input.
-        pub(crate) fn adjust_zoom(&mut self, scroll: f32, mouse_pos: egui::Pos2) {
+        pub fn adjust_zoom(&mut self, scroll: f32, mouse_pos: egui::Pos2) {
             let new_zoom =
                 (self.zoom + scroll * Self::ZOOM_STEP).clamp(Self::ZOOM_MIN, Self::ZOOM_MAX);
 
@@ -137,19 +137,19 @@ pub mod camera {
             }
         }
 
-        pub(crate) fn world_to_screen_x(&self, wx: f64) -> f32 {
+        pub fn world_to_screen_x(&self, wx: f64) -> f32 {
             (wx as f32 - self.camera.borrow().0) * self.zoom + 500.0
         }
 
-        pub(crate) fn world_to_screen_y(&self, wy: f64) -> f32 {
+        pub fn world_to_screen_y(&self, wy: f64) -> f32 {
             (wy as f32 - self.camera.borrow().1) * self.zoom + 500.0
         }
 
-        pub(crate) fn screen_to_world_x(&self, sx: f32) -> f64 {
+        pub fn screen_to_world_x(&self, sx: f32) -> f64 {
             ((sx - 500.0) / self.zoom + self.camera.borrow().0) as f64
         }
 
-        pub(crate) fn screen_to_world_y(&self, sy: f32) -> f64 {
+        pub fn screen_to_world_y(&self, sy: f32) -> f64 {
             ((sy - 500.0) / self.zoom + self.camera.borrow().1) as f64
         }
     }
@@ -346,7 +346,7 @@ pub mod drawing {
     }
 
     impl TreeVis<'_> {
-        pub(crate) fn draw_color_and_highlights(&self, ctx: &egui::Context) {
+        pub fn draw_color_and_highlights(&self, ctx: &egui::Context) {
             let painter = ctx.layer_painter(egui::LayerId::background());
             let active_color = parse_color(self.user_config.colors.get("yellow").unwrap());
             let search_color = parse_color(self.user_config.colors.get("purple").unwrap());
@@ -395,7 +395,7 @@ pub mod drawing {
             });
         }
 
-        pub(crate) fn redraw_tree(&self, ctx: &egui::Context) {
+        pub fn redraw_tree(&self, ctx: &egui::Context) {
             egui::CentralPanel::default().show(ctx, |ui| {
                 let painter = ui.painter();
 
@@ -404,7 +404,7 @@ pub mod drawing {
             });
         }
 
-        pub(crate) fn draw_edges(&self, painter: &egui::Painter) {
+        pub fn draw_edges(&self, painter: &egui::Painter) {
             let activated_edge_color =
                 parse_color(self.user_config.colors.get("activated_edges").expect(
                     "You MUST supply an .active_edges key in your toml with a valid colour",
@@ -435,7 +435,7 @@ pub mod drawing {
             });
         }
 
-        pub(crate) fn draw_nodes(&self, painter: &egui::Painter) {
+        pub fn draw_nodes(&self, painter: &egui::Painter) {
             let zoom = 1.0 + self.zoom; // Zoom level for scaling nodes
 
             self.passive_tree.nodes.values().for_each(|node| {
@@ -469,7 +469,7 @@ pub(crate) mod debug {
     // DEBUG BAR
     impl TreeVis<'_> {
         /// Draw the debug information bar
-        pub(crate) fn draw_debug_bar(&self, ctx: &egui::Context) {
+        pub fn draw_debug_bar(&self, ctx: &egui::Context) {
             let (
                 mouse_info,
                 zoom_info,
@@ -497,7 +497,7 @@ pub(crate) mod debug {
         }
 
         /// Precompute debug bar contents to avoid borrow conflicts
-        pub(crate) fn get_debug_bar_contents(
+        pub fn get_debug_bar_contents(
             &self,
             ctx: &egui::Context,
         ) -> (String, String, String, String, String, String) {
@@ -603,7 +603,7 @@ pub mod background_services {
 
     // Checkers bg systemts
     impl TreeVis<'_> {
-        pub(crate) fn check_and_activate_nodes(&mut self) {
+        pub fn check_and_activate_nodes(&mut self) {
             let active_nodes: HashSet<usize> = self
                 .passive_tree
                 .nodes
@@ -676,7 +676,7 @@ pub mod background_services {
             }
         }
 
-        pub(crate) fn check_and_activate_edges(&mut self) {
+        pub fn check_and_activate_edges(&mut self) {
             let mut visited_edges: HashSet<(NodeId, NodeId)> = HashSet::new();
             let active_nodes: Vec<_> = self
                 .passive_tree
@@ -733,7 +733,7 @@ pub mod io {
     use super::*;
     // IO
     impl TreeVis<'_> {
-        pub(crate) fn select_node(&mut self, node_id: usize) {
+        pub fn select_node(&mut self, node_id: usize) {
             if let Some(character) = &mut self.current_character {
                 if !character.activated_node_ids.contains(&node_id) {
                     log::info!("Selecting node: {}", node_id);
@@ -742,7 +742,7 @@ pub mod io {
                 }
             }
         }
-        pub(crate) fn hover_node(&mut self, node_id: usize) {
+        pub fn hover_node(&mut self, node_id: usize) {
             if let Some(node) = self.passive_tree.nodes.get(&node_id) {
                 if !node.active {
                     log::info!("Hovering over node: {}", node_id);
@@ -758,7 +758,7 @@ pub mod io {
 
         /// Processes the shortest path from a given node to the nearest active node.
         /// If `activate` is true, nodes and edges along the path will be activated.
-        pub(crate) fn process_path_to_active_node(
+        pub fn process_path_to_active_node(
             &mut self,
             node_id: usize,
             activate: bool,
@@ -798,7 +798,7 @@ pub mod io {
         }
 
         /// Finds the shortest path from the given node to the nearest active node.
-        pub(crate) fn find_shortest_path_to_active_node(
+        pub fn find_shortest_path_to_active_node(
             &self,
             target_node: usize,
         ) -> Option<(Vec<usize>, usize)> {
@@ -815,7 +815,7 @@ pub mod io {
         }
 
         /// Updates the active edges based on the given path.
-        pub(crate) fn update_active_edges(&mut self, path: Vec<usize>) {
+        pub fn update_active_edges(&mut self, path: Vec<usize>) {
             for window in path.windows(2) {
                 if let [start, end] = window {
                     self.active_edges.insert((*start, *end));
@@ -826,7 +826,7 @@ pub mod io {
         }
 
         pub(crate) const HOVER_RADIUS: f32 = 100.0;
-        pub(crate) fn get_hovered_node(&self, ctx: &egui::Context) -> Option<usize> {
+        pub fn get_hovered_node(&self, ctx: &egui::Context) -> Option<usize> {
             let mouse_pos = ctx.input(|input| input.pointer.hover_pos())?;
 
             self.passive_tree.nodes.iter().find_map(|(&node_id, node)| {
@@ -843,11 +843,11 @@ pub mod io {
             })
         }
 
-        pub(crate) fn get_target_node(&self) -> Option<usize> {
+        pub fn get_target_node(&self) -> Option<usize> {
             // Logic to determine if a target node has been selected
             Some(self.target_node_id)
         }
-        pub(crate) fn handle_mouse(&mut self, ctx: &egui::Context) {
+        pub fn handle_mouse(&mut self, ctx: &egui::Context) {
             ctx.input(|input| {
                 if let Some(mouse_pos) = input.pointer.hover_pos() {
                     // Handle zoom and drag interactions
@@ -866,7 +866,7 @@ pub mod io {
             });
         }
         /// Update the hovered node based on mouse position.
-        pub(crate) fn update_hovered_node(&mut self, mouse_pos: egui::Pos2) {
+        pub fn update_hovered_node(&mut self, mouse_pos: egui::Pos2) {
             let mut closest_node = None;
             let mut closest_distance = f32::MAX;
 
@@ -886,7 +886,7 @@ pub mod io {
             self.hovered_node = closest_node;
         }
 
-        pub(crate) fn click_node(&mut self, node_id: NodeId) {
+        pub fn click_node(&mut self, node_id: NodeId) {
             if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
                 node.active = !node.active;
                 if node.active {
@@ -899,7 +899,7 @@ pub mod io {
             }
             self.requires_activation_check = true; // set flag
         }
-        pub(crate) fn clear_active_nodes(&mut self) {
+        pub fn clear_active_nodes(&mut self) {
             for node in self.passive_tree.nodes.values_mut() {
                 node.active = false;
             }
