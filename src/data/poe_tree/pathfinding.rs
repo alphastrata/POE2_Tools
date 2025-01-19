@@ -26,19 +26,6 @@ impl PartialOrd for NodeCost {
     }
 }
 
-/// Count how many edges from `start` to `node` by walking `came_from`.
-fn distance_to_start(came_from: &HashMap<usize, usize>, mut node: usize) -> usize {
-    let mut dist = 0;
-    while let Some(&parent) = came_from.get(&node) {
-        if parent == node {
-            break; // Reached the start
-        }
-        node = parent;
-        dist += 1;
-    }
-    dist
-}
-
 impl PassiveTree {
     pub fn is_node_within_distance(&self, start: NodeId, target: NodeId, max_steps: usize) -> bool {
         let path = self.find_path(start, target);
@@ -357,37 +344,25 @@ fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<usize> {
         .map(|(id, _)| *id)
         .collect()
 }
-/// Rebuild the path backward from `target` to `start`, then reverse it.
-fn rebuild_path(came_from: &HashMap<usize, usize>, start: usize, target: usize) -> Vec<usize> {
-    let mut path = Vec::new();
-    let mut current = target;
-    while current != start {
-        path.push(current);
-        current = came_from[&current];
-    }
-    path.push(start);
-    path.reverse();
-    path
-}
 
 #[cfg(test)]
 mod test {
     use super::*;
     use std::{fs::File, io::BufReader};
     // #[test]
-    fn frontiers() {
-        // flow of water = 49220 -> criticals11 = 4157 -> criticals3 = 34168
-        // 55088 is the +10% to crits
-        // criticals 3 = 34168 +%36 to crits within 8s (moving out from 49220)
-        // criticals14 = 20024 ->
-        // attack_damage1 = 7576 +10%
-        // attack_damage3 = 33866 +10% -> connects to Flow of Water 49220
-        // attack_speed27 = 42857 -> 7576 ->  33866
-        // flow of water -> criticals15 = 44223
-        // flow of water -> intelligence9 = 8975
-        // attack_speed46 = 14725 -> 49220
-        // attack_speed37 = 34233
-    }
+    // fn frontiers() {
+    // flow of water = 49220 -> criticals11 = 4157 -> criticals3 = 34168
+    // 55088 is the +10% to crits
+    // criticals 3 = 34168 +%36 to crits within 8s (moving out from 49220)
+    // criticals14 = 20024 ->
+    // attack_damage1 = 7576 +10%
+    // attack_damage3 = 33866 +10% -> connects to Flow of Water 49220
+    // attack_speed27 = 42857 -> 7576 ->  33866
+    // flow of water -> criticals15 = 44223
+    // flow of water -> intelligence9 = 8975
+    // attack_speed46 = 14725 -> 49220
+    // attack_speed37 = 34233
+    // }
 
     #[test]
     fn nodes_within_distance() {

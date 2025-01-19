@@ -130,7 +130,6 @@ pub struct TreeVis<'p> {
 // Helper Functions
 impl<'p> TreeVis<'p> {
     // Camera consts
-    const SCALE_FACTOR: f32 = 1.0;
     const ZOOM_MIN: f32 = 0.0; // Minimum zoom level
     const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
     const ZOOM_STEP: f32 = 0.0001; // Step size for zoom changes
@@ -139,41 +138,6 @@ impl<'p> TreeVis<'p> {
     const BASE_RADIUS: f32 = 8.0;
     const NOTABLE_MULTIPLIER: f32 = 1.5; // Scale notable nodes
     const NAMELESS_MULTIPLIER: f32 = 1.0; // Scale nameless nodes
-
-    fn update_fuzzy_search(&mut self, ctx: &egui::Context) {
-        if self.is_fuzzy_search_open() {
-            egui::Window::new("Fuzzy Search")
-                .collapsible(true)
-                .show(ctx, |ui| {
-                    let response = ui.text_edit_singleline(&mut self.search_query);
-                    if response.changed() {
-                        self.search_results =
-                            self.passive_tree.fuzzy_search_nodes(&self.search_query);
-                    }
-                    egui::CollapsingHeader::new("Results").show(ui, |ui| {
-                        for &id in &self.search_results {
-                            let node = &self.passive_tree.nodes[&id];
-                            if ui.selectable_label(false, &node.name).double_clicked() {
-                                self.go_to_node(id);
-                            }
-                        }
-                    });
-                });
-        }
-    }
-
-    fn update_hover(&mut self, mx: f32, my: f32) {
-        self.hovered_node = self
-            .passive_tree
-            .nodes
-            .iter()
-            .find(|(_, node)| {
-                let dx = mx - node.wx as f32;
-                let dy = my - node.wy as f32;
-                (dx * dx + dy * dy).sqrt() < 10.0 // Hover threshold
-            })
-            .map(|(id, _)| *id);
-    }
 
     fn current_zoom_level(&self) -> f32 {
         self.zoom
@@ -189,51 +153,6 @@ impl<'p> TreeVis<'p> {
 
     fn is_fuzzy_search_open(&self) -> bool {
         self.fuzzy_search_open.load(Ordering::Relaxed)
-    }
-
-    fn camera_x(&self) -> f32 {
-        self.camera.borrow().0
-    }
-
-    fn camera_y(&self) -> f32 {
-        self.camera.borrow().1
-    }
-
-    fn camera_xy(&self) -> (f32, f32) {
-        *self.camera.borrow()
-    }
-
-    fn find_arbitrary_path(&mut self) {
-        if self.path_nodes.len() < 2 {
-            return; // Need at least two nodes
-        }
-
-        let mut full_path = Vec::new();
-        for pair in self.path_nodes.windows(2) {
-            if let [start, target] = pair {
-                let segment = self.passive_tree.find_shortest_path(*start, *target);
-                if full_path.is_empty() {
-                    full_path.extend(segment);
-                } else {
-                    full_path.extend(segment.iter().skip(1));
-                }
-            }
-        }
-        self.highlighted_path = full_path;
-    }
-
-    fn find_path(&mut self, start: usize, target: usize) {
-        let path = self.passive_tree.find_shortest_path(start, target);
-
-        // Update the active path and edges.
-        self.highlighted_path = path.clone();
-        self.active_edges.clear();
-        for window in path.windows(2) {
-            if let [a, b] = window {
-                self.active_edges.insert((*a, *b));
-                self.active_edges.insert((*b, *a));
-            }
-        }
     }
 
     const CAMERA_OFFSET: (f32, f32) = (-2_600.0, -1_300.0);
@@ -321,27 +240,6 @@ impl<'p> TreeVis<'p> {
         self.current_character = UserCharacter::load_from_toml(path);
     }
 
-    fn highlight_activated_nodes(&self, painter: &egui::Painter) {
-        if let Some(character) = &self.current_character {
-            for &node_id in &character.activated_node_ids {
-                if let Some(node) = self.passive_tree.nodes.get(&node_id) {
-                    painter.circle_filled(
-                        egui::pos2(
-                            self.world_to_screen_x(node.wx),
-                            self.world_to_screen_y(node.wy),
-                        ),
-                        10.0, // slightly larger size
-                        parse_color(
-                            self.color_map
-                                .get("green")
-                                .unwrap_or(&"#29D398".to_string()),
-                        ),
-                    );
-                }
-            }
-        }
-    }
-
     fn handle_mouse(&mut self, ctx: &egui::Context) {
         ctx.input(|input| {
             if input.raw_scroll_delta.y != 0.0 {
@@ -409,32 +307,6 @@ impl<'p> TreeVis<'p> {
             *self.camera.borrow_mut() = (new_camera_x, new_camera_y);
             self.zoom = new_zoom;
         }
-    }
-
-    fn initialize_camera_and_zoom(&mut self) {
-        let (min_x, max_x) = self
-            .passive_tree
-            .nodes
-            .values()
-            .map(|node| node.wx)
-            .fold((f64::MAX, f64::MIN), |(min, max), x| {
-                (min.min(x), max.max(x))
-            });
-
-        let (min_y, max_y) = self
-            .passive_tree
-            .nodes
-            .values()
-            .map(|node| node.wy)
-            .fold((f64::MAX, f64::MIN), |(min, max), y| {
-                (min.min(y), max.max(y))
-            });
-
-        let width = max_x - min_x;
-        let height = max_y - min_y;
-
-        self.zoom = (1.0 / width as f32).min(1.0 / height as f32) * 800.0;
-        *self.camera.borrow_mut() = ((min_x + max_x) as f32 / 2.0, (min_y + max_y) as f32 / 2.0);
     }
 
     fn world_to_screen_x(&self, wx: f64) -> f32 {
