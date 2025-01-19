@@ -12,7 +12,7 @@ fn main() {
     // Load the user config
     let config: UserConfig = UserConfig::load_from_file("data/user_config.toml");
 
-    let file = File::open("../../data/POE2_Tree.json").unwrap();
+    let file = File::open("data/POE2_Tree.json").unwrap();
     let reader = BufReader::new(file);
     let u = serde_json::from_reader(reader).unwrap();
 
