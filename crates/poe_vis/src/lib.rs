@@ -145,32 +145,37 @@ impl eframe::App for TreeVis<'_> {
 
 impl TreeVis<'_> {
     fn show_class_popup(&mut self, ctx: &egui::Context) {
+        egui::CentralPanel::default().show(ctx, |_| {}); // Empty central panel to ensure everything else is blocked
+
         egui::Window::new("Choose Your Class")
             .collapsible(false)
             .resizable(false)
+            .title_bar(false) // Remove the window's title bar for a cleaner look
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]) // Centre on screen
             .show(ctx, |ui| {
-                ui.label("Please select your class:");
-
-                if ui.button("Monk").clicked() {
-                    self.current_character
-                        .get_or_insert_with(Character::default) // Ensure it's initialized
-                        .character_class = CharacterClass::Monk;
-                }
-                if ui.button("Sorceress").clicked() {
-                    self.current_character
-                        .get_or_insert_with(Character::default)
-                        .character_class = CharacterClass::Sorceress;
-                }
-                if ui.button("Warrior").clicked() {
-                    self.current_character
-                        .get_or_insert_with(Character::default)
-                        .character_class = CharacterClass::Warrior;
-                }
-                if ui.button("Ranger").clicked() {
-                    self.current_character
-                        .get_or_insert_with(Character::default)
-                        .character_class = CharacterClass::Ranger;
-                }
+                ui.vertical_centered(|ui| {
+                    ui.label("Please select your class:");
+                    if ui.button("Monk").clicked() {
+                        self.current_character
+                            .get_or_insert_with(Character::default)
+                            .character_class = CharacterClass::Monk;
+                    }
+                    if ui.button("Sorceress").clicked() {
+                        self.current_character
+                            .get_or_insert_with(Character::default)
+                            .character_class = CharacterClass::Sorceress;
+                    }
+                    if ui.button("Warrior").clicked() {
+                        self.current_character
+                            .get_or_insert_with(Character::default)
+                            .character_class = CharacterClass::Warrior;
+                    }
+                    if ui.button("Ranger").clicked() {
+                        self.current_character
+                            .get_or_insert_with(Character::default)
+                            .character_class = CharacterClass::Ranger;
+                    }
+                });
             });
     }
 }

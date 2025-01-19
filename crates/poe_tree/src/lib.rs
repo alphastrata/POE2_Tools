@@ -225,7 +225,7 @@ impl PassiveTree {
             .iter()
             .filter_map(|(&nid, node)| {
                 let dist = (node.wx.powi(2) + node.wy.powi(2)).sqrt();
-                if dist < Self::CULL_NODES_AFTER_THIS || CHAR_START_NODES.contains(&nid) {
+                if dist < Self::CULL_NODES_AFTER_THIS && !CHAR_START_NODES.contains(&nid) {
                     Some(nid)
                 } else {
                     None

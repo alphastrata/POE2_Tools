@@ -26,7 +26,7 @@ pub mod rhs_menu {
                 .rect; // Capture the rectangle of the RHS menu
 
             // Log the RHS menu dimensions
-            log::debug!(
+            log::trace!(
                 "RHS menu rect: x = {:.2}, y = {:.2}, width = {:.2}, height = {:.2}",
                 rhs_rect.min.x,
                 rhs_rect.min.y,

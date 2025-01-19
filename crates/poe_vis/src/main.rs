@@ -9,7 +9,6 @@ fn main() {
     pretty_env_logger::init();
 
     let config: UserConfig = UserConfig::load_from_file("data/user_config.toml");
-
     let file = File::open("data/POE2_Tree.json").unwrap();
     let reader = BufReader::new(file);
     let u = serde_json::from_reader(reader).unwrap();
@@ -17,12 +16,13 @@ fn main() {
     let mut tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
 
     // There's a lot of noise in the data for atlas passives etc that we don't plot.
+    log::debug!("Removing hidden nodes...");
     tree.remove_hidden();
-
+    log::debug!("Hidden nodes removed.");
     // Load the character data, defaulting to `None` if the file is missing or invalid
     let character = Character::load_from_toml("data/character22.toml");
 
-    println!(
+    log::debug!(
         "Found {} nodes and {} groups",
         tree.nodes.len(),
         tree.groups.len(),
