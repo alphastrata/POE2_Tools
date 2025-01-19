@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use egui::Key;
 
-
 pub fn parse_color(col_str: &str) -> egui::Color32 {
     // Parse color from hex string (e.g., "#FF0000")
     if col_str.starts_with('#') && col_str.len() == 7 {
@@ -19,6 +18,9 @@ pub fn parse_color(col_str: &str) -> egui::Color32 {
 pub struct UserConfig {
     pub colors: HashMap<String, String>,
     pub controls: HashMap<String, Vec<String>>,
+
+    #[serde(skip_deserializing)]
+    #[serde(default)]
     pub character: crate::character::Character,
 }
 
@@ -98,13 +100,12 @@ impl UserConfig {
     }
 }
 
+mod tests {
 
-
-mod tests{
-    
     #[test]
     fn can_parse_config() {
         use crate::config::UserConfig;
-        let _config: UserConfig = UserConfig::load_from_file("/Users/smak/Documents/poe-tools2/data/user_config.toml");
+        let _config: UserConfig =
+            UserConfig::load_from_file("/Users/smak/Documents/poe-tools2/data/user_config.toml");
     }
 }

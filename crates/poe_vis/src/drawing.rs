@@ -1,6 +1,5 @@
 use std::default::Default;
 
-
 use poe_tree::config::parse_color;
 
 use super::*;
@@ -109,8 +108,7 @@ pub mod rhs_menu {
 
             if ui.text_edit_singleline(&mut self.search_query).changed() {
                 if !self.search_query.is_empty() {
-                    self.search_results =
-                        self.passive_tree.fuzzy_search_nodes(&self.search_query);
+                    self.search_results = self.passive_tree.fuzzy_search_nodes(&self.search_query);
                     log::debug!("Search query updated: {}", self.search_query);
                     log::debug!("Search results: {:?}", self.search_results);
                 } else {
@@ -250,10 +248,12 @@ impl TreeVis<'_> {
     }
 
     pub fn draw_edges(&self, painter: &egui::Painter) {
-        let activated_edge_color =
-            parse_color(self.user_config.colors.get("activated_edges").expect(
-                "You MUST supply an .active_edges key in your toml with a valid colour",
-            ));
+        let activated_edge_color = parse_color(
+            self.user_config
+                .colors
+                .get("activated_edges")
+                .expect("You MUST supply an .active_edges key in your toml with a valid colour"),
+        );
         let default_edge_color = egui::Color32::GRAY;
 
         self.passive_tree.edges.iter().for_each(|edge| {

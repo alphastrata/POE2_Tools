@@ -42,8 +42,7 @@ impl TreeVis<'_> {
         // Convert mouse position to world coordinates
         let world_mouse_x = self.screen_to_world_x(mouse_pos.x);
         let world_mouse_y = self.screen_to_world_y(mouse_pos.y);
-        let world_mouse_pos =
-            format!("World Mouse: ({:.2}, {:.2})", world_mouse_x, world_mouse_y);
+        let world_mouse_pos = format!("World Mouse: ({:.2}, {:.2})", world_mouse_x, world_mouse_y);
 
         // Get camera position
         let (camera_x, camera_y) = *self.camera.borrow();

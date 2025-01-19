@@ -1,4 +1,3 @@
-
 use std::hash::{Hash, Hasher};
 
 use super::type_wrappings::NodeId;

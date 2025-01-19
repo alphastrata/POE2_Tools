@@ -1,13 +1,11 @@
 use super::*;
-  
+
 // Helper Functions
 impl<'p> TreeVis<'p> {
     // Node size constants
     pub(crate) const ZOOM_MIN: f32 = 0.0; // Minimum zoom level
     pub(crate) const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
     pub(crate) const ZOOM_STEP: f32 = 0.0001; // Step size for zoom changes
-
-   
 
     pub fn move_camera_to_node(&self, node_id: usize) {
         if let Some(node) = self.passive_tree.nodes.get(&node_id) {
@@ -38,11 +36,10 @@ impl<'p> TreeVis<'p> {
         todo!()
     }
     #[allow(unused)]
-    pub fn load_character<P: AsRef<std::path::Path>>(&mut self, path:P) {
+    pub fn load_character<P: AsRef<std::path::Path>>(&mut self, path: P) {
         todo!()
     }
 
-   
     pub fn current_zoom_level(&self) -> f32 {
         self.zoom
     }
@@ -56,8 +53,7 @@ impl<'p> TreeVis<'p> {
 
     /// Adjust the zoom level based on raw scroll input.
     pub fn adjust_zoom(&mut self, scroll: f32, mouse_pos: egui::Pos2) {
-        let new_zoom =
-            (self.zoom + scroll * Self::ZOOM_STEP).clamp(Self::ZOOM_MIN, Self::ZOOM_MAX);
+        let new_zoom = (self.zoom + scroll * Self::ZOOM_STEP).clamp(Self::ZOOM_MIN, Self::ZOOM_MAX);
 
         if (new_zoom - self.zoom).abs() > f32::EPSILON {
             // Calculate the scaling factor

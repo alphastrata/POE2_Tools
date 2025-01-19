@@ -133,9 +133,7 @@ impl TreeVis<'_> {
 
         active_nodes.iter().enumerate().try_for_each(|(i, &start)| {
             active_nodes.iter().skip(i + 1).try_for_each(|&end| {
-                if visited_edges.contains(&(start, end))
-                    || visited_edges.contains(&(end, start))
-                {
+                if visited_edges.contains(&(start, end)) || visited_edges.contains(&(end, start)) {
                     return ControlFlow::Continue::<()>(());
                 }
 
@@ -158,5 +156,4 @@ impl TreeVis<'_> {
             self.active_edges
         );
     }
-
 }

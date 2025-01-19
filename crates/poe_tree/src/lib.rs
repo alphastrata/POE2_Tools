@@ -1,4 +1,5 @@
 pub mod character;
+pub mod config;
 pub mod consts;
 pub mod coordinates;
 pub mod debug_utils;
@@ -7,7 +8,6 @@ pub mod nodes;
 pub mod pathfinding;
 pub mod skills;
 pub mod stats;
-pub mod config;
 pub mod type_wrappings;
 
 use consts::{CHAR_START_NODES, ORBIT_RADII, ORBIT_SLOTS};
@@ -16,7 +16,6 @@ use edges::Edge;
 use nodes::PoeNode;
 use type_wrappings::{GroupId, NodeId};
 
-
 use serde_json::Value;
 use std::{
     collections::{HashMap, HashSet},
@@ -24,18 +23,13 @@ use std::{
     time::Instant,
 };
 
-
-
-pub mod prelude {
-    
-}
+pub mod prelude {}
 
 #[cfg(test)]
 mod tests {
     use std::{fs::File, io::BufReader};
 
     use crate::{edges::Edge, stats::Operand, PassiveTree};
-
 
     #[test]
     fn path_between_flow_like_water_and_chaos_inoculation() {
@@ -209,7 +203,6 @@ mod tests {
         );
     }
 }
-
 
 #[derive(Debug, Clone, Default)]
 pub struct PassiveTree {
