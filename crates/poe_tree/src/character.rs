@@ -32,7 +32,7 @@ impl Character {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone, Copy)]
 pub enum CharacterClass {
     #[default]
     Monk,

@@ -192,83 +192,6 @@ impl PassiveTree {
         })
     }
 
-    pub fn find_shortest_path(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
-        let mut distances: HashMap<NodeId, usize> = HashMap::new();
-        let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
-        let mut priority_queue = BinaryHeap::new();
-
-        // Initialize distances
-        for &node_id in self.nodes.keys() {
-            distances.insert(node_id, usize::MAX);
-        }
-        distances.insert(start, 0);
-
-        // Push the starting node with a cost of 0
-        priority_queue.push(Reverse(NodeCost {
-            node_id: start,
-            cost: 0,
-        }));
-
-        while let Some(Reverse(NodeCost { node_id, cost })) = priority_queue.pop() {
-            // Stop processing if we've reached the target
-            if node_id == target {
-                break;
-            }
-
-            // Skip outdated entries in the priority queue
-            if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
-                continue;
-            }
-
-            // Process all neighbors of the current node
-            for edge in self.edges.iter() {
-                let neighbor = if edge.start == node_id {
-                    edge.end
-                } else if edge.end == node_id {
-                    edge.start
-                } else {
-                    continue;
-                };
-
-                let new_cost = cost + 1; // Assuming unweighted edges
-                if new_cost < *distances.get(&neighbor).unwrap_or(&usize::MAX) {
-                    eprintln!(
-                        "Updating distance for node {:?} from {} to {}",
-                        neighbor,
-                        distances.get(&neighbor).unwrap_or(&usize::MAX),
-                        new_cost
-                    );
-                    distances.insert(neighbor, new_cost);
-                    predecessors.insert(neighbor, node_id);
-                    priority_queue.push(Reverse(NodeCost {
-                        node_id: neighbor,
-                        cost: new_cost,
-                    }));
-                }
-            }
-        }
-
-        // Reconstruct the path from `predecessors`
-        let mut path = Vec::new();
-        let mut current = target;
-        while let Some(&prev) = predecessors.get(&current) {
-            path.push(current);
-            current = prev;
-        }
-
-        // Add the start node if we reached it
-        if current == start {
-            path.push(start);
-            path.reverse();
-            eprintln!("Path found: {:?}", path);
-            return path;
-        }
-
-        // No valid path found
-        eprintln!("No path found from {:?} to {:?}", start, target);
-        Vec::new()
-    }
-
     pub fn all_nodes_with_distance(&self, start: NodeId, delta: usize) -> Vec<Vec<NodeId>> {
         let mut distances: HashMap<NodeId, usize> = HashMap::new();
         let mut priority_queue = BinaryHeap::new();
@@ -343,6 +266,94 @@ fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<usize> {
         .collect()
 }
 
+impl PassiveTree {
+    pub fn find_adjacent_nodes(&self, start_node: usize) -> Vec<usize> {
+        log::debug!("Finding adjacent nodes for start_node: {}", start_node);
+
+        self.edges
+            .iter()
+            .filter(|e| e.end == start_node || e.start == start_node)
+            .map(|v| if v.end == start_node { v.start } else { v.end })
+            .collect::<Vec<usize>>()
+    }
+    pub fn find_shortest_path(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
+        let mut distances: HashMap<NodeId, usize> = HashMap::new();
+        let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
+        let mut priority_queue = BinaryHeap::new();
+
+        // Initialize distances
+        for &node_id in self.nodes.keys() {
+            distances.insert(node_id, usize::MAX);
+        }
+        distances.insert(start, 0);
+
+        // Push the starting node with a cost of 0
+        priority_queue.push(Reverse(NodeCost {
+            node_id: start,
+            cost: 0,
+        }));
+
+        while let Some(Reverse(NodeCost { node_id, cost })) = priority_queue.pop() {
+            // Stop processing if we've reached the target
+            if node_id == target {
+                break;
+            }
+
+            // Skip outdated entries in the priority queue
+            if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
+                continue;
+            }
+
+            // Process all neighbors of the current node
+            for edge in self.edges.iter() {
+                let neighbor = if edge.start == node_id {
+                    edge.end
+                } else if edge.end == node_id {
+                    edge.start
+                } else {
+                    continue;
+                };
+
+                let new_cost = cost + 1; // Assuming unweighted edges
+                if new_cost < *distances.get(&neighbor).unwrap_or(&usize::MAX) {
+                    distances.insert(neighbor, new_cost);
+                    predecessors.insert(neighbor, node_id);
+                    priority_queue.push(Reverse(NodeCost {
+                        node_id: neighbor,
+                        cost: new_cost,
+                    }));
+
+                    eprintln!(
+                        "Updated neighbor {}: cost {}, predecessor {}",
+                        neighbor, new_cost, node_id
+                    );
+                }
+            }
+        }
+
+        // Reconstruct the path from `predecessors`
+        let mut path = Vec::new();
+        let mut current = target;
+        while let Some(&prev) = predecessors.get(&current) {
+            eprintln!("Tracing back: {} -> {}", current, prev);
+            path.push(current);
+            current = prev;
+        }
+
+        // Add the start node if we reached it
+        if current == start {
+            path.push(start);
+            path.reverse();
+            eprintln!("Path found: {:?}", path);
+            return path;
+        }
+
+        // No valid path found
+        eprintln!("No path found from {:?} to {:?}", start, target);
+        Vec::new()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -361,6 +372,54 @@ mod test {
     // attack_speed46 = 14725 -> 49220
     // attack_speed37 = 34233
     // }
+
+    #[test]
+    fn test_find_shortest_path() {
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let tree_data = serde_json::from_reader(reader).unwrap();
+        let tree = PassiveTree::from_value(&tree_data).unwrap();
+
+        let start = 44683;
+        let target = 52980;
+
+        let path = tree.find_shortest_path(start, target);
+
+        eprintln!("Shortest path from {} to {}: {:?}", start, target, path);
+        assert!(!path.is_empty(), "No path found!");
+        assert_eq!(path.first(), Some(&start));
+        assert_eq!(path.last(), Some(&target));
+    }
+
+    #[test]
+    fn test_bidirectional_edges() {
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
+        let reader = BufReader::new(file);
+        let tree_data = serde_json::from_reader(reader).unwrap();
+        let tree = PassiveTree::from_value(&tree_data).unwrap();
+
+        let mut bidirectional_issues = Vec::new();
+
+        for edge in &tree.edges {
+            // Check if the reverse edge exists
+            let reverse_edge_exists = tree
+                .edges
+                .iter()
+                .any(|e| e.start == edge.end && e.end == edge.start);
+            if !reverse_edge_exists {
+                bidirectional_issues.push((edge.start, edge.end));
+            }
+        }
+
+        if !bidirectional_issues.is_empty() {
+            eprintln!("Found non-bidirectional edges: {:?}", bidirectional_issues);
+        }
+
+        assert!(
+            bidirectional_issues.is_empty(),
+            "Some edges are not bidirectional."
+        );
+    }
 
     #[test]
     fn nodes_within_distance() {

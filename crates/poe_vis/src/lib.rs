@@ -12,6 +12,7 @@ pub mod io;
 use poe_tree::{
     character::{Character, CharacterClass},
     config::UserConfig,
+    consts::CHAR_START_NODES,
     PassiveTree,
 };
 
@@ -92,7 +93,7 @@ pub struct TreeVis<'p> {
 impl eframe::App for TreeVis<'_> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Check if a character is loaded, and show class selection popup if not
-        if self.current_character.is_none() {
+        if self.current_character.is_none() || self.start_node_id == 0usize {
             self.show_class_popup(ctx);
         }
 
@@ -144,38 +145,82 @@ impl eframe::App for TreeVis<'_> {
 }
 
 impl TreeVis<'_> {
-    fn show_class_popup(&mut self, ctx: &egui::Context) {
-        egui::CentralPanel::default().show(ctx, |_| {}); // Empty central panel to ensure everything else is blocked
+    pub fn show_class_popup(&mut self, ctx: &egui::Context) {
+        // Ensure character exists, or initialize with default
+        let character = self
+            .current_character
+            .get_or_insert_with(Character::default);
+
+        let selected_class = &mut character.character_class;
 
         egui::Window::new("Choose Your Class")
             .collapsible(false)
             .resizable(false)
-            .title_bar(false) // Remove the window's title bar for a cleaner look
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]) // Centre on screen
+            .title_bar(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.label("Please select your class:");
-                    if ui.button("Monk").clicked() {
-                        self.current_character
-                            .get_or_insert_with(Character::default)
-                            .character_class = CharacterClass::Monk;
-                    }
-                    if ui.button("Sorceress").clicked() {
-                        self.current_character
-                            .get_or_insert_with(Character::default)
-                            .character_class = CharacterClass::Sorceress;
-                    }
-                    if ui.button("Warrior").clicked() {
-                        self.current_character
-                            .get_or_insert_with(Character::default)
-                            .character_class = CharacterClass::Warrior;
-                    }
-                    if ui.button("Ranger").clicked() {
-                        self.current_character
-                            .get_or_insert_with(Character::default)
-                            .character_class = CharacterClass::Ranger;
-                    }
-                });
+                ui.label("Please select your class:");
+
+                // Dropdown for class selection
+                egui::ComboBox::from_label("Class")
+                    .selected_text(format!("{:?}", selected_class))
+                    .show_ui(ui, |ui| {
+                        [
+                            CharacterClass::Monk,
+                            CharacterClass::Sorceress,
+                            CharacterClass::Witch,
+                            CharacterClass::Warrior,
+                            CharacterClass::Mercenary,
+                            CharacterClass::Ranger,
+                        ]
+                        .into_iter()
+                        .for_each(|class| {
+                            ui.selectable_value(selected_class, class, format!("{:?}", class));
+                        });
+                    });
+
+                // Update the character's class and compute adjacent nodes
+                let class_starting_node = CHAR_START_NODES[(*selected_class) as usize];
+                let starting_node_candidates =
+                    self.passive_tree.find_adjacent_nodes(class_starting_node);
+                dbg!(starting_node_candidates.len());
+
+                let starting_node_candidates: Vec<usize> = self
+                    .passive_tree
+                    .all_nodes_with_distance(class_starting_node, 1)
+                    .into_iter()
+                    .flatten()
+                    .collect();
+                dbg!(starting_node_candidates.len());
+
+                let mut selected_starting_node = starting_node_candidates.first().unwrap(); //NOTE: should never be non-zero
+
+                egui::ComboBox::from_label("Starting Node")
+                    .selected_text(format!("Node {:?}", selected_starting_node))
+                    .show_ui(ui, |ui| {
+                        (&starting_node_candidates).into_iter().for_each(|node| {
+                            ui.selectable_value(
+                                &mut selected_starting_node,
+                                node,
+                                format!("Node {}", node),
+                            );
+                        });
+                    });
+
+                log::debug!(
+                    "Selected Class: {:?}, Selected Starting Node: {}",
+                    selected_class,
+                    selected_starting_node
+                );
+
+                // Confirm button
+                if ui.button("Confirm").clicked() {
+                    log::debug!(
+                        "Confirmed Class: {:?}, Adjacent Nodes: {:?}",
+                        selected_class,
+                        starting_node_candidates
+                    );
+                }
             });
     }
 }
