@@ -513,8 +513,8 @@ impl<'p> TreeVis<'p> {
         egui::CentralPanel::default().show(ctx, |ui| {
             let painter = ui.painter();
 
-            self.draw_edges(&painter);
-            self.draw_nodes(&painter);
+            self.draw_edges(painter);
+            self.draw_nodes(painter);
         });
     }
 
@@ -881,7 +881,7 @@ impl TreeVis<'_> {
         }
     }
 }
-impl<'p> TreeVis<'p> {
+impl TreeVis<'_> {
     pub fn check_and_activate_edges(&mut self) {
         let mut visited_edges: HashSet<(NodeId, NodeId)> = HashSet::new();
         let active_nodes: Vec<_> = self
@@ -927,7 +927,7 @@ impl<'p> TreeVis<'p> {
 
     // Other related functions like draw_edges, check_and_activate_nodes, etc.
 }
-impl<'p> TreeVis<'p> {
+impl TreeVis<'_> {
     pub fn select_node(&mut self, node_id: usize) {
         if let Some(character) = &mut self.current_character {
             if !character.activated_node_ids.contains(&node_id) {

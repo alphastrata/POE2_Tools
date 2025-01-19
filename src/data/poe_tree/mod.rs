@@ -15,12 +15,10 @@ use debug_utils::format_bytes;
 use edges::Edge;
 use nodes::PoeNode;
 use serde_json::Value;
-use stats::Stat;
 use type_wrappings::{GroupId, NodeId};
 
 use std::{
     collections::{HashMap, HashSet},
-    fs,
     mem::size_of,
     time::Instant,
 };

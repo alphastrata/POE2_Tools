@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use egui::Key;
 
-use crate::data::poe_tree::character::{CharacterClass, CharacterConfig};
+use crate::data::poe_tree::character::CharacterConfig;
 
 pub(crate) fn parse_color(col_str: &str) -> egui::Color32 {
     // Parse color from hex string (e.g., "#FF0000")

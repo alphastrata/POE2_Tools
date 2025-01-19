@@ -1,9 +1,9 @@
 //$ src\data\poe_tree\nodes.rs
 use crate::config::{parse_color, UserConfig};
 
-use super::stats::{Operand, Stat};
-use super::type_wrappings::{EdgeId, GroupId, NodeId};
-use super::{consts::*, PassiveTree};
+use super::stats::Stat;
+use super::type_wrappings::{GroupId, NodeId};
+use super::PassiveTree;
 
 #[derive(Debug, Clone, Default)]
 pub struct PoeNode {
