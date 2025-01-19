@@ -1,22 +1,54 @@
 use std::{
     cell::RefCell,
-    collections::{HashMap, HashSet}, sync::atomic::AtomicBool,
+    collections::{HashMap, HashSet},
+    sync::atomic::AtomicBool,
 };
-pub mod camera;
-pub mod drawing;
-pub(crate) mod debug;
 pub mod background_services;
+pub mod camera;
+pub(crate) mod debug;
+pub mod drawing;
 pub mod io;
 
 use poo_tree::{character::Character, config::UserConfig, PassiveTree};
 
-impl TreeVis<'_> {
+impl<'p> TreeVis<'p> {
     pub(crate) const BASE_RADIUS: f32 = 8.0;
     pub(crate) const NOTABLE_MULTIPLIER: f32 = 1.5; // Scale notable nodes
     pub(crate) const NAMELESS_MULTIPLIER: f32 = 1.0; // Scale nameless nodes
     pub(crate) const CAMERA_OFFSET: (f32, f32) = (-2_600.0, -1_300.0);
-}
 
+    pub fn new(
+        passive_tree: &'p mut PassiveTree,
+        user_config: UserConfig,
+        current_character: Character,
+    ) -> Self {
+        Self {
+            camera: RefCell::new(Self::CAMERA_OFFSET),
+            zoom: 0.09,
+            passive_tree,
+            hovered_node: None, // No node hovered initially
+
+            // Fuzzy-search-related
+            fuzzy_search_open: AtomicBool::new(false), // Search not open initially
+            search_query: String::new(),               // Empty search query
+            search_results: Vec::new(),                // No search results initially
+
+            // Path-finder-related
+            start_node_id: 0,             // Default to the root or initial node
+            target_node_id: 0,            // Default to no target node
+            highlighted_path: Vec::new(), // No path initially
+            active_edges: HashSet::new(), // No edges highlighted initially
+            active_nodes: HashSet::new(),
+
+            current_character: Some(current_character),
+            last_save_time: std::time::Instant::now(), // Set to the current time
+
+            user_config,
+            controls: HashMap::new(),
+            requires_activation_check: false,
+        }
+    }
+}
 
 pub(crate) struct NonInteractiveAreas {}
 pub struct TreeVis<'p> {
@@ -59,7 +91,6 @@ impl eframe::App for TreeVis<'_> {
         self.handle_mouse(ctx);
 
         if self.requires_activation_check {
-
             log::debug!("Checking for active nodes & edges to highlight..");
             self.check_and_activate_nodes();
             self.check_and_activate_edges();

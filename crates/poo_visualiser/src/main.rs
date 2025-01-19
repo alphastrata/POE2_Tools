@@ -3,7 +3,7 @@
 use std::{fs::File, io::BufReader};
 
 
-use poo_tree::{config::{UserCharacter, UserConfig}, PassiveTree};
+use poo_tree::{character::Character, config::UserConfig, PassiveTree};
 use poo_visualiser::TreeVis;
 
 fn main() {
@@ -21,7 +21,7 @@ fn main() {
     tree.remove_hidden();
 
     // Load the character data, defaulting to `None` if the file is missing or invalid
-    let character = UserCharacter::load_from_toml("character.toml");
+    let character = Character::load_from_toml("character.toml").unwrap();
 
     println!(
         "Found {} nodes and {} groups",

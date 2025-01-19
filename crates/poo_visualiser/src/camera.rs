@@ -1,48 +1,13 @@
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    sync::atomic::AtomicBool,
-};
-
-use poo_tree::{character::Character, config::UserConfig, PassiveTree};
-
 use super::*;
   
 // Helper Functions
 impl<'p> TreeVis<'p> {
     // Node size constants
+    pub(crate) const ZOOM_MIN: f32 = 0.0; // Minimum zoom level
+    pub(crate) const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
+    pub(crate) const ZOOM_STEP: f32 = 0.0001; // Step size for zoom changes
 
-    pub fn new(
-        passive_tree: &'p mut PassiveTree,
-        user_config: UserConfig,
-        current_character: Character,
-    ) -> Self {
-        Self {
-            camera: RefCell::new(Self::CAMERA_OFFSET),
-            zoom: 0.09,
-            passive_tree,
-            hovered_node: None, // No node hovered initially
-
-            // Fuzzy-search-related
-            fuzzy_search_open: AtomicBool::new(false), // Search not open initially
-            search_query: String::new(),               // Empty search query
-            search_results: Vec::new(),                // No search results initially
-
-            // Path-finder-related
-            start_node_id: 0,             // Default to the root or initial node
-            target_node_id: 0,            // Default to no target node
-            highlighted_path: Vec::new(), // No path initially
-            active_edges: HashSet::new(), // No edges highlighted initially
-            active_nodes: HashSet::new(),
-
-            current_character,
-            last_save_time: std::time::Instant::now(), // Set to the current time
-
-            user_config,
-            controls: HashMap::new(),
-            requires_activation_check: false,
-        }
-    }
+   
 
     pub fn move_camera_to_node(&self, node_id: usize) {
         if let Some(node) = self.passive_tree.nodes.get(&node_id) {
@@ -63,29 +28,21 @@ impl<'p> TreeVis<'p> {
         // self.disable_fuzzy_search();
     }
 
+    #[allow(unused)]
     pub fn save_character(&mut self) {
-        if let Some(character) = &self.current_character {
-            character.save_to_toml("data/last_character.toml");
-            self.last_save_time = std::time::Instant::now();
-        }
+        todo!()
     }
 
     #[allow(unused)]
     pub fn auto_save_character(&mut self) {
-        if let Some(character) = &self.current_character {
-            if self.last_save_time.elapsed().as_secs() >= 5 {
-                self.save_character();
-            }
-        }
+        todo!()
+    }
+    #[allow(unused)]
+    pub fn load_character<P: AsRef<std::path::Path>>(&mut self, path:P) {
+        todo!()
     }
 
-    pub fn load_character(&mut self, path: &str) {
-        self.current_character = UserCharacter::load_from_toml(path);
-    }
-
-    pub(crate) const ZOOM_MIN: f32 = 0.0; // Minimum zoom level
-    pub(crate) const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
-    pub(crate) const ZOOM_STEP: f32 = 0.0001; // Step size for zoom changes
+   
     pub fn current_zoom_level(&self) -> f32 {
         self.zoom
     }
