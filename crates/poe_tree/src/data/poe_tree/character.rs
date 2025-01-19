@@ -11,7 +11,7 @@ pub enum CharacterClass {
     Sorceress,
     Witch,
     Warrior,
-    Mercenery,
+    Mercenary,
     Ranger,
 }
 
@@ -26,7 +26,7 @@ impl<'de> serde::Deserialize<'de> for CharacterClass {
             "Sorceress" => Ok(CharacterClass::Sorceress),
             "Witch" => Ok(CharacterClass::Witch),
             "Warrior" => Ok(CharacterClass::Warrior),
-            "Mercenery" => Ok(CharacterClass::Mercenery),
+            "Mercenary" => Ok(CharacterClass::Mercenary),
             "Ranger" => Ok(CharacterClass::Ranger),
             _ => Err(serde::de::Error::unknown_variant(
                 &s,
@@ -35,10 +35,22 @@ impl<'de> serde::Deserialize<'de> for CharacterClass {
                     "Sorceress",
                     "Witch",
                     "Warrior",
-                    "Mercenery",
+                    "Mercenary",
                     "Ranger",
                 ],
             )),
         }
+    }
+}
+
+
+mod tests{
+    use crate::config::UserConfig;
+
+    #[test]
+    fn can_parse_config() {
+        let config: UserConfig = UserConfig::load_from_file("/Users/smak/Documents/poo-tools2/data/user_config.toml");
+
+        println!("{:?}", config);
     }
 }

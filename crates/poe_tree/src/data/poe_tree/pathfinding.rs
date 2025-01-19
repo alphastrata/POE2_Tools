@@ -365,7 +365,7 @@ mod test {
 
     #[test]
     fn nodes_within_distance() {
-        let file = File::open("data/POE2_Tree.json").unwrap();
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
 
@@ -427,7 +427,7 @@ mod test {
     }
     #[test]
     fn equivalent_path_lengths_to_target() {
-        let file = File::open("data/POE2_Tree.json").unwrap();
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
 
@@ -447,7 +447,7 @@ mod test {
 
     #[test]
     fn connected_path() {
-        let file = File::open("data/POE2_Tree.json").unwrap();
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
 

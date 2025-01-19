@@ -13,7 +13,7 @@ mod tests {
 
     #[test]
     fn path_between_flow_like_water_and_chaos_inoculation() {
-        let file = File::open("data/POE2_Tree.json").unwrap();
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
         let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn bidirectional_edges() {
-        let file = File::open("data/POE2_Tree.json").unwrap();
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
         let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn path_between_avatar_of_fire_and_over_exposure() {
-        let file = File::open("data/POE2_Tree.json").unwrap();
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
         let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn collect_life_nodes_from_real_tree() {
-        let file = File::open("data/POE2_Tree.json").unwrap();
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
         let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn collect_evasion_percentage_nodes_from_real_tree() {
-        let file = File::open("data/POE2_Tree.json").unwrap();
+        let file = File::open("../../data/POE2_Tree.json").unwrap();
         let reader = BufReader::new(file);
         let u = serde_json::from_reader(reader).unwrap();
 
