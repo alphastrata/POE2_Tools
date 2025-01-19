@@ -1,4 +1,5 @@
 //$ crates/poo_visualiser/src/lib.rs
+use poo_tree::*;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -160,6 +161,8 @@ pub mod drawing {
     use super::*;
     // drawing{
     pub mod rhs_menu {
+        use super::TreeVis;
+
         impl TreeVis<'_> {
             fn draw_rhs_menu(&mut self, ctx: &egui::Context) {
                 let rhs_rect = egui::SidePanel::right("rhs_menu")
