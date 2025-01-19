@@ -8,9 +8,6 @@ use std::{
     time::Instant,
 };
 
-use egui::accesskit::Tree;
-use log::debug;
-
 use crate::{config::UserConfig, data::poe_tree::PassiveTree};
 use crate::{
     config::{parse_color, UserCharacter},
@@ -29,6 +26,16 @@ impl eframe::App for TreeVis<'_> {
 
         //DEBUG:
         self.draw_debug_bar(ctx);
+
+        // Example: Process node hovering
+        if let Some(hovered_node_id) = self.get_hovered_node(ctx) {
+            self.hover_node(hovered_node_id);
+        }
+
+        // Example: Check and activate nodes if target node changes
+        if let Some(target_node_id) = self.get_target_node() {
+            self.select_node(target_node_id);
+        }
 
         ctx.input(|input| {
             if let Some(hovered) = self.hovered_node {
@@ -937,8 +944,7 @@ impl<'p> TreeVis<'p> {
 
                 // Highlight the shortest path to an active node (do not activate)
                 if let Some(shortest_path) = self.process_path_to_active_node(node_id, false) {
-                    log::debug!("Highlighting path: {:?}", shortest_path);
-
+                    // log::debug!("Highlighting path: {:?}", shortest_path);
                     self.highlighted_path = shortest_path;
                 }
             }
@@ -1009,5 +1015,28 @@ impl<'p> TreeVis<'p> {
                 log::debug!("Edge activated: ({}, {})", start, end);
             }
         }
+    }
+
+    const HOVER_RADIUS: f32 = 100.0;
+    fn get_hovered_node(&self, ctx: &egui::Context) -> Option<usize> {
+        // Logic to determine hovered node from mouse position
+        let mouse_pos = ctx.input(|input| input.pointer.hover_pos())?;
+        self.passive_tree.nodes.iter().find_map(|(&node_id, node)| {
+            let screen_x = self.world_to_screen_x(node.wx);
+            let screen_y = self.world_to_screen_y(node.wy);
+
+            let distance =
+                ((mouse_pos.x - screen_x).powi(2) + (mouse_pos.y - screen_y).powi(2)).sqrt();
+            if distance < Self::HOVER_RADIUS {
+                Some(node_id)
+            } else {
+                None
+            }
+        })
+    }
+
+    fn get_target_node(&self) -> Option<usize> {
+        // Logic to determine if a target node has been selected
+        Some(self.target_node_id)
     }
 }
