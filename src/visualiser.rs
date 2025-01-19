@@ -107,8 +107,6 @@ pub struct TreeVis<'p> {
     start_node_id: usize,
     target_node_id: usize,
     highlighted_path: Vec<usize>,
-    // for multi-step pathing
-    path_nodes: Vec<usize>,
 
     /// Store edges of the current path
     // NOTE: mostly used for drawing.
@@ -116,14 +114,13 @@ pub struct TreeVis<'p> {
     active_nodes: HashSet<usize>,
 
     // Config-driven colours
-    color_map: HashMap<String, String>,
-
     current_character: Option<UserCharacter>,
     last_save_time: std::time::Instant,
 
     user_config: UserConfig,
 
     /// Mapped controls from self.user_config
+    #[allow(unused)]
     controls: HashMap<String, egui::Key>,
 }
 
@@ -143,14 +140,17 @@ impl<'p> TreeVis<'p> {
         self.zoom
     }
 
+    #[allow(unused)]
     fn enable_fuzzy_search(&self) {
         self.fuzzy_search_open.store(true, Ordering::Relaxed);
     }
 
+    #[allow(unused)]
     fn disable_fuzzy_search(&self) {
         self.fuzzy_search_open.store(false, Ordering::Relaxed);
     }
 
+    #[allow(unused)]
     fn is_fuzzy_search_open(&self) -> bool {
         self.fuzzy_search_open.load(Ordering::Relaxed)
     }
@@ -161,19 +161,9 @@ impl<'p> TreeVis<'p> {
         user_config: UserConfig,
         current_character: Option<UserCharacter>,
     ) -> Self {
-        // Initialize controls from the user configuration
-        // let controls = user_config
-        //     .controls
-        //     .iter()
-        //     .map(|(action, key)| (action.clone(), *key))
-        //     .collect();
-
-        // vis.initialize_camera_and_zoom();
-
-        //TODO: camera offset needs to be const from the window dims?
         Self {
             camera: RefCell::new(Self::CAMERA_OFFSET),
-            zoom: 0.07,
+            zoom: 0.09,
             passive_tree,
             hovered_node: None, // No node hovered initially
 
@@ -188,11 +178,6 @@ impl<'p> TreeVis<'p> {
             highlighted_path: Vec::new(), // No path initially
             active_edges: HashSet::new(), // No edges highlighted initially
             active_nodes: HashSet::new(),
-            // Config-driven colours
-            color_map: HashMap::new(),
-
-            // Multi-step pathing
-            path_nodes: Vec::new(), // No intermediate nodes
 
             current_character,
             last_save_time: std::time::Instant::now(), // Set to the current time
@@ -228,6 +213,7 @@ impl<'p> TreeVis<'p> {
         }
     }
 
+    #[allow(unused)]
     fn auto_save_character(&mut self) {
         if let Some(character) = &self.current_character {
             if self.last_save_time.elapsed().as_secs() >= 5 {

@@ -3,7 +3,7 @@
 use std::hash::{Hash, Hasher};
 
 use super::type_wrappings::NodeId;
-use super::{consts::*, PassiveTree};
+use super::PassiveTree;
 
 #[derive(Debug, Clone)]
 pub struct Edge {
