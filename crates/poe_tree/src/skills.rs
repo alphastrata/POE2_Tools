@@ -1,4 +1,3 @@
-//$ crates/poe_tree/src/data/poe_tree/skills.rs
 use serde::{Deserialize, Serialize};
 
 use super::stats::{deserialize_stats, Stat};

@@ -98,7 +98,7 @@ pub mod rhs_menu {
                     .clicked()
                 {
                     log::info!("Clear button clicked");
-                    self.clear_active_nodes();
+                    self.clear_active_nodes_and_edges();
                 }
             });
         }

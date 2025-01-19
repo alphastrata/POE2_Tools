@@ -40,10 +40,7 @@ impl TreeVis<'_> {
             ));
         }
     }
-}
 
-// Checkers bg systemts
-impl TreeVis<'_> {
     pub fn check_and_activate_nodes(&mut self) {
         let active_nodes: HashSet<usize> = self
             .passive_tree
@@ -162,5 +159,4 @@ impl TreeVis<'_> {
         );
     }
 
-    // Other related functions like draw_edges, check_and_activate_nodes, etc.
 }

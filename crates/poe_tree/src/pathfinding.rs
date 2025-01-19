@@ -1,4 +1,3 @@
-//$ crates/poe_tree/src/data/poe_tree/pathfinding.rs
 use super::edges::Edge;
 use super::stats::Stat;
 use super::type_wrappings::NodeId;

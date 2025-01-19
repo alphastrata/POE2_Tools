@@ -1,4 +1,3 @@
-//$ crates/poe_tree/src/data/poe_tree/coordinates.rs
 #[derive(Debug, Clone)]
 pub struct Group {
     pub x: f64,

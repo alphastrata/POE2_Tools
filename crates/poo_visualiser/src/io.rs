@@ -168,12 +168,14 @@ impl TreeVis<'_> {
                 self.highlighted_path.retain(|&id| id != node_id);
             }
         }
-        self.requires_activation_check = true; // set flag
+        self.requires_activation_check = true; 
     }
-    pub fn clear_active_nodes(&mut self) {
-        for node in self.passive_tree.nodes.values_mut() {
+
+    /// Clears all active nodes and edges (except the self.starting_id)
+    pub fn clear_active_nodes_and_edges(&mut self) {
+        self.passive_tree.nodes.values_mut().filter(|n| n.node_id == self.start_node_id).for_each(|node| {
             node.active = false;
-        }
+        });
         self.highlighted_path.clear();
         self.active_edges.clear();
         log::info!("Cleared all active nodes and paths.");

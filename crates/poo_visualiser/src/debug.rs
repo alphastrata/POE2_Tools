@@ -1,6 +1,3 @@
-use std::sync::atomic::AtomicUsize;
-
-pub(crate) static ACTIVE_NODE_COUNT: AtomicUsize = AtomicUsize::new(0);
 use super::*;
 
 // DEBUG BAR

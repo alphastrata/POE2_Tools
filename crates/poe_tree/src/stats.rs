@@ -1,4 +1,3 @@
-//$ crates/poe_tree/src/data/poe_tree/stats.rs
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};

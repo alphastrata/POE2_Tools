@@ -43,7 +43,6 @@ impl<'de> serde::Deserialize<'de> for CharacterClass {
     }
 }
 
-
 mod tests{
     
     #[test]
