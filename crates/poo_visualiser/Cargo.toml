@@ -1,11 +1,16 @@
 [package]
-name = "poo-visualiser"
+name = "poo_visualiser"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "visualiser"
+path = "src/main.rs"
+
 [dependencies]
-poo_tree = { workspace = true }
+poo_tree.workspace = true
 log.workspace = true
 egui.workspace = true
 eframe.workspace = true
 pretty_env_logger.workspace = true
+serde_json.workspace = true

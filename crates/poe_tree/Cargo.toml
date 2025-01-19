@@ -4,9 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-chrono = { workspace = true }
-anyhow = { workspace = true }
-colored = { workspace = true }
 eframe = { workspace = true }
 egui = { workspace = true }
 log = { workspace = true }

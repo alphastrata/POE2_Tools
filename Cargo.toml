@@ -8,11 +8,13 @@ resolver = "2"
 members = ["crates/*"]
 
 
+[[bin]]
+name = "visualiser"
+path = "crates/poo_visualiser/src/main.rs"
+
 [workspace.dependencies]
 # 3rd party:
-chrono = { version = "0.4.39", features = ["serde"] }
 anyhow = "1.0.95"
-colored = "2.2.0"
 eframe = "0.30.0"
 egui = "0.30.0"
 log = "0.4.22"
@@ -25,3 +27,4 @@ toml = "0.8.19"
 
 # ours:
 poo_tree = { path = "crates/poe_tree" }
+poo_visualiser = { path = "crates/poo_visualiser" }

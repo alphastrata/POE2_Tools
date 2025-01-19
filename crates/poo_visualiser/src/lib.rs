@@ -1,5 +1,7 @@
 //$ crates/poo_visualiser/src/lib.rs
 
+use config::{UserCharacter, UserConfig};
+use data::prelude::PassiveTree;
 use poo_tree::*;
 use std::{
     cell::RefCell,
@@ -157,7 +159,7 @@ pub mod camera {
 }
 
 pub mod drawing {
-    use std::{default::Default, sync::atomic::AtomicUsize};
+    use std::default::Default;
 
     use config::parse_color;
 
