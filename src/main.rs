@@ -32,7 +32,6 @@ fn main() {
     );
 
     // Initialize the visualization
-
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_decorations(true) // Show OS-specific window decorations
@@ -43,7 +42,6 @@ fn main() {
         ..Default::default()
     };
 
-    // let native_opts = eframe::NativeOptions::default();
     _ = eframe::run_native(
         "POE2_TREE debug vis tool",
         options,

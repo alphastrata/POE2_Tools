@@ -84,24 +84,6 @@ impl TreeVis<'_> {
             ));
         }
     }
-
-    /// Draw the debug information bar
-    fn draw_debug_bar(&self, ctx: &egui::Context) {
-        let (mouse_info, zoom_info, hovered_node_info, node_dist_from_origin) =
-            self.get_debug_bar_contents(ctx);
-
-        egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(node_dist_from_origin);
-                ui.separator();
-                ui.label(mouse_info);
-                ui.separator();
-                ui.label(zoom_info);
-                ui.separator();
-                ui.label(hovered_node_info);
-            });
-        });
-    }
 }
 pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
@@ -117,7 +99,7 @@ pub struct TreeVis<'p> {
     // Path-finder-related
     start_node_id: usize,
     target_node_id: usize,
-    path: Vec<usize>,
+    highlighted_path: Vec<usize>,
     // for multi-step pathing
     path_nodes: Vec<usize>,
 
@@ -186,35 +168,6 @@ impl<'p> TreeVis<'p> {
             .map(|(id, _)| *id);
     }
 
-    fn auto_fit(&mut self) {
-        let (min_x, max_x) = self
-            .passive_tree
-            .nodes
-            .values()
-            .map(|node| node.wx)
-            .fold((f64::MAX, f64::MIN), |(min, max), x| {
-                (min.min(x), max.max(x))
-            });
-
-        let (min_y, max_y) = self
-            .passive_tree
-            .nodes
-            .values()
-            .map(|node| node.wy)
-            .fold((f64::MAX, f64::MIN), |(min, max), y| {
-                (min.min(y), max.max(y))
-            });
-
-        let width = max_x - min_x;
-        let height = max_y - min_y;
-
-        self.zoom = (1.0 / width as f32).min(1.0 / height as f32) * 0.9; // Adjust zoom for screen size
-        self.camera = RefCell::new((
-            (min_x + max_x) as f32 / 2.0, // Center camera
-            (min_y + max_y) as f32 / 2.0,
-        ));
-    }
-
     fn current_zoom_level(&self) -> f32 {
         self.zoom
     }
@@ -259,14 +212,14 @@ impl<'p> TreeVis<'p> {
                 }
             }
         }
-        self.path = full_path;
+        self.highlighted_path = full_path;
     }
 
     fn find_path(&mut self, start: usize, target: usize) {
         let path = self.passive_tree.find_shortest_path(start, target);
 
         // Update the active path and edges.
-        self.path = path.clone();
+        self.highlighted_path = path.clone();
         self.active_edges.clear();
         for window in path.windows(2) {
             if let [a, b] = window {
@@ -276,6 +229,7 @@ impl<'p> TreeVis<'p> {
         }
     }
 
+    const CAMERA_OFFSET: (f32, f32) = (-2_600.0, -1_300.0);
     pub fn new(
         passive_tree: &'p mut PassiveTree,
         user_config: UserConfig,
@@ -289,8 +243,10 @@ impl<'p> TreeVis<'p> {
         //     .collect();
 
         // vis.initialize_camera_and_zoom();
+
+        //TODO: camera offset needs to be const from the window dims?
         Self {
-            camera: RefCell::new((700.0, 700.0)),
+            camera: RefCell::new(Self::CAMERA_OFFSET),
             zoom: 0.07,
             passive_tree,
             hovered_node: None, // No node hovered initially
@@ -303,7 +259,7 @@ impl<'p> TreeVis<'p> {
             // Path-finder-related
             start_node_id: 0,             // Default to the root or initial node
             target_node_id: 0,            // Default to no target node
-            path: Vec::new(),             // No path initially
+            highlighted_path: Vec::new(), // No path initially
             active_edges: HashSet::new(), // No edges highlighted initially
             active_nodes: HashSet::new(),
             // Config-driven colours
@@ -325,19 +281,18 @@ impl<'p> TreeVis<'p> {
             let mut camera = self.camera.borrow_mut();
             camera.0 = node.wx as f32;
             camera.1 = node.wy as f32;
+
+            log::debug!(
+                "Camera centered on node ID: {} at world position: ({:.2}, {:.2})",
+                node_id,
+                node.wx,
+                node.wy
+            );
         }
     }
     fn go_to_node(&self, id: usize) {
         self.move_camera_to_node(id);
         self.disable_fuzzy_search();
-    }
-    fn select_node(&mut self, node_id: usize) {
-        if let Some(character) = &mut self.current_character {
-            if !character.activated_node_ids.contains(&node_id) {
-                character.activated_node_ids.push(node_id);
-                self.save_character();
-            }
-        }
     }
 
     fn save_character(&mut self) {
@@ -449,49 +404,6 @@ impl<'p> TreeVis<'p> {
         }
     }
 
-    /// Precompute debug bar contents to avoid borrow conflicts
-    fn get_debug_bar_contents(&self, ctx: &egui::Context) -> (String, String, String, String) {
-        // Get mouse position
-        let mouse_pos = ctx.input(|input| input.pointer.hover_pos().unwrap_or_default());
-        let mouse_info = format!("Mouse: ({:.2}, {:.2})", mouse_pos.x, mouse_pos.y);
-
-        // Get zoom level
-        let zoom_info = format!("Zoom: {:.2}", self.zoom);
-
-        // Get hovered node info
-        let hovered_node_info = if let Some(hovered_node_id) = self.hovered_node {
-            if let Some(node) = self.passive_tree.nodes.get(&hovered_node_id) {
-                format!("Hovered Node: {:?}", node)
-            } else {
-                format!(
-                    "Hovered Node: {} (not found in passive_tree)",
-                    hovered_node_id
-                )
-            }
-        } else {
-            "Hovered Node: None".to_string()
-        };
-
-        // Get distance from (0,0) for hovered node
-        let dist_from_origin_info = if let Some(hovered_node_id) = self.hovered_node {
-            if let Some(node) = self.passive_tree.nodes.get(&hovered_node_id) {
-                let dist = (node.wx.powi(2) + node.wy.powi(2)).sqrt();
-                format!("Distance from (0,0): {:.2}", dist)
-            } else {
-                "Distance from (0,0): N/A".to_string()
-            }
-        } else {
-            "Distance from (0,0): N/A".to_string()
-        };
-
-        (
-            mouse_info,
-            zoom_info,
-            hovered_node_info,
-            dist_from_origin_info,
-        )
-    }
-
     fn initialize_camera_and_zoom(&mut self) {
         let (min_x, max_x) = self
             .passive_tree
@@ -525,21 +437,19 @@ impl<'p> TreeVis<'p> {
     fn world_to_screen_y(&self, wy: f64) -> f32 {
         (wy as f32 - self.camera.borrow().1) * self.zoom + 500.0
     }
-}
 
-impl TreeVis<'_> {
     fn click_node(&mut self, node_id: NodeId) {
         if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
             node.active = !node.active;
             if node.active {
-                if !self.path.contains(&node_id) {
-                    self.path.push(node_id);
+                if !self.highlighted_path.contains(&node_id) {
+                    self.highlighted_path.push(node_id);
                 }
             } else {
-                self.path.retain(|&id| id != node_id);
+                self.highlighted_path.retain(|&id| id != node_id);
             }
             log::debug!("Node {} active state toggled to: {}", node_id, node.active);
-            log::debug!("Current path nodes: {:?}", self.path);
+            log::debug!("Current path nodes: {:?}", self.highlighted_path);
         }
     }
 
@@ -590,121 +500,6 @@ impl TreeVis<'_> {
                 );
             }
         });
-    }
-}
-
-impl TreeVis<'_> {
-    pub fn check_and_activate_nodes(&mut self) {
-        let active_nodes: HashSet<usize> = self
-            .passive_tree
-            .nodes
-            .iter()
-            .filter(|(_, node)| node.active)
-            .map(|(id, _)| *id)
-            .collect();
-
-        let current_active_count = active_nodes.len();
-        let previous_active_count = ACTIVE_NODE_COUNT.load(Ordering::Relaxed);
-
-        if current_active_count <= previous_active_count {
-            return;
-        }
-
-        ACTIVE_NODE_COUNT.store(current_active_count, Ordering::Relaxed);
-
-        if active_nodes.len() < 2 {
-            log::debug!("Not enough active nodes for pathfinding.");
-            return;
-        }
-
-        let mut visited_nodes: HashSet<NodeId> = HashSet::new();
-        let mut updated_nodes = false;
-
-        active_nodes.iter().enumerate().try_for_each(|(i, &start)| {
-            active_nodes.iter().skip(i + 1).try_for_each(|&end| {
-                if visited_nodes.contains(&start) && visited_nodes.contains(&end) {
-                    return ControlFlow::Continue::<()>(());
-                }
-
-                log::debug!("Attempting to find path between {} and {}", start, end);
-
-                if !self.passive_tree.edges.iter().any(|edge| {
-                    (edge.start == start && edge.end == end)
-                        || (edge.start == end && edge.end == start)
-                }) {
-                    let start_time = Instant::now();
-                    let path = self.passive_tree.find_path(start, end);
-
-                    if !path.is_empty() {
-                        log::debug!("Path found: {:?} between {} and {}", path, start, end);
-
-                        path.iter().for_each(|&node_id| {
-                            if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
-                                if !node.active {
-                                    node.active = true;
-                                    updated_nodes = true;
-                                }
-                                visited_nodes.insert(node_id);
-                            }
-                        });
-
-                        let duration = start_time.elapsed();
-                        log::debug!("Path activated in {:?}", duration);
-                    } else {
-                        log::debug!("No path found between {} and {}", start, end);
-                    }
-                }
-
-                ControlFlow::Continue::<()>(())
-            })
-        });
-
-        if updated_nodes {
-            log::debug!("Nodes activated along paths.");
-            self.active_nodes = active_nodes;
-        } else {
-            log::debug!("No new nodes activated.");
-        }
-    }
-
-    pub fn check_and_activate_edges(&mut self) {
-        let mut visited_edges: HashSet<(NodeId, NodeId)> = HashSet::new();
-        let active_nodes: Vec<_> = self
-            .passive_tree
-            .nodes
-            .iter()
-            .filter(|(_, node)| node.active)
-            .map(|(id, _)| *id)
-            .collect();
-
-        // Don't recompute paths and edges unless we've increased the number of nodes
-        let current_active_count = active_nodes.len();
-        let previous_active_count = ACTIVE_NODE_COUNT.load(Ordering::Relaxed);
-        if current_active_count <= previous_active_count {
-            return;
-        }
-
-        active_nodes.iter().enumerate().try_for_each(|(i, &start)| {
-            active_nodes.iter().skip(i + 1).try_for_each(|&end| {
-                if visited_edges.contains(&(start, end)) || visited_edges.contains(&(end, start)) {
-                    return ControlFlow::Continue::<()>(());
-                }
-
-                if self.passive_tree.edges.iter().any(|edge| {
-                    (edge.start == start && edge.end == end)
-                        || (edge.start == end && edge.end == start)
-                }) {
-                    log::debug!("Edge found and activated between {} and {}", start, end);
-
-                    visited_edges.insert((start, end));
-                }
-
-                ControlFlow::Continue::<()>(())
-            })
-        });
-        self.active_edges = visited_edges;
-
-        log::debug!("Edge activation completed.");
     }
 
     pub fn redraw_tree(&self, ctx: &egui::Context) {
@@ -771,14 +566,12 @@ impl TreeVis<'_> {
             painter.circle_filled(egui::pos2(sx, sy), radius, color);
         });
     }
-}
 
-impl TreeVis<'_> {
     fn clear_active_nodes(&mut self) {
         for node in self.passive_tree.nodes.values_mut() {
             node.active = false;
         }
-        self.path.clear();
+        self.highlighted_path.clear();
         self.active_edges.clear();
         log::info!("Cleared all active nodes and paths.");
     }
@@ -909,5 +702,312 @@ impl TreeVis<'_> {
                 }
             }
         });
+    }
+}
+
+impl TreeVis<'_> {
+    /// Draw the debug information bar
+    fn draw_debug_bar(&self, ctx: &egui::Context) {
+        let (
+            mouse_info,
+            zoom_info,
+            hovered_node_info,
+            node_dist_from_origin,
+            world_mouse_pos,
+            camera_pos,
+        ) = self.get_debug_bar_contents(ctx);
+
+        egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(mouse_info);
+                ui.separator();
+                ui.label(zoom_info);
+                ui.separator();
+                ui.label(hovered_node_info);
+                ui.separator();
+                ui.label(node_dist_from_origin);
+                ui.separator();
+                ui.label(world_mouse_pos);
+                ui.separator();
+                ui.label(camera_pos);
+            });
+        });
+    }
+
+    /// Precompute debug bar contents to avoid borrow conflicts
+    fn get_debug_bar_contents(
+        &self,
+        ctx: &egui::Context,
+    ) -> (String, String, String, String, String, String) {
+        // Get mouse position
+        let mouse_pos = ctx.input(|input| input.pointer.hover_pos().unwrap_or_default());
+        let mouse_info = format!("Mouse: ({:.2}, {:.2})", mouse_pos.x, mouse_pos.y);
+
+        // Convert mouse position to world coordinates
+        let world_mouse_x = self.screen_to_world_x(mouse_pos.x);
+        let world_mouse_y = self.screen_to_world_y(mouse_pos.y);
+        let world_mouse_pos = format!("World Mouse: ({:.2}, {:.2})", world_mouse_x, world_mouse_y);
+
+        // Get camera position
+        let (camera_x, camera_y) = *self.camera.borrow();
+        let camera_pos = format!("Camera: ({:.2}, {:.2})", camera_x, camera_y);
+
+        // Get zoom level
+        let zoom_info = format!("Zoom: {:.2}", self.zoom);
+
+        // Get hovered node info
+        let hovered_node_info = if let Some(hovered_node_id) = self.hovered_node {
+            if let Some(node) = self.passive_tree.nodes.get(&hovered_node_id) {
+                format!("Hovered Node: {:?}", node)
+            } else {
+                format!(
+                    "Hovered Node: {} (not found in passive_tree)",
+                    hovered_node_id
+                )
+            }
+        } else {
+            "Hovered Node: None".to_string()
+        };
+
+        // Get distance from (0,0) for hovered node
+        let node_dist_from_origin = if let Some(hovered_node_id) = self.hovered_node {
+            if let Some(node) = self.passive_tree.nodes.get(&hovered_node_id) {
+                let dist = (node.wx.powi(2) + node.wy.powi(2)).sqrt();
+                format!("Distance from Origin: {:.2}", dist)
+            } else {
+                "Distance from Origin: N/A".to_string()
+            }
+        } else {
+            "Distance from Origin: N/A".to_string()
+        };
+
+        (
+            mouse_info,
+            zoom_info,
+            hovered_node_info,
+            node_dist_from_origin,
+            world_mouse_pos,
+            camera_pos,
+        )
+    }
+
+    fn screen_to_world_x(&self, sx: f32) -> f64 {
+        ((sx - 500.0) / self.zoom + self.camera.borrow().0) as f64
+    }
+
+    fn screen_to_world_y(&self, sy: f32) -> f64 {
+        ((sy - 500.0) / self.zoom + self.camera.borrow().1) as f64
+    }
+}
+
+impl TreeVis<'_> {
+    pub fn check_and_activate_nodes(&mut self) {
+        let active_nodes: HashSet<usize> = self
+            .passive_tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.active)
+            .map(|(id, _)| *id)
+            .collect();
+
+        let current_active_count = active_nodes.len();
+        let previous_active_count = ACTIVE_NODE_COUNT.load(Ordering::Relaxed);
+
+        if current_active_count <= previous_active_count {
+            return;
+        }
+
+        ACTIVE_NODE_COUNT.store(current_active_count, Ordering::Relaxed);
+
+        if active_nodes.len() < 2 {
+            log::debug!("Not enough active nodes for pathfinding.");
+            return;
+        }
+
+        let mut visited_nodes: HashSet<NodeId> = HashSet::new();
+        let mut updated_nodes = false;
+
+        active_nodes.iter().enumerate().try_for_each(|(i, &start)| {
+            active_nodes.iter().skip(i + 1).try_for_each(|&end| {
+                if visited_nodes.contains(&start) && visited_nodes.contains(&end) {
+                    return ControlFlow::Continue::<()>(());
+                }
+
+                log::debug!("Attempting to find path between {} and {}", start, end);
+
+                if !self.passive_tree.edges.iter().any(|edge| {
+                    (edge.start == start && edge.end == end)
+                        || (edge.start == end && edge.end == start)
+                }) {
+                    let start_time = Instant::now();
+                    let path = self.passive_tree.find_path(start, end);
+
+                    if !path.is_empty() {
+                        log::debug!("Path found: {:?} between {} and {}", path, start, end);
+
+                        path.iter().for_each(|&node_id| {
+                            if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
+                                if !node.active {
+                                    node.active = true;
+                                    updated_nodes = true;
+                                }
+                                visited_nodes.insert(node_id);
+                            }
+                        });
+
+                        let duration = start_time.elapsed();
+                        log::debug!("Path activated in {:?}", duration);
+                    } else {
+                        log::debug!("No path found between {} and {}", start, end);
+                    }
+                }
+
+                ControlFlow::Continue::<()>(())
+            })
+        });
+
+        if updated_nodes {
+            log::debug!("Nodes activated along paths.");
+            self.active_nodes = active_nodes;
+        } else {
+            log::debug!("No new nodes activated.");
+        }
+    }
+}
+impl<'p> TreeVis<'p> {
+    pub fn check_and_activate_edges(&mut self) {
+        let mut visited_edges: HashSet<(NodeId, NodeId)> = HashSet::new();
+        let active_nodes: Vec<_> = self
+            .passive_tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.active)
+            .map(|(id, _)| *id)
+            .collect();
+
+        // Don't recompute paths and edges unless we've increased the number of nodes
+        let current_active_count = active_nodes.len();
+        let previous_active_count = ACTIVE_NODE_COUNT.load(Ordering::Relaxed);
+        if current_active_count <= previous_active_count {
+            return;
+        }
+
+        active_nodes.iter().enumerate().try_for_each(|(i, &start)| {
+            active_nodes.iter().skip(i + 1).try_for_each(|&end| {
+                if visited_edges.contains(&(start, end)) || visited_edges.contains(&(end, start)) {
+                    return ControlFlow::Continue::<()>(());
+                }
+
+                if self.passive_tree.edges.iter().any(|edge| {
+                    (edge.start == start && edge.end == end)
+                        || (edge.start == end && edge.end == start)
+                }) {
+                    log::debug!("Edge found and activated between {} and {}", start, end);
+
+                    visited_edges.insert((start, end));
+                }
+
+                ControlFlow::Continue::<()>(())
+            })
+        });
+        self.active_edges = visited_edges;
+
+        log::debug!(
+            "Edge activation completed. Active edges: {:?}",
+            self.active_edges
+        );
+    }
+
+    // Other related functions like draw_edges, check_and_activate_nodes, etc.
+}
+impl<'p> TreeVis<'p> {
+    pub fn select_node(&mut self, node_id: usize) {
+        if let Some(character) = &mut self.current_character {
+            if !character.activated_node_ids.contains(&node_id) {
+                log::info!("Selecting node: {}", node_id);
+                self.target_node_id = node_id;
+                self.process_path_to_active_node(node_id, true); // Activate the path
+            }
+        }
+    }
+    pub fn hover_node(&mut self, node_id: usize) {
+        if let Some(node) = self.passive_tree.nodes.get(&node_id) {
+            if !node.active {
+                log::info!("Hovering over node: {}", node_id);
+
+                // Highlight the shortest path to an active node (do not activate)
+                if let Some(shortest_path) = self.process_path_to_active_node(node_id, false) {
+                    log::debug!("Highlighting path: {:?}", shortest_path);
+
+                    self.highlighted_path = shortest_path;
+                }
+            }
+        }
+    }
+
+    /// Processes the shortest path from a given node to the nearest active node.
+    /// If `activate` is true, nodes and edges along the path will be activated.
+    fn process_path_to_active_node(
+        &mut self,
+        node_id: usize,
+        activate: bool,
+    ) -> Option<Vec<usize>> {
+        if let Some((shortest_path, active_node_id)) =
+            self.find_shortest_path_to_active_node(node_id)
+        {
+            log::debug!(
+                "Shortest path from {} to {}: {:?}",
+                node_id,
+                active_node_id,
+                shortest_path
+            );
+
+            if activate {
+                // Activate nodes along the path
+                shortest_path.iter().for_each(|&path_node_id| {
+                    if let Some(node) = self.passive_tree.nodes.get_mut(&path_node_id) {
+                        if !node.active {
+                            log::debug!("Activating node: {}", path_node_id);
+                            node.active = true;
+                            self.active_nodes.insert(path_node_id);
+                        }
+                    }
+                });
+
+                // Update active edges
+                self.update_active_edges(shortest_path.clone());
+            }
+
+            return Some(shortest_path);
+        } else {
+            log::warn!("No active node found to connect to {}", node_id);
+        }
+
+        None
+    }
+
+    /// Finds the shortest path from the given node to the nearest active node.
+    fn find_shortest_path_to_active_node(&self, target_node: usize) -> Option<(Vec<usize>, usize)> {
+        self.passive_tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.active)
+            .map(|(&active_node_id, _)| {
+                let path = self.passive_tree.find_path(target_node, active_node_id);
+                (path, active_node_id)
+            })
+            .filter(|(path, _)| !path.is_empty())
+            .min_by_key(|(path, _)| path.len())
+    }
+
+    /// Updates the active edges based on the given path.
+    fn update_active_edges(&mut self, path: Vec<usize>) {
+        for window in path.windows(2) {
+            if let [start, end] = window {
+                self.active_edges.insert((*start, *end));
+                self.active_edges.insert((*end, *start));
+                log::debug!("Edge activated: ({}, {})", start, end);
+            }
+        }
     }
 }
