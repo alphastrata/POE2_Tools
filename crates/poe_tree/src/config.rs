@@ -105,7 +105,6 @@ mod tests {
     #[test]
     fn can_parse_config() {
         use crate::config::UserConfig;
-        let _config: UserConfig =
-            UserConfig::load_from_file("/Users/smak/Documents/poe-tools2/data/user_config.toml");
+        let _config: UserConfig = UserConfig::load_from_file("../../data/user_config.toml");
     }
 }
