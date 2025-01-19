@@ -9,7 +9,7 @@ pub(crate) mod debug;
 pub mod drawing;
 pub mod io;
 
-use poo_tree::{character::Character, config::UserConfig, PassiveTree};
+use poe_tree::{character::Character, config::UserConfig, PassiveTree};
 
 impl<'p> TreeVis<'p> {
     pub(crate) const BASE_RADIUS: f32 = 8.0;

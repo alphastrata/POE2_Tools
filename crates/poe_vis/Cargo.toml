@@ -1,5 +1,5 @@
 [package]
-name = "poo_visualiser"
+name = "poe_vis"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ name = "visualiser"
 path = "src/main.rs"
 
 [dependencies]
-poo_tree = { workspace = true }
+poe_tree = { workspace = true }
 log = { workspace = true }
 egui = { workspace = true }
 eframe = { workspace = true }

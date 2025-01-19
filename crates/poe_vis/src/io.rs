@@ -1,5 +1,5 @@
 
-use poo_tree::type_wrappings::NodeId;
+use poe_tree::type_wrappings::NodeId;
 
 use super::*;
 // IO

@@ -2273,6 +2273,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "poe_tools"
+version = "0.1.0"
+
+[[package]]
+name = "poe_tree"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "eframe",
+ "egui",
+ "log",
+ "pretty_env_logger",
+ "rfd",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "toml",
+]
+
+[[package]]
+name = "poe_vis"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "log",
+ "poe_tree",
+ "pretty_env_logger",
+ "serde_json",
+]
+
+[[package]]
 name = "polling"
 version = "3.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2292,38 +2324,6 @@ name = "pollster"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
-
-[[package]]
-name = "poo_tools"
-version = "0.1.0"
-
-[[package]]
-name = "poo_tree"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "eframe",
- "egui",
- "log",
- "pretty_env_logger",
- "rfd",
- "serde",
- "serde_json",
- "serde_yaml",
- "toml",
-]
-
-[[package]]
-name = "poo_visualiser"
-version = "0.1.0"
-dependencies = [
- "eframe",
- "egui",
- "log",
- "poo_tree",
- "pretty_env_logger",
- "serde_json",
-]
 
 [[package]]
 name = "ppv-lite86"

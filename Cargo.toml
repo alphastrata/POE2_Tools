@@ -1,11 +1,11 @@
 [package]
-name = "poo_tools"
+name = "poe_tools"
 version = "0.1.0"
 edition = "2021"
 
 [workspace]
 resolver = "2"
-members = ["crates/poe_tree", "crates/poo_visualiser"]
+members = ["crates/poe_tree", "crates/poe_vis"]
 
 [workspace.dependencies]
 anyhow = "1.0.95"
@@ -18,5 +18,5 @@ serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.134"
 serde_yaml = "0.9.34"
 toml = "0.8.19"
-poo_tree = { path = "crates/poe_tree" }
+poe_tree = { path = "crates/poe_tree" }
 chrono = "0.4.39"

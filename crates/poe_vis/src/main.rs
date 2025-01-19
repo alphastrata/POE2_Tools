@@ -1,10 +1,10 @@
-//$ crates/poo_visualiser/src/main.rs
+//$ crates/poe_visualiser/src/main.rs
 
 use std::{fs::File, io::BufReader};
 
 
-use poo_tree::{character::Character, config::UserConfig, PassiveTree};
-use poo_visualiser::TreeVis;
+use poe_tree::{character::Character, config::UserConfig, PassiveTree};
+use poe_vis::TreeVis;
 
 fn main() {
     pretty_env_logger::init();
@@ -41,7 +41,7 @@ fn main() {
     };
 
     _ = eframe::run_native(
-        "poo-tools",
+        "poe-tools",
         options,
         Box::new(|_cc| Ok(Box::new(TreeVis::new(&mut tree, config, character)))),
     );

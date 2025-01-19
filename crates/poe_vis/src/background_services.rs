@@ -6,7 +6,7 @@ use std::{
 };
 
 pub(crate) static ACTIVE_NODE_COUNT: AtomicUsize = AtomicUsize::new(0);
-use poo_tree::type_wrappings::NodeId;
+use poe_tree::type_wrappings::NodeId;
 
 use super::*;
 
