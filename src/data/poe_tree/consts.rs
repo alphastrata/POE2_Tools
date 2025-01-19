@@ -7,4 +7,11 @@ pub const ORBIT_RADII: [f64; 10] = [
 ];
 pub const ORBIT_SLOTS: [usize; 10] = [1, 12, 24, 24, 72, 72, 72, 24, 72, 144];
 
-pub const CHAR_START_NODES: [usize; 6] = [50459, 47175, 50986, 61525, 54447, 44683];
+pub const CHAR_START_NODES: [usize; 6] = [
+    50459, // Ranger 4 o'clock
+    47175, // Warrior 8'oclock
+    50986, // Mercenery 6'oclock
+    61525, // 10 oclock ?? mystery character...
+    54447, // Witch top  12'oclock, Sorceress too..
+    44683, // Monk 2'clock
+];

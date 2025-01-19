@@ -38,3 +38,7 @@ load_character_nodes = ["l"]
 #TODO: zoom sensitivity
 #TODO: transate_sensitivity
 #TODO: lock_camera_when_typing
+#TODO: screen dims (save last camera position and window size)
+
+[character]
+class = "Monk"

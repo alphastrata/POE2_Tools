@@ -19,6 +19,9 @@ fn main() {
 
     let mut tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
 
+    // There's alot of noise in the data for atlas passives etc that we don't plot.
+    tree.remove_hidden();
+
     // Load the character data, defaulting to `None` if the file is missing or invalid
     let character = UserCharacter::load_from_toml("character.toml");
 

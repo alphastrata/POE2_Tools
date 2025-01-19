@@ -1,13 +1,17 @@
 //$ src\data\poe_tree\mod.rs
+pub mod character;
 pub mod consts;
 pub mod coordinates;
+pub mod debug_utils;
 pub mod edges;
 pub mod nodes;
 pub mod pathfinding;
 pub mod skills;
 pub mod stats;
 pub mod type_wrappings;
-use consts::{ORBIT_RADII, ORBIT_SLOTS};
+
+use consts::{CHAR_START_NODES, ORBIT_RADII, ORBIT_SLOTS};
+use debug_utils::format_bytes;
 use edges::Edge;
 use nodes::PoeNode;
 use serde_json::Value;
@@ -17,8 +21,9 @@ use type_wrappings::{GroupId, NodeId};
 use std::{
     collections::{HashMap, HashSet},
     fs,
+    mem::size_of,
+    time::Instant,
 };
-
 #[derive(Debug, Clone, Default)]
 pub struct PassiveTree {
     pub groups: HashMap<GroupId, coordinates::Group>,
@@ -28,6 +33,71 @@ pub struct PassiveTree {
 }
 
 impl PassiveTree {
+    const CULL_NODES_AFTER_THIS: f64 = 12_400.0;
+
+    /// There's lots of nodes that we don't wish to plot (usually), this removes them.
+    pub fn remove_hidden(&mut self) {
+        let start_time = Instant::now();
+
+        // Determine retained node IDs
+        let retained_node_ids: std::collections::HashSet<_> = self
+            .nodes
+            .iter()
+            .filter_map(|(&nid, node)| {
+                let dist = (node.wx.powi(2) + node.wy.powi(2)).sqrt();
+                if dist < Self::CULL_NODES_AFTER_THIS || CHAR_START_NODES.contains(&nid) {
+                    Some(nid)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Size before pruning
+        let edges_size_before = self.edges.len() * size_of::<Edge>();
+        let nodes_size_before = self.nodes.len() * size_of::<PoeNode>();
+
+        // Count removed edges
+        let initial_edge_count = self.edges.len();
+        self.edges.retain(|edge| {
+            retained_node_ids.contains(&edge.start) && retained_node_ids.contains(&edge.end)
+        });
+        let removed_edge_count = initial_edge_count - self.edges.len();
+
+        // Count removed nodes
+        let initial_node_count = self.nodes.len();
+        self.nodes
+            .retain(|&nid, _| retained_node_ids.contains(&nid));
+        let removed_node_count = initial_node_count - self.nodes.len();
+
+        // Size after pruning but before shrink
+        let edges_size_after_prune = self.edges.len() * size_of::<Edge>();
+        let nodes_size_after_prune = self.nodes.len() * size_of::<PoeNode>();
+
+        // Shrink to fit for memory optimization
+        self.edges.shrink_to_fit();
+        self.nodes.shrink_to_fit();
+
+        // Log the results
+        let duration = start_time.elapsed();
+        log::debug!(
+            "Pruned tree in {:?}. Removed {} edges and {} nodes.",
+            duration,
+            removed_edge_count,
+            removed_node_count
+        );
+        log::debug!(
+            "Memory usage: Edges - before: {}, after prune: {}.",
+            format_bytes(edges_size_before),
+            format_bytes(edges_size_after_prune),
+        );
+        log::debug!(
+            "Memory usage: Nodes - before: {}, after prune: {}.",
+            format_bytes(nodes_size_before),
+            format_bytes(nodes_size_after_prune),
+        );
+    }
+
     /// The main parser for the POE2_Tree.json we found...
     /// NOTE this panics! intentionally, if there's a problem parsing I want to know and be pointed to the place we need to fixs
     pub fn from_value(val: &Value) -> Result<Self, serde_json::Error> {

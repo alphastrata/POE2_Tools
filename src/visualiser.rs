@@ -87,10 +87,13 @@ impl TreeVis<'_> {
 
     /// Draw the debug information bar
     fn draw_debug_bar(&self, ctx: &egui::Context) {
-        let (mouse_info, zoom_info, hovered_node_info) = self.get_debug_bar_contents(ctx);
+        let (mouse_info, zoom_info, hovered_node_info, node_dist_from_origin) =
+            self.get_debug_bar_contents(ctx);
 
         egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
+                ui.label(node_dist_from_origin);
+                ui.separator();
                 ui.label(mouse_info);
                 ui.separator();
                 ui.label(zoom_info);
@@ -447,7 +450,7 @@ impl<'p> TreeVis<'p> {
     }
 
     /// Precompute debug bar contents to avoid borrow conflicts
-    fn get_debug_bar_contents(&self, ctx: &egui::Context) -> (String, String, String) {
+    fn get_debug_bar_contents(&self, ctx: &egui::Context) -> (String, String, String, String) {
         // Get mouse position
         let mouse_pos = ctx.input(|input| input.pointer.hover_pos().unwrap_or_default());
         let mouse_info = format!("Mouse: ({:.2}, {:.2})", mouse_pos.x, mouse_pos.y);
@@ -469,7 +472,24 @@ impl<'p> TreeVis<'p> {
             "Hovered Node: None".to_string()
         };
 
-        (mouse_info, zoom_info, hovered_node_info)
+        // Get distance from (0,0) for hovered node
+        let dist_from_origin_info = if let Some(hovered_node_id) = self.hovered_node {
+            if let Some(node) = self.passive_tree.nodes.get(&hovered_node_id) {
+                let dist = (node.wx.powi(2) + node.wy.powi(2)).sqrt();
+                format!("Distance from (0,0): {:.2}", dist)
+            } else {
+                "Distance from (0,0): N/A".to_string()
+            }
+        } else {
+            "Distance from (0,0): N/A".to_string()
+        };
+
+        (
+            mouse_info,
+            zoom_info,
+            hovered_node_info,
+            dist_from_origin_info,
+        )
     }
 
     fn initialize_camera_and_zoom(&mut self) {
