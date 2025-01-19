@@ -1,10 +1,26 @@
-//$ crates/poe_tree/src/data/poe_tree/character.rs
-#[derive(Debug, serde::Deserialize, Default)]
-pub struct CharacterConfig {
-    pub class: CharacterClass, // The actual enum field
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use chrono::{DateTime, Utc};
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Character {
+    pub class: CharacterClass,
+    pub name: String,
+    pub activated_node_ids: HashSet<usize>, // Using HashSet for efficient lookup of node IDs
+    pub date_created: DateTime<Utc>,
+
+    // POE2 Relevant fields
+    pub level: u32,
+   
+    // Max value = 24
+    pub quest_passive_skills: u8,
+
+     // TODO: add some skill related data
+    // pub equipped_items: Vec<Item>,
+    // pub skill_gems: Vec<SkillGem>
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 pub enum CharacterClass {
     #[default]
     Monk,
@@ -15,39 +31,12 @@ pub enum CharacterClass {
     Ranger,
 }
 
-impl<'de> serde::Deserialize<'de> for CharacterClass {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        match s.as_str() {
-            "Monk" => Ok(CharacterClass::Monk),
-            "Sorceress" => Ok(CharacterClass::Sorceress),
-            "Witch" => Ok(CharacterClass::Witch),
-            "Warrior" => Ok(CharacterClass::Warrior),
-            "Mercenary" => Ok(CharacterClass::Mercenary),
-            "Ranger" => Ok(CharacterClass::Ranger),
-            _ => Err(serde::de::Error::unknown_variant(
-                &s,
-                &[
-                    "Monk",
-                    "Sorceress",
-                    "Witch",
-                    "Warrior",
-                    "Mercenary",
-                    "Ranger",
-                ],
-            )),
-        }
-    }
-}
-
-mod tests{
-    
+#[cfg(test)]
+mod tests {
+use super::*; 
     #[test]
-    fn can_parse_config() {
-        use crate::config::UserConfig;
-        let _config: UserConfig = UserConfig::load_from_file("/Users/smak/Documents/poo-tools2/data/user_config.toml");
+    fn can_parse_character() {
+      
+
     }
 }

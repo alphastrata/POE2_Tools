@@ -4,7 +4,7 @@ use std::{
     sync::atomic::AtomicBool,
 };
 
-use poo_tree::{config::{UserCharacter, UserConfig}, PassiveTree};
+use poo_tree::{character::Character, config::UserConfig, PassiveTree};
 
 use super::*;
   
@@ -15,7 +15,7 @@ impl<'p> TreeVis<'p> {
     pub fn new(
         passive_tree: &'p mut PassiveTree,
         user_config: UserConfig,
-        current_character: Option<UserCharacter>,
+        current_character: Character,
     ) -> Self {
         Self {
             camera: RefCell::new(Self::CAMERA_OFFSET),

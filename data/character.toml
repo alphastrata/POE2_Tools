@@ -1,4 +1,7 @@
-#$ data/character.toml
+[character]
+class = "Monk"
 name = "jengablox"
 activated_node_ids = []
 date_created = "2025-01-13T12:34:56Z"
+level = 8
+quest_passive_skills = 2

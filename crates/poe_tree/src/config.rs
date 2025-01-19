@@ -19,7 +19,7 @@ pub fn parse_color(col_str: &str) -> egui::Color32 {
 pub struct UserConfig {
     pub colors: HashMap<String, String>,
     pub controls: HashMap<String, Vec<String>>,
-    pub character: crate::character::CharacterConfig,
+    pub character: crate::character::Character,
 }
 
 impl UserConfig {
@@ -98,29 +98,13 @@ impl UserConfig {
     }
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
-pub struct UserCharacter {
-    pub name: String,
-    pub activated_node_ids: Vec<usize>,
-    pub date_created: String,
-}
 
-impl UserCharacter {
-    pub fn new(name: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            activated_node_ids: Vec::new(),
-            date_created: chrono::Utc::now().to_rfc3339(),
-        }
-    }
 
-    pub fn save_to_toml(&self, path: &str) {
-        let serialized = toml::to_string(self).expect("Failed to serialize character to TOML");
-        std::fs::write(path, serialized).expect("Failed to save character to TOML");
-    }
-
-    pub fn load_from_toml(path: &str) -> Option<Self> {
-        let data = std::fs::read_to_string(path).ok()?;
-        toml::from_str(&data).ok()
+mod tests{
+    
+    #[test]
+    fn can_parse_config() {
+        use crate::config::UserConfig;
+        let _config: UserConfig = UserConfig::load_from_file("/Users/smak/Documents/poo-tools2/data/user_config.toml");
     }
 }

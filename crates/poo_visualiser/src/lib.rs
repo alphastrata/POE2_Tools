@@ -8,7 +8,7 @@ pub(crate) mod debug;
 pub mod background_services;
 pub mod io;
 
-use poo_tree::{config::{UserCharacter, UserConfig}, PassiveTree};
+use poo_tree::{character::Character, config::UserConfig, PassiveTree};
 
 impl TreeVis<'_> {
     pub(crate) const BASE_RADIUS: f32 = 8.0;
@@ -41,7 +41,7 @@ pub struct TreeVis<'p> {
     active_nodes: HashSet<usize>,
 
     // Config-driven colours
-    current_character: Option<UserCharacter>,
+    current_character: Option<Character>,
     last_save_time: std::time::Instant,
 
     user_config: UserConfig,
