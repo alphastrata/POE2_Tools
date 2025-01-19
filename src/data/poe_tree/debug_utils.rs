@@ -1,3 +1,4 @@
+//$ src/data/poe_tree/debug_utils.rs
 pub fn format_bytes(bytes: usize) -> String {
     const KB: usize = 1024;
     const MB: usize = 1024 * KB;

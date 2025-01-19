@@ -1,122 +1,123 @@
-[38;5;245m[39m[38;5;4m[1m .[0m
-[38;5;245m├── [39m[38;5;4m[1m __pycache__[0m
-[38;5;245m│   ├── [39m a2b.cpython-311.pyc
-[38;5;245m│   ├── [39m common.cpython-311.pyc
-[38;5;245m│   └── [39m poe_tree_types.cpython-311.pyc
-[38;5;245m├── [39m[38;5;4m[1m assets[0m
-[38;5;245m│   ├── [39m _1.png
-[38;5;245m│   ├── [39m _2.png
-[38;5;245m│   ├── [39m _3.png
-[38;5;245m│   ├── [39m _4.png
-[38;5;245m│   ├── [39m _5.png
-[38;5;245m│   ├── [39m attributions.txt
-[38;5;245m│   ├── [39m frame-3.png
-[38;5;245m│   ├── [39m line-3.png
-[38;5;245m│   ├── [39m node_the-power-within.png
-[38;5;245m│   ├── [39m Orbit1Active.png
-[38;5;245m│   ├── [39m Orbit1Intermediate.png
-[38;5;245m│   ├── [39m Orbit1Normal.png
-[38;5;245m│   ├── [39m Orbit2Active.png
-[38;5;245m│   ├── [39m Orbit2Intermediate.png
-[38;5;245m│   ├── [39m Orbit2Normal.png
-[38;5;245m│   ├── [39m Orbit3Active.png
-[38;5;245m│   ├── [39m Orbit3Intermediate.png
-[38;5;245m│   ├── [39m Orbit3Normal.png
-[38;5;245m│   ├── [39m Orbit4Active.png
-[38;5;245m│   ├── [39m Orbit4Intermediate.png
-[38;5;245m│   ├── [39m Orbit4Normal.png
-[38;5;245m│   ├── [39m Orbit5Active.png
-[38;5;245m│   ├── [39m Orbit5Intermediate.png
-[38;5;245m│   ├── [39m Orbit5Normal.png
-[38;5;245m│   ├── [39m Orbit6Active.png
-[38;5;245m│   ├── [39m Orbit6Intermediate.png
-[38;5;245m│   ├── [39m Orbit6Normal.png
-[38;5;245m│   ├── [39m range_guide.png
-[38;5;245m│   └── [39m tree_py.png
-[38;5;245m├── [39m Cargo.lock
-[38;5;245m├── [39m Cargo.toml
-[38;5;245m├── [39m config.toml
-[38;5;245m├── [39m[38;5;4m[1m data[0m
-[38;5;245m│   ├── [39m base-only.json
-[38;5;245m│   ├── [39m character.toml
-[38;5;245m│   ├── [39m expanded_tree.json
-[38;5;245m│   ├── [39m flow-of-water-tree.json
-[38;5;245m│   ├── [39m other-data.json
-[38;5;245m│   ├── [39m POE2_Tree.json
-[38;5;245m│   ├── [39m schema.txt
-[38;5;245m│   ├── [39m small_tree.json
-[38;5;245m│   ├── [39m Untitled-1.json
-[38;5;245m│   └── [39m user_config.toml
-[38;5;245m├── [39m[38;5;4m[1m deprecated[0m
-[38;5;245m│   ├── [39m ggez_vis.rs
-[38;5;245m│   ├── [39m log-search.py
-[38;5;245m│   ├── [39m main.rs
-[38;5;245m│   ├── [39m one
-[38;5;245m│   ├── [39m output.txt
-[38;5;245m│   ├── [39m[38;5;4m[1m passivetree[0m
-[38;5;245m│   ├── [39m[38;5;4m[1m PathOfBuilding[0m
-[38;5;245m│   ├── [39m trader_ideas.py
-[38;5;245m│   ├── [39m tree_utils.rs
-[38;5;245m│   ├── [39m[38;5;2m[1m update-helix.ps1[0m
-[38;5;245m│   └── [39m visual.rs
-[38;5;245m├── [39m[38;5;4m[1m experiments[0m
-[38;5;245m│   ├── [39m __init__.py
-[38;5;245m│   ├── [39m[38;5;4m[1m __pycache__[0m
-[38;5;245m│   ├── [39m a2b.html
-[38;5;245m│   ├── [39m a2b.py
-[38;5;245m│   ├── [39m bokeh_plot.png
-[38;5;245m│   ├── [39m common.py
-[38;5;245m│   ├── [39m dist-from.html
-[38;5;245m│   ├── [39m dist-from.py
-[38;5;245m│   ├── [39m expand-tree.py
-[38;5;245m│   ├── [39m find-node-by-name.py
-[38;5;245m│   ├── [39m flow-of-water-tree-maker.py
-[38;5;245m│   ├── [39m log-search.py
-[38;5;245m│   ├── [39m[38;5;4m[1m loggy[0m
-[38;5;245m│   ├── [39m[38;5;4m[1m maxroll[0m
-[38;5;245m│   ├── [39m notes7.md
-[38;5;245m│   ├── [39m notes8.md
-[38;5;245m│   ├── [39m orbit_calcs_opt1.png
-[38;5;245m│   ├── [39m orbit_calcs_opt1_invertedY.png
-[38;5;245m│   ├── [39m orbit_calcs_opt2.png
-[38;5;245m│   ├── [39m orbit_calcs_opt2_invertedY.png
-[38;5;245m│   ├── [39m orbit_calcs_opt3_minus90.png
-[38;5;245m│   ├── [39m orbit_calcs_opt4_minus90.png
-[38;5;245m│   ├── [39m passive_tree.html
-[38;5;245m│   ├── [39m path.py
-[38;5;245m│   ├── [39m poe_tree_types.py
-[38;5;245m│   ├── [39m proper-node-placement.py
-[38;5;245m│   ├── [39m runme.sh
-[38;5;245m│   ├── [39m[38;5;4m[1m shop[0m
-[38;5;245m│   ├── [39m trader_ideas.py
-[38;5;245m│   ├── [39m tree-vis-4o.py
-[38;5;245m│   ├── [39m tree-vis_gemini.py
-[38;5;245m│   ├── [39m treedump.sh
-[38;5;245m│   ├── [39m trim-flow.py
-[38;5;245m│   ├── [39m tsx-inspired-vis.py
-[38;5;245m│   ├── [39m Untitled-2023-03-04-0640(3).png
-[38;5;245m│   ├── [39m vis-poe-tree-selection-dist.html
-[38;5;245m│   ├── [39m vis-poe-tree-selection-dist.py
-[38;5;245m│   ├── [39m vis-poe-tree-selection-dist2.html
-[38;5;245m│   ├── [39m vis-poe-tree-selection-dist2.py
-[38;5;245m│   └── [39m what-fmr.py
-[38;5;245m├── [39m[38;5;4m[1m notes[0m
-[38;5;245m│   ├── [39m notes.md
-[38;5;245m│   ├── [39m notes4.md
-[38;5;245m│   ├── [39m notes5.md
-[38;5;245m│   ├── [39m notes6.md
-[38;5;245m│   └── [39m notes7.md
-[38;5;245m├── [39m notes9.md
-[38;5;245m├── [39m project_structure.txt
-[38;5;245m├── [39m repo_maintenence.py
-[38;5;245m├── [39m[38;5;4m[1m󱧼 src[0m
-[38;5;245m│   ├── [39m config.rs
-[38;5;245m│   ├── [39m[38;5;4m[1m data[0m
-[38;5;245m│   ├── [39m lib.rs
-[38;5;245m│   ├── [39m log.rs
-[38;5;245m│   ├── [39m main.rs
-[38;5;245m│   └── [39m visualiser.rs
-[38;5;245m└── [39m[38;5;4m[1m target[0m
-[38;5;245m    ├── [39m CACHEDIR.TAG
-[38;5;245m    ├── [39m[38;5;4m[1m debug[0m
-[38;5;245m    └── [39m[38;5;4m[1m release[0m
+.
+├── __pycache__
+│   ├── a2b.cpython-311.pyc
+│   ├── common.cpython-311.pyc
+│   └── poe_tree_types.cpython-311.pyc
+├── assets
+│   ├── _1.png
+│   ├── _2.png
+│   ├── _3.png
+│   ├── _4.png
+│   ├── _5.png
+│   ├── attributions.txt
+│   ├── frame-3.png
+│   ├── line-3.png
+│   ├── node_the-power-within.png
+│   ├── Orbit1Active.png
+│   ├── Orbit1Intermediate.png
+│   ├── Orbit1Normal.png
+│   ├── Orbit2Active.png
+│   ├── Orbit2Intermediate.png
+│   ├── Orbit2Normal.png
+│   ├── Orbit3Active.png
+│   ├── Orbit3Intermediate.png
+│   ├── Orbit3Normal.png
+│   ├── Orbit4Active.png
+│   ├── Orbit4Intermediate.png
+│   ├── Orbit4Normal.png
+│   ├── Orbit5Active.png
+│   ├── Orbit5Intermediate.png
+│   ├── Orbit5Normal.png
+│   ├── Orbit6Active.png
+│   ├── Orbit6Intermediate.png
+│   ├── Orbit6Normal.png
+│   ├── range_guide.png
+│   └── tree_py.png
+├── Cargo.lock
+├── Cargo.toml
+├── config.toml
+├── data
+│   ├── base-only.json
+│   ├── character.toml
+│   ├── expanded_tree.json
+│   ├── flow-of-water-tree.json
+│   ├── other-data.json
+│   ├── POE2_Tree.json
+│   ├── schema.txt
+│   ├── small_tree.json
+│   ├── Untitled-1.json
+│   └── user_config.toml
+├── deprecated
+│   ├── ggez_vis.rs
+│   ├── log-search.py
+│   ├── main.rs
+│   ├── one
+│   ├── output.txt
+│   ├── passivetree
+│   ├── PathOfBuilding
+│   ├── trader_ideas.py
+│   ├── tree_utils.rs
+│   ├── update-helix.ps1
+│   └── visual.rs
+├── experiments
+│   ├── __init__.py
+│   ├── __pycache__
+│   ├── a2b.html
+│   ├── a2b.py
+│   ├── bokeh_plot.png
+│   ├── common.py
+│   ├── dist-from.html
+│   ├── dist-from.py
+│   ├── expand-tree.py
+│   ├── find-node-by-name.py
+│   ├── flow-of-water-tree-maker.py
+│   ├── log-search.py
+│   ├── loggy
+│   ├── maxroll
+│   ├── notes7.md
+│   ├── notes8.md
+│   ├── orbit_calcs_opt1.png
+│   ├── orbit_calcs_opt1_invertedY.png
+│   ├── orbit_calcs_opt2.png
+│   ├── orbit_calcs_opt2_invertedY.png
+│   ├── orbit_calcs_opt3_minus90.png
+│   ├── orbit_calcs_opt4_minus90.png
+│   ├── passive_tree.html
+│   ├── path.py
+│   ├── poe_tree_types.py
+│   ├── proper-node-placement.py
+│   ├── runme.sh
+│   ├── shop
+│   ├── trader_ideas.py
+│   ├── tree-vis-4o.py
+│   ├── tree-vis_gemini.py
+│   ├── treedump.sh
+│   ├── trim-flow.py
+│   ├── tsx-inspired-vis.py
+│   ├── Untitled-2023-03-04-0640(3).png
+│   ├── vis-poe-tree-selection-dist.html
+│   ├── vis-poe-tree-selection-dist.py
+│   ├── vis-poe-tree-selection-dist2.html
+│   ├── vis-poe-tree-selection-dist2.py
+│   └── what-fmr.py
+├── notes
+│   ├── notes.md
+│   ├── notes4.md
+│   ├── notes5.md
+│   ├── notes6.md
+│   └── notes7.md
+├── notes.rs
+├── notes9.md
+├── project_structure.txt
+├── repo_maintenence.py
+├── src
+│   ├── config.rs
+│   ├── data
+│   ├── lib.rs
+│   ├── log.rs
+│   ├── main.rs
+│   └── visualiser
+└── target
+    ├── CACHEDIR.TAG
+    ├── debug
+    └── release

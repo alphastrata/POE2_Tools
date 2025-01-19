@@ -1,4 +1,4 @@
-//$ src\data\poe_tree\pathfinding.rs
+//$ src/data/poe_tree/pathfinding.rs
 use super::edges::Edge;
 use super::stats::Stat;
 use super::type_wrappings::NodeId;
@@ -26,16 +26,15 @@ impl PartialOrd for NodeCost {
     }
 }
 
+// Pathfinding algos..
 impl PassiveTree {
+    /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
+    const STEP_LIMIT: i32 = 123;
+
     pub fn is_node_within_distance(&self, start: NodeId, target: NodeId, max_steps: usize) -> bool {
         let path = self.find_path(start, target);
         !path.is_empty() && path.len() <= max_steps + 1
     }
-}
-
-impl PassiveTree {
-    /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
-    const STEP_LIMIT: i32 = 123;
 
     /// naive BFS
     pub fn find_path(&self, start: NodeId, end: NodeId) -> Vec<NodeId> {

@@ -1,4 +1,4 @@
-//$ src\main.rs
+//$ src/main.rs
 use std::{fs::File, io::BufReader};
 
 use poo_tools::{

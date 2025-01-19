@@ -1,3 +1,4 @@
+//$ src/data/poe_tree/character.rs
 #[derive(Debug, serde::Deserialize, Default)]
 pub struct CharacterConfig {
     pub class: CharacterClass, // The actual enum field

@@ -1,4 +1,4 @@
-//$ src\data\poe_tree\mod.rs
+//$ src/data/poe_tree/mod.rs
 pub mod character;
 pub mod consts;
 pub mod coordinates;
