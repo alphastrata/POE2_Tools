@@ -2323,6 +2323,7 @@ dependencies = [
  "egui",
  "log",
  "poo_tree",
+ "pretty_env_logger",
 ]
 
 [[package]]

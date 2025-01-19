@@ -1,12 +1,7 @@
 //$ crates/poo_visualiser/src/main.rs
+use config::{UserCharacter, UserConfig};
+use data::prelude::PassiveTree;
 use std::{fs::File, io::BufReader};
-
-use poo_tools::{
-    config::{UserCharacter, UserConfig},
-    data::prelude::PassiveTree,
-    visualiser::TreeVis,
-};
-
 fn main() {
     pretty_env_logger::init();
 

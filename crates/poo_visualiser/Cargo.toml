@@ -8,3 +8,4 @@ poo_tree = { workspace = true }
 log.workspace = true
 egui.workspace = true
 eframe.workspace = true
+pretty_env_logger.workspace = true

@@ -1,4 +1,5 @@
 //$ crates/poo_visualiser/src/lib.rs
+
 use poo_tree::*;
 use std::{
     cell::RefCell,
@@ -158,13 +159,15 @@ pub mod camera {
 pub mod drawing {
     use std::{default::Default, sync::atomic::AtomicUsize};
 
+    use config::parse_color;
+
     use super::*;
     // drawing{
     pub mod rhs_menu {
         use super::TreeVis;
 
         impl TreeVis<'_> {
-            fn draw_rhs_menu(&mut self, ctx: &egui::Context) {
+            pub fn draw_rhs_menu(&mut self, ctx: &egui::Context) {
                 let rhs_rect = egui::SidePanel::right("rhs_menu")
                     .show(ctx, |ui| {
                         ui.heading("Menu");
