@@ -8,9 +8,9 @@ name = "visualiser"
 path = "src/main.rs"
 
 [dependencies]
-poo_tree.workspace = true
-log.workspace = true
-egui.workspace = true
-eframe.workspace = true
-pretty_env_logger.workspace = true
-serde_json.workspace = true
+poo_tree = { workspace = true }
+log = { workspace = true }
+egui = { workspace = true }
+eframe = { workspace = true }
+pretty_env_logger = { workspace = true }
+serde_json = { workspace = true }

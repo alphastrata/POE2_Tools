@@ -1,7 +1,5 @@
 //$ crates/poo_visualiser/src/main.rs
 
-use poe_tree::*;
-
 use std::{fs::File, io::BufReader};
 
 fn main() {

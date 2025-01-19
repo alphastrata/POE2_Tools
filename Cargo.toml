@@ -5,15 +5,9 @@ edition = "2021"
 
 [workspace]
 resolver = "2"
-members = ["crates/*"]
-
-
-[[bin]]
-name = "visualiser"
-path = "crates/poo_visualiser/src/main.rs"
+members = ["crates/poe_tree", "crates/poo_visualiser"]
 
 [workspace.dependencies]
-# 3rd party:
 anyhow = "1.0.95"
 eframe = "0.30.0"
 egui = "0.30.0"
@@ -24,7 +18,5 @@ serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.134"
 serde_yaml = "0.9.34"
 toml = "0.8.19"
-
-# ours:
 poo_tree = { path = "crates/poe_tree" }
-poo_visualiser = { path = "crates/poo_visualiser" }
+chrono = "0.4.39"
