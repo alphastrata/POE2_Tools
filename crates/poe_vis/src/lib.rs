@@ -9,7 +9,11 @@ pub(crate) mod debug;
 pub mod drawing;
 pub mod io;
 
-use poe_tree::{character::Character, config::UserConfig, PassiveTree};
+use poe_tree::{
+    character::{Character, CharacterClass},
+    config::UserConfig,
+    PassiveTree,
+};
 
 impl<'p> TreeVis<'p> {
     pub(crate) const BASE_RADIUS: f32 = 8.0;
@@ -20,7 +24,7 @@ impl<'p> TreeVis<'p> {
     pub fn new(
         passive_tree: &'p mut PassiveTree,
         user_config: UserConfig,
-        current_character: Character,
+        current_character: Option<Character>,
     ) -> Self {
         Self {
             camera: RefCell::new(Self::CAMERA_OFFSET),
@@ -40,7 +44,7 @@ impl<'p> TreeVis<'p> {
             active_edges: HashSet::new(), // No edges highlighted initially
             active_nodes: HashSet::new(),
 
-            current_character: Some(current_character),
+            current_character,
             last_save_time: std::time::Instant::now(), // Set to the current time
 
             user_config,
@@ -87,6 +91,11 @@ pub struct TreeVis<'p> {
 
 impl eframe::App for TreeVis<'_> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Check if a character is loaded, and show class selection popup if not
+        if self.current_character.is_none() {
+            self.show_class_popup(ctx);
+        }
+
         // IO
         self.handle_mouse(ctx);
 
@@ -131,5 +140,37 @@ impl eframe::App for TreeVis<'_> {
         self.draw_rhs_menu(ctx);
 
         //todo: draw top menu (open tree, char etc..)
+    }
+}
+
+impl TreeVis<'_> {
+    fn show_class_popup(&mut self, ctx: &egui::Context) {
+        egui::Window::new("Choose Your Class")
+            .collapsible(false)
+            .resizable(false)
+            .show(ctx, |ui| {
+                ui.label("Please select your class:");
+
+                if ui.button("Monk").clicked() {
+                    self.current_character
+                        .get_or_insert_with(Character::default) // Ensure it's initialized
+                        .character_class = CharacterClass::Monk;
+                }
+                if ui.button("Sorceress").clicked() {
+                    self.current_character
+                        .get_or_insert_with(Character::default)
+                        .character_class = CharacterClass::Sorceress;
+                }
+                if ui.button("Warrior").clicked() {
+                    self.current_character
+                        .get_or_insert_with(Character::default)
+                        .character_class = CharacterClass::Warrior;
+                }
+                if ui.button("Ranger").clicked() {
+                    self.current_character
+                        .get_or_insert_with(Character::default)
+                        .character_class = CharacterClass::Ranger;
+                }
+            });
     }
 }

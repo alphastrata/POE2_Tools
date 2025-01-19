@@ -17,15 +17,18 @@ impl Character {
         let toml_string = toml::to_string(self).expect("Failed to serialize to TOML");
         fs::write(path, toml_string)
     }
-}
-impl Character {
-    pub fn load_from_toml<P: AsRef<Path>>(path: P) -> Result<Self, io::Error> {
-        let toml_string = fs::read_to_string(path.as_ref())?;
-        Ok(toml::from_str(&toml_string).expect(&format!(
-            "Failed to deserialize from TOML from {}. DATA:\n{}",
-            path.as_ref().display(),
-            toml_string,
-        )))
+
+    pub fn load_from_toml<P: AsRef<Path>>(path: P) -> Option<Self> {
+        let toml_string = fs::read_to_string(path.as_ref()).unwrap_or_default();
+
+        toml::from_str(&toml_string).ok().or_else(|| {
+            eprintln!(
+                "Failed to deserialize from TOML from {}. DATA:\n{}",
+                path.as_ref().display(),
+                toml_string,
+            );
+            None
+        })
     }
 }
 
@@ -38,6 +41,19 @@ pub enum CharacterClass {
     Warrior,
     Mercenary,
     Ranger,
+}
+
+impl CharacterClass {
+    pub fn to_string(&self) -> &str {
+        match self {
+            CharacterClass::Monk => "Monk",
+            CharacterClass::Sorceress => "Sorceress",
+            CharacterClass::Witch => "Witch",
+            CharacterClass::Warrior => "Warrior",
+            CharacterClass::Mercenary => "Mercenary",
+            CharacterClass::Ranger => "Ranger",
+        }
+    }
 }
 
 #[cfg(test)]
