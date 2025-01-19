@@ -2,10 +2,8 @@
 
 use std::{fs::File, io::BufReader};
 
-use poo_tree::{
-    config::{UserCharacter, UserConfig},
-    data::prelude::PassiveTree,
-};
+
+use poo_tree::{config::{UserCharacter, UserConfig}, PassiveTree};
 use poo_visualiser::TreeVis;
 
 fn main() {

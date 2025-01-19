@@ -1,7 +1,5 @@
 #$ data/user_config.toml
-//$ data/user_config.toml
 [colors]
-
 # Node Colors
 attack = "#E95678"          # Red
 mana = "#26BBD9"            # Blue

@@ -3,7 +3,6 @@ use std::collections::HashMap;
 
 use egui::Key;
 
-use crate::data::poe_tree::character::CharacterConfig;
 
 pub fn parse_color(col_str: &str) -> egui::Color32 {
     // Parse color from hex string (e.g., "#FF0000")
@@ -21,13 +20,14 @@ pub fn parse_color(col_str: &str) -> egui::Color32 {
 pub struct UserConfig {
     pub colors: HashMap<String, String>,
     pub controls: HashMap<String, Vec<String>>,
-    pub character: CharacterConfig,
+    pub character: crate::character::CharacterConfig,
 }
 
 impl UserConfig {
     pub fn load_from_file(path: &str) -> Self {
         let config_str = std::fs::read_to_string(path).expect("Unable to read config file");
-        toml::from_str(&config_str).expect("Invalid TOML format")
+        log::trace!("{}", &config_str);
+        toml::from_str(&config_str).unwrap()
     }
 
     pub fn key_from_string(key_str: &str) -> Option<Key> {
