@@ -1,4 +1,3 @@
-use std::sync::atomic::AtomicUsize;
 
 use poo_tree::type_wrappings::NodeId;
 

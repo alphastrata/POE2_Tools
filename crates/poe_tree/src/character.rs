@@ -45,13 +45,10 @@ impl<'de> serde::Deserialize<'de> for CharacterClass {
 
 
 mod tests{
-    use crate::config::UserConfig;
-
+    
     #[test]
     fn can_parse_config() {
-        _ = pretty_env_logger::init();
-        let config: UserConfig = UserConfig::load_from_file("/Users/smak/Documents/poo-tools2/data/user_config.toml");
-
-        println!("{:?}", config);
+        use crate::config::UserConfig;
+        let _config: UserConfig = UserConfig::load_from_file("/Users/smak/Documents/poo-tools2/data/user_config.toml");
     }
 }

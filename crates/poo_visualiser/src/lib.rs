@@ -2,13 +2,12 @@
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    sync::atomic::{AtomicBool, AtomicUsize},
+    sync::atomic::{AtomicBool},
 };
 
 use poo_tree::{config::{UserCharacter, UserConfig}, PassiveTree};
 
 impl TreeVis<'_> {
-    pub(crate) const ACTIVE_NODE_COUNT: AtomicUsize = AtomicUsize::new(0);
     pub(crate) const BASE_RADIUS: f32 = 8.0;
     pub(crate) const NOTABLE_MULTIPLIER: f32 = 1.5; // Scale notable nodes
     pub(crate) const NAMELESS_MULTIPLIER: f32 = 1.0; // Scale nameless nodes
