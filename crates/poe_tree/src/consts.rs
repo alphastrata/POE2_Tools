@@ -12,3 +12,18 @@ pub const CHAR_START_NODES: [usize; 6] = [
     54447, // Witch top  12'oclock, Sorceress too..
     44683, // Monk 2'clock
 ];
+
+pub const LEVEL_ONE_NODES: [usize; 12] = [
+    // monk
+    10364, 52980, 
+    // ranger
+    56651, 1328, 
+    // merc
+    59915, 59779, 
+    // warrior
+    38646, 3936, 
+    // unknown
+    50084, 13855, 
+    // sorc-n-witch
+    4739, 44871,
+];
