@@ -1,3 +1,4 @@
+//$ crates/poe_vis/src/debug.rs
 use super::*;
 
 // DEBUG BAR

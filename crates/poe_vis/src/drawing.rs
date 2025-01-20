@@ -1,3 +1,4 @@
+//$ crates/poe_vis/src/drawing.rs
 use std::default::Default;
 
 use poe_tree::config::parse_color;

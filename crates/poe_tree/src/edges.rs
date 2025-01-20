@@ -1,3 +1,4 @@
+//$ crates/poe_tree/src/edges.rs
 use std::hash::{Hash, Hasher};
 
 use super::type_wrappings::NodeId;

@@ -1,4 +1,4 @@
-//$ deprecated/ggez_vis.rs
+//$ experiments/deprecated/ggez_vis.rs
 
 // src/main.rs
 use ggez::{conf, event, ContextBuilder, GameResult};

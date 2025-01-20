@@ -1,3 +1,4 @@
+//$ crates/poe_tree/src/lib.rs
 pub mod character;
 pub mod config;
 pub mod consts;
@@ -37,7 +38,8 @@ pub struct PassiveTree {
 impl PassiveTree {
     const CULL_NODES_AFTER_THIS: f64 = 12_400.0;
 
-    /// There's lots of nodes that we don't wish to plot (usually), this removes them.
+    /// Prunes nodes and edges that lie beyond CULL_NODES_AFTER_THIS and are not character start nodes.
+    /// Also prunes the adjacency list to reflect the removal of these nodes/edges.
     pub fn remove_hidden(&mut self) {
         let start_time = Instant::now();
 
@@ -59,18 +61,27 @@ impl PassiveTree {
         let edges_size_before = self.edges.len() * size_of::<Edge>();
         let nodes_size_before = self.nodes.len() * size_of::<PoeNode>();
 
-        // Count removed edges
+        // Prune edges
         let initial_edge_count = self.edges.len();
         self.edges.retain(|edge| {
             retained_node_ids.contains(&edge.start) && retained_node_ids.contains(&edge.end)
         });
         let removed_edge_count = initial_edge_count - self.edges.len();
 
-        // Count removed nodes
+        // Prune nodes
         let initial_node_count = self.nodes.len();
         self.nodes
             .retain(|&nid, _| retained_node_ids.contains(&nid));
         let removed_node_count = initial_node_count - self.nodes.len();
+
+        // Prune adjacency list
+        // 1. Remove any node not in retained_node_ids
+        self.adjacency_list
+            .retain(|&node_id, _| retained_node_ids.contains(&node_id));
+        // 2. Within each retained node's adjacency set, remove any neighbours not in retained_node_ids
+        for (_, neighbours) in self.adjacency_list.iter_mut() {
+            neighbours.retain(|neighbour_id| retained_node_ids.contains(neighbour_id));
+        }
 
         // Size after pruning but before shrink
         let edges_size_after_prune = self.edges.len() * size_of::<Edge>();
@@ -373,7 +384,7 @@ mod tests {
     use serde_json::Value;
     use std::{collections::HashSet, fs::File, io::BufReader};
 
-    use crate::{edges::Edge, stats::Operand, PassiveTree};
+    use crate::{edges::Edge, pathfinding::quick_tree, stats::Operand, PassiveTree};
 
     // #[test]
     // fn path_between_flow_like_water_and_chaos_inoculation() {
@@ -407,10 +418,7 @@ mod tests {
 
     #[test]
     fn test_adjacency_set() {
-        let file = File::open("../../data/POE2_Tree.json").unwrap();
-        let reader = BufReader::new(file);
-        let val: Value = serde_json::from_reader(reader).unwrap();
-        let tree = PassiveTree::from_value(&val).unwrap();
+        let tree = quick_tree();
 
         assert!(tree.adjacency_list.contains_key(&44683));
         assert_eq!(tree.adjacency_list[&44683], HashSet::from([5162, 45406]));
@@ -419,11 +427,7 @@ mod tests {
 
     #[test]
     fn bidirectional_edges() {
-        let file = File::open("../../data/POE2_Tree.json").unwrap();
-        let reader = BufReader::new(file);
-        let u = serde_json::from_reader(reader).unwrap();
-        let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
-
+        let tree = quick_tree();
         for edge in &tree.edges {
             let reverse_edge = Edge {
                 start: edge.end,
@@ -441,10 +445,7 @@ mod tests {
 
     #[test]
     fn collect_life_nodes_from_real_tree() {
-        let file = File::open("../../data/POE2_Tree.json").unwrap();
-        let reader = BufReader::new(file);
-        let u = serde_json::from_reader(reader).unwrap();
-        let tree: PassiveTree = PassiveTree::from_value(&u).unwrap();
+        let tree = quick_tree();
 
         let mut life_nodes = Vec::new();
         let mut total_life = 0.0;
@@ -474,11 +475,8 @@ mod tests {
 
     #[test]
     fn collect_evasion_percentage_nodes_from_real_tree() {
-        let file = File::open("../../data/POE2_Tree.json").unwrap();
-        let reader = BufReader::new(file);
-        let u = serde_json::from_reader(reader).unwrap();
+        let tree = quick_tree();
 
-        let tree = PassiveTree::from_value(&u).unwrap();
         let mut evasion_nodes = Vec::new();
         let mut total_evasion_percent = 0.0;
 

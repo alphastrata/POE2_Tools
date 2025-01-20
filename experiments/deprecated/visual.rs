@@ -1,4 +1,4 @@
-//$ deprecated/visual.rs
+//$ experiments/deprecated/visual.rs
 
 // src/visual.rs
 use ggez::{

@@ -1,3 +1,4 @@
+//$ crates/poe_tree/src/pathfinding.rs
 use super::edges::Edge;
 use super::stats::Stat;
 use super::type_wrappings::NodeId;
@@ -261,20 +262,24 @@ impl PassiveTree {
     }
 }
 
+
+
+pub fn quick_tree() -> PassiveTree {
+    let file = std::fs::File::open("../../data/POE2_Tree.json").unwrap();
+    let reader = std::io::BufReader::new(file);
+    let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
+    let mut tree = PassiveTree::from_value(&tree_data).unwrap();
+    
+    tree.remove_hidden();
+    tree
+}
+
 #[cfg(test)]
 mod test {
 
     use super::*;
-    use serde_json::Value;
-    use std::{fs::File, io::BufReader};
+   
 
-    fn quick_tree() -> PassiveTree {
-        let file = File::open("../../data/POE2_Tree.json").unwrap();
-        let reader = BufReader::new(file);
-        let tree_data: Value = serde_json::from_reader(reader).unwrap();
-        let tree = PassiveTree::from_value(&tree_data).unwrap();
-        tree
-    }
 
     #[test]
     fn test_large_path_bfs_dijkstra() {

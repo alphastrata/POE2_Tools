@@ -1,4 +1,4 @@
-//$ crates/poe_visualiser/src/main.rs
+//$ crates/poe_vis/src/main.rs
 
 use std::{fs::File, io::BufReader};
 

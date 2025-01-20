@@ -1,22 +1,15 @@
 .
-├── __pycache__
-│   ├── a2b.cpython-311.pyc
-│   ├── common.cpython-311.pyc
-│   └── poe_tree_types.cpython-311.pyc
-├── assets
-│   ├── _1.png
-
+├── Cargo.lock
 ├── Cargo.toml
-├── config.toml
 ├── crates
-│   ├── poe_tree
-│   ├── poo_visualiser
+│   ├── poe_tree/src/
+│   └── poe_vis/src
 ├── data
-│   ├── base-only.json
 │   ├── character.toml
-├── notes.rs
-├── notes9.md
+│   ├── POE2_Tree.json
+│   └── user_config.toml
 ├── project_structure.txt
-├── repo_maintenence.py
-└── src
-    └── lib.rs
+├── src
+│   ├── data
+│   └── lib.rs
+└── target

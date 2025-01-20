@@ -1,3 +1,4 @@
+//$ crates/poe_vis/src/lib.rs
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},

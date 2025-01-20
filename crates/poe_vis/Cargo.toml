@@ -1,3 +1,4 @@
+#$ crates/poe_vis/Cargo.toml
 [package]
 name = "poe_vis"
 version = "0.1.0"
