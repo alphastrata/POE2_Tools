@@ -35,7 +35,7 @@ pub struct PassiveTree {
 }
 
 impl PassiveTree {
-    const CULL_NODES_AFTER_THIS: f64 = 12_400.0;
+    const CULL_NODES_AFTER_THIS: f32 = 12_400.0;
 
     /// Prunes nodes and edges that lie beyond CULL_NODES_AFTER_THIS and are not character start nodes.
     /// Also prunes the adjacency list to reflect the removal of these nodes/edges.
@@ -113,10 +113,18 @@ impl PassiveTree {
             .map(|obj| {
                 obj.iter()
                     .filter_map(|(gid, gval)| {
-                        let gid = gid.parse::<usize>().ok()?;
+                        let gid = gid.parse::<u32>().ok()?;
+
+                        // Value doesn't support deserialising to f32
                         let x = gval.get("x")?.as_f64()?;
                         let y = gval.get("y")?.as_f64()?;
-                        Some((gid, coordinates::Group { x, y }))
+                        Some((
+                            gid,
+                            coordinates::Group {
+                                x: x as f32,
+                                y: y as f32,
+                            },
+                        ))
                     })
                     .collect()
             })
@@ -160,13 +168,13 @@ impl PassiveTree {
                             return None;
                         }
 
-                        let node_id = node_id.parse::<usize>().ok()?;
+                        let node_id = node_id.parse::<u32>().ok()?;
                         let skill_id = nval.get("skill_id")?.as_str()?.to_string();
                         let parent =
-                            nval.get("parent").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                            nval.get("parent").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
                         let radius = nval.get("radius").and_then(|v| v.as_u64()).unwrap_or(0) as u8;
                         let position =
-                            nval.get("position").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                            nval.get("position").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
 
                         // Calculate world position with null safety
                         let (wx, wy) = {
@@ -214,7 +222,7 @@ impl PassiveTree {
                     Some(obj) => {
                         obj.iter()
                             .flat_map(|(from_id, node)| {
-                                let from_id = match from_id.parse::<usize>() {
+                                let from_id = match from_id.parse::<u32>() {
                                     Ok(id) => id,
                                     Err(e) => {
                                         eprintln!("Failed to parse from_id `{}`: {}", from_id, e);
@@ -231,7 +239,7 @@ impl PassiveTree {
                                             match connection.get("id").and_then(|id| id.as_u64()) {
                                                 Some(to_id) => Some(Edge {
                                                     start: from_id,
-                                                    end: to_id as usize,
+                                                    end: to_id as u32,
                                                 }),
                                                 None => {
                                                     eprintln!(
@@ -288,8 +296,9 @@ impl PassiveTree {
 }
 
 /// Make the world position (wx, wy) for a node.
-fn calculate_world_position(group: &coordinates::Group, radius: u8, position: usize) -> (f64, f64) {
+fn calculate_world_position(group: &coordinates::Group, radius: u8, position: u32) -> (f32, f32) {
     let r = radius as usize;
+    let position = position as usize;
     let radius_value = ORBIT_RADII.get(r).unwrap_or_else(|| {
         panic!(
             "Failed to retrieve radius for r={} with position={} and group coordinates=({}, {})",
@@ -304,15 +313,15 @@ fn calculate_world_position(group: &coordinates::Group, radius: u8, position: us
         );
         eprintln!("Defaulting to 60 slots.");
         60
-    }) as f64;
+    }) as f32;
 
     // Calculate the angle in radians
     //TODO: f16, or f32?
 
-    let angle = match slots as usize {
+    let angle = match slots as u32 {
         16 => {
             // Use predefined angles for 16-slot orbits
-            const PREDEFINED_16: [f64; 16] = [
+            const PREDEFINED_16: [f32; 16] = [
                 0.0, 30.0, 45.0, 60.0, 90.0, 120.0, 135.0, 150.0, 180.0, 210.0, 225.0, 240.0,
                 270.0, 300.0, 315.0, 330.0,
             ];
@@ -320,7 +329,7 @@ fn calculate_world_position(group: &coordinates::Group, radius: u8, position: us
         }
         40 => {
             // Use predefined angles for 40-slot orbits
-            const PREDEFINED_40: [f64; 40] = [
+            const PREDEFINED_40: [f32; 40] = [
                 0.0, 10.0, 20.0, 30.0, 40.0, 45.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0,
                 120.0, 130.0, 135.0, 140.0, 150.0, 160.0, 170.0, 180.0, 190.0, 200.0, 210.0, 220.0,
                 225.0, 230.0, 240.0, 250.0, 260.0, 270.0, 280.0, 290.0, 300.0, 310.0, 315.0, 320.0,
@@ -330,7 +339,7 @@ fn calculate_world_position(group: &coordinates::Group, radius: u8, position: us
         }
         _ => {
             // Uniform angle division for ALL other cases
-            (2.0 * std::f64::consts::PI * position as f64 / slots) - (std::f64::consts::PI / 2.0)
+            (2.0 * std::f32::consts::PI * position as f32 / slots) - (std::f32::consts::PI / 2.0)
         }
     };
 
@@ -344,8 +353,7 @@ fn calculate_world_position(group: &coordinates::Group, radius: u8, position: us
 #[cfg(test)]
 mod tests {
 
-    use crate::{edges::Edge, pathfinding::quick_tree, PassiveTree};
-
+    use crate::{edges::Edge, pathfinding::quick_tree};
 
     #[test]
     fn bidirectional_edges() {

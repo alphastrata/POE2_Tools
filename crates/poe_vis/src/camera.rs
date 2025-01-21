@@ -8,7 +8,7 @@ impl<'p> TreeVis<'p> {
     pub(crate) const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
     pub(crate) const ZOOM_STEP: f32 = 0.0001; // Step size for zoom changes
 
-    pub fn move_camera_to_node(&self, node_id: usize) {
+    pub fn move_camera_to_node(&self, node_id: u32) {
         if let Some(node) = self.passive_tree.nodes.get(&node_id) {
             let mut camera = self.camera.borrow_mut();
             camera.0 = node.wx as f32;
@@ -22,7 +22,7 @@ impl<'p> TreeVis<'p> {
             );
         }
     }
-    pub fn go_to_node(&self, id: usize) {
+    pub fn go_to_node(&self, id: u32) {
         self.move_camera_to_node(id);
         // self.disable_fuzzy_search();
     }
@@ -73,19 +73,19 @@ impl<'p> TreeVis<'p> {
         }
     }
 
-    pub fn world_to_screen_x(&self, wx: f64) -> f32 {
+    pub fn world_to_screen_x(&self, wx: f32) -> f32 {
         (wx as f32 - self.camera.borrow().0) * self.zoom + 500.0
     }
 
-    pub fn world_to_screen_y(&self, wy: f64) -> f32 {
+    pub fn world_to_screen_y(&self, wy: f32) -> f32 {
         (wy as f32 - self.camera.borrow().1) * self.zoom + 500.0
     }
 
-    pub fn screen_to_world_x(&self, sx: f32) -> f64 {
-        ((sx - 500.0) / self.zoom + self.camera.borrow().0) as f64
+    pub fn screen_to_world_x(&self, sx: f32) -> f32 {
+        ((sx - 500.0) / self.zoom + self.camera.borrow().0) as f32
     }
 
-    pub fn screen_to_world_y(&self, sy: f32) -> f64 {
-        ((sy - 500.0) / self.zoom + self.camera.borrow().1) as f64
+    pub fn screen_to_world_y(&self, sy: f32) -> f32 {
+        ((sy - 500.0) / self.zoom + self.camera.borrow().1) as f32
     }
 }

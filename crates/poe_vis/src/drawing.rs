@@ -151,7 +151,7 @@ pub mod rhs_menu {
                 ui.label("Start Node:");
                 let mut start_node_str = self.start_node_id.to_string();
                 if ui.text_edit_singleline(&mut start_node_str).changed() {
-                    if let Ok(parsed) = start_node_str.parse::<usize>() {
+                    if let Ok(parsed) = start_node_str.parse::<u32>() {
                         if self.passive_tree.nodes.contains_key(&parsed) {
                             self.start_node_id = parsed;
                             log::info!("Start Node updated: {}", self.start_node_id);
@@ -167,7 +167,7 @@ pub mod rhs_menu {
                 ui.label("Target Node:");
                 let mut target_node_str = self.target_node_id.to_string();
                 if ui.text_edit_singleline(&mut target_node_str).changed() {
-                    if let Ok(parsed) = target_node_str.parse::<usize>() {
+                    if let Ok(parsed) = target_node_str.parse::<u32>() {
                         if self.passive_tree.is_node_within_distance(
                             self.start_node_id,
                             parsed,

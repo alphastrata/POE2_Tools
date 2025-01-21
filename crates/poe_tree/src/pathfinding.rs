@@ -3,28 +3,9 @@ use super::edges::Edge;
 use super::stats::Stat;
 use super::type_wrappings::NodeId;
 
-use std::cmp::{Ordering, Reverse};
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::HashSet;
 
 use super::PassiveTree;
-
-#[derive(Eq, PartialEq)]
-struct NodeCost {
-    node_id: NodeId,
-    cost: usize,
-}
-
-impl Ord for NodeCost {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.cost.cmp(&self.cost) // Reverse order for min-heap
-    }
-}
-
-impl PartialOrd for NodeCost {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
 
 // Pathfinding algos..
 impl PassiveTree {
@@ -36,7 +17,7 @@ impl PassiveTree {
         !path.is_empty() && path.len() <= max_steps + 1
     }
 
-    pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<usize> {
+    pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<u32> {
         log::debug!("Performing search for query: {}", query);
         self.nodes
             .iter()
@@ -141,14 +122,14 @@ impl PassiveTree {
         })
     }
 
-    pub fn find_shortest_path(&self, a: NodeId, b: NodeId) -> Vec<usize> {
+    pub fn find_shortest_path(&self, a: NodeId, b: NodeId) -> Vec<u32> {
         self.bfs(a, b)
     }
-    pub fn find_path(&self, a: NodeId, b: NodeId) -> Vec<usize> {
+    pub fn find_path(&self, a: NodeId, b: NodeId) -> Vec<u32> {
         self.bfs(a, b)
     }
 }
-fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<usize> {
+fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<u32> {
     let mut prev_node = 0;
     data.nodes
         .iter()

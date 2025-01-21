@@ -4,7 +4,7 @@ use poe_tree::type_wrappings::NodeId;
 use super::*;
 // IO
 impl TreeVis<'_> {
-    pub fn select_node(&mut self, node_id: usize) {
+    pub fn select_node(&mut self, node_id: u32) {
         if let Some(character) = &mut self.current_character {
             if !character.activated_node_ids.contains(&node_id) {
                 log::info!("Selecting node: {}", node_id);
@@ -13,7 +13,7 @@ impl TreeVis<'_> {
             }
         }
     }
-    pub fn hover_node(&mut self, node_id: usize) {
+    pub fn hover_node(&mut self, node_id: u32) {
         if let Some(node) = self.passive_tree.nodes.get(&node_id) {
             if !node.active {
                 log::info!("Hovering over node: {}", node_id);
@@ -31,9 +31,9 @@ impl TreeVis<'_> {
     /// If `activate` is true, nodes and edges along the path will be activated.
     pub fn process_path_to_active_node(
         &mut self,
-        node_id: usize,
+        node_id: u32,
         activate: bool,
-    ) -> Option<Vec<usize>> {
+    ) -> Option<Vec<u32>> {
         if let Some((shortest_path, active_node_id)) =
             self.find_shortest_path_to_active_node(node_id)
         {
@@ -71,8 +71,8 @@ impl TreeVis<'_> {
     /// Finds the shortest path from the given node to the nearest active node.
     pub fn find_shortest_path_to_active_node(
         &self,
-        target_node: usize,
-    ) -> Option<(Vec<usize>, usize)> {
+        target_node: u32,
+    ) -> Option<(Vec<u32>, u32)> {
         self.passive_tree
             .nodes
             .iter()
@@ -86,7 +86,7 @@ impl TreeVis<'_> {
     }
 
     /// Updates the active edges based on the given path.
-    pub fn update_active_edges(&mut self, path: Vec<usize>) {
+    pub fn update_active_edges(&mut self, path: Vec<u32>) {
         for window in path.windows(2) {
             if let [start, end] = window {
                 self.active_edges.insert((*start, *end));
@@ -97,7 +97,7 @@ impl TreeVis<'_> {
     }
 
     pub(crate) const HOVER_RADIUS: f32 = 100.0;
-    pub fn get_hovered_node(&self, ctx: &egui::Context) -> Option<usize> {
+    pub fn get_hovered_node(&self, ctx: &egui::Context) -> Option<u32> {
         let mouse_pos = ctx.input(|input| input.pointer.hover_pos())?;
 
         self.passive_tree.nodes.iter().find_map(|(&node_id, node)| {
@@ -114,7 +114,7 @@ impl TreeVis<'_> {
         })
     }
 
-    pub fn get_target_node(&self) -> Option<usize> {
+    pub fn get_target_node(&self) -> Option<u32> {
         // Logic to determine if a target node has been selected
         Some(self.target_node_id)
     }

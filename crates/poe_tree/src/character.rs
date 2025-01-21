@@ -7,7 +7,7 @@ use std::{collections::HashSet, fs, io, path::Path};
 pub struct Character {
     pub character_class: CharacterClass,
     pub name: String,
-    pub activated_node_ids: HashSet<usize>,
+    pub activated_node_ids: HashSet<u32>,
     pub date_created: DateTime<Utc>,
     pub level: u32,
     pub quest_passive_skills: u8,

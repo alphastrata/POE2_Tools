@@ -21,10 +21,10 @@ pub enum StatType {
 pub struct Stat {
     pub name: String,
     pub operand: Operand,
-    pub value: f64,
+    pub value: f32,
 }
 impl Stat {
-    pub fn apply(&self, other: &Stat) -> Option<f64> {
+    pub fn apply(&self, other: &Stat) -> Option<f32> {
         if self.name == other.name {
             match self.operand {
                 Operand::Add => Some(self.value + other.value),
@@ -49,7 +49,8 @@ where
         // Parse the value and determine the operand
         let (operand, parsed_value) = match value {
             serde_json::Value::Number(n) => {
-                let val = n.as_f64().unwrap_or(0.0);
+                // Value doesn't support deserialising to f32
+                let val = n.as_f64().unwrap_or(0.0) as f32;
                 if name.contains('%') {
                     (Operand::Percentage, val)
                 } else {
@@ -57,7 +58,7 @@ where
                 }
             }
             serde_json::Value::String(s) => {
-                if let Ok(val) = s.parse::<f64>() {
+                if let Ok(val) = s.parse::<f32>() {
                     if s.contains('x') {
                         (Operand::Multiply, val)
                     } else if s.contains('%') {

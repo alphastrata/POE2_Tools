@@ -9,7 +9,7 @@ use ggez::{
     Context, GameResult, event::EventHandler,
 };
 use crate::data::*;
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 // Horizon palette
 const BG_COLOR: Color   = Color { r: 0.07, g: 0.09, b: 0.12, a: 1.0 };
@@ -21,20 +21,20 @@ const ACTIVE_COLOR: Color=Color { r: 0.94, g: 0.40, b: 0.40, a: 1.0 };
 #[derive(Debug, Clone)]
 pub struct Camera {
     pub pos: Vec2,  // keep as f32 internally
-    pub zoom: f64,
+    pub zoom: f32,
 }
 
 pub struct TreeVisualization {
     pub data: TreeData,
     pub camera: Camera,
-    pub hovered_node: Option<usize>,
+    pub hovered_node: Option<u32>,
     pub fuzzy_active: bool, // toggled by 'f' to open some fuzzy UI
-    pub active_nodes: Vec<usize>,
+    pub active_nodes: Vec<u32>,
     // bounding box
-    pub min_x: f64,
-    pub max_x: f64,
-    pub min_y: f64,
-    pub max_y: f64,
+    pub min_x: f32,
+    pub max_x: f32,
+    pub min_y: f32,
+    pub max_y: f32,
 }
 
 impl TreeVisualization {
@@ -42,8 +42,8 @@ impl TreeVisualization {
         // fill (wx, wy) and other fields
         for (_, node) in data.passive_tree.nodes.iter_mut() {
             if let Some(group) = data.passive_tree.groups.get(&node.parent) {
-                let r = node.radius as f64; // or your real orbit code
-                let angle = (node.position as f64) * (2.0 * PI / 16.0);
+                let r = node.radius as f32; // or your real orbit code
+                let angle = (node.position as f32) * (2.0 * PI / 16.0);
                 node.wx = group.x + r * angle.cos();
                 node.wy = group.y + r * angle.sin();
             }
@@ -74,12 +74,12 @@ impl TreeVisualization {
         }
     }
 
-    fn screen_to_world(&self, sx: f32, sy: f32, sw: f32, sh: f32) -> (f64, f64) {
+    fn screen_to_world(&self, sx: f32, sy: f32, sw: f32, sh: f32) -> (f32, f32) {
         let cx = sw * 0.5;
         let cy = sh * 0.5;
         let wx = (sx - cx)/ (self.camera.zoom as f32) + self.camera.pos.x;
         let wy = (sy - cy)/ (self.camera.zoom as f32) + self.camera.pos.y;
-        (wx as f64, wy as f64)
+        (wx as f32, wy as f32)
     }
 
     fn clamp_camera(&mut self, sw: f32, sh: f32) {
@@ -95,8 +95,8 @@ impl TreeVisualization {
         if self.camera.pos.y > maxy - halfh { self.camera.pos.y = maxy - halfh; }
     }
 
-    fn update_hover(&mut self, mx: f64, my: f64) {
-        let mut best_dist = f64::MAX;
+    fn update_hover(&mut self, mx: f32, my: f32) {
+        let mut best_dist = f32::MAX;
         let mut best_id = None;
         for (&id, node) in &self.data.passive_tree.nodes {
             let dx = node.wx - mx;
@@ -238,7 +238,7 @@ impl EventHandler for TreeVisualization {
     }
 
     fn mouse_wheel_event(&mut self, ctx: &mut Context, _x: f32, y: f32) -> GameResult {
-        self.camera.zoom+=0.1*(y as f64);
+        self.camera.zoom+=0.1*(y as f32);
         if self.camera.zoom<0.1 {self.camera.zoom=0.1;}
         if self.camera.zoom>100.0{self.camera.zoom=100.0;}
         let (sw,sh)=ctx.gfx.drawable_size();
@@ -247,7 +247,7 @@ impl EventHandler for TreeVisualization {
     }
 }
 
-fn world_to_screen(wx: f64, wy: f64, camx: f32, camy: f32, zoom: f64, sw: f32, sh: f32)->[f32;2]{
+fn world_to_screen(wx: f32, wy: f32, camx: f32, camy: f32, zoom: f32, sw: f32, sh: f32)->[f32;2]{
     let cx=sw*0.5;
     let cy=sh*0.5;
     let sx=((wx as f32-camx)*(zoom as f32))+cx;

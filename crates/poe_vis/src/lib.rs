@@ -61,22 +61,22 @@ pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
     zoom: f32,
     passive_tree: &'p mut PassiveTree,
-    hovered_node: Option<usize>,
+    hovered_node: Option<u32>,
 
     // Fuzzy-search-related
     fuzzy_search_open: AtomicBool,
     search_query: String,
-    search_results: Vec<usize>,
+    search_results: Vec<u32>,
 
     // Path-finder-related
-    start_node_id: usize,
-    target_node_id: usize,
-    highlighted_path: Vec<usize>,
+    start_node_id: u32,
+    target_node_id: u32,
+    highlighted_path: Vec<u32>,
 
     /// Store edges of the current path
     // NOTE: mostly used for drawing.
-    active_edges: HashSet<(usize, usize)>,
-    active_nodes: HashSet<usize>,
+    active_edges: HashSet<(u32, u32)>,
+    active_nodes: HashSet<u32>,
 
     // Config-driven colours
     current_character: Option<Character>,
@@ -94,7 +94,7 @@ pub struct TreeVis<'p> {
 impl eframe::App for TreeVis<'_> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Check if a character is loaded, and show class selection popup if not
-        // if self.current_character.is_none() || self.start_node_id == 0usize {
+        // if self.current_character.is_none() || self.start_node_id == 0u32 {
         //     self.show_class_popup(ctx);
         // }
 

@@ -2,7 +2,7 @@
 use serde_json::Value;
 use std::collections::HashSet;
 
-fn print_keys_recursive(value: &Value, indent: usize, seen: &mut HashSet<String>) {
+fn print_keys_recursive(value: &Value, indent: u32, seen: &mut HashSet<String>) {
     if let Some(obj) = value.as_object() {
         for (k, v) in obj.iter() {
             let stripped_key = k.replace(|c: char| c.is_ascii_digit(), "");

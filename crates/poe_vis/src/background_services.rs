@@ -43,7 +43,7 @@ impl TreeVis<'_> {
     }
 
     pub fn check_and_activate_nodes(&mut self) {
-        let active_nodes: HashSet<usize> = self
+        let active_nodes: HashSet<u32> = self
             .passive_tree
             .nodes
             .iter()

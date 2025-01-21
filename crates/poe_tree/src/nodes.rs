@@ -11,21 +11,21 @@ pub struct PoeNode {
     pub skill_id: String,
     pub parent: GroupId,
     pub radius: u8,
-    pub position: usize,
+    pub position: u32,
     pub name: String,
     pub is_notable: bool,
     pub stats: Vec<Stat>,
-    pub wx: f64,
-    pub wy: f64,
+    pub wx: f32,
+    pub wy: f32,
     pub active: bool,
 }
 
 impl PoeNode {
-    pub fn distance_to(&self, other: &Self) -> f64 {
+    pub fn distance_to(&self, other: &Self) -> f32 {
         ((self.wx - other.wx).powi(2) + (self.wy - other.wy).powi(2)).sqrt()
     }
 
-    pub fn distance_to_origin(&self) -> f64 {
+    pub fn distance_to_origin(&self) -> f32 {
         (self.wx.powi(2) + self.wy.powi(2)).sqrt()
     }
 
