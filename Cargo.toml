@@ -21,3 +21,6 @@ serde_yaml = "0.9.34"
 toml = "0.8.19"
 poe_tree = { path = "crates/poe_tree" }
 chrono = "0.4.39"
+
+[dependencies]
+rfd.workspace = true

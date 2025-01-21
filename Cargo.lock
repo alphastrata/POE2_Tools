@@ -2275,6 +2275,9 @@ dependencies = [
 [[package]]
 name = "poe_tools"
 version = "0.1.0"
+dependencies = [
+ "rfd",
+]
 
 [[package]]
 name = "poe_tree"
@@ -2301,6 +2304,7 @@ dependencies = [
  "log",
  "poe_tree",
  "pretty_env_logger",
+ "rfd",
  "serde_json",
 ]
 

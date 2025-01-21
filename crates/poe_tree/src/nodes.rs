@@ -1,10 +1,8 @@
 //$ crates/poe_tree/src/nodes.rs
-use crate::config::{parse_color, UserConfig};
-use crate::skills::PassiveSkill;
-
-use super::stats::Stat;
 use super::type_wrappings::{GroupId, NodeId};
 use super::PassiveTree;
+use crate::config::{parse_color, UserConfig};
+use crate::skills::PassiveSkill;
 
 #[derive(Debug, Clone, Default)]
 pub struct PoeNode {

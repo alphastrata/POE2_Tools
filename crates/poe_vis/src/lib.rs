@@ -10,11 +10,7 @@ pub(crate) mod debug;
 pub mod drawing;
 pub mod io;
 
-use poe_tree::{
-    character::Character,
-    config::UserConfig,
-    PassiveTree,
-};
+use poe_tree::{character::Character, config::UserConfig, PassiveTree};
 
 impl<'p> TreeVis<'p> {
     pub(crate) const BASE_RADIUS: f32 = 8.0;
@@ -55,7 +51,6 @@ impl<'p> TreeVis<'p> {
     }
 }
 
-pub(crate) struct NonInteractiveAreas {}
 pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
     zoom: f32,
@@ -100,6 +95,8 @@ impl eframe::App for TreeVis<'_> {
         // IO
         self.handle_mouse(ctx);
 
+        self.draw_top_bar(ctx);
+
         if self.requires_activation_check {
             log::debug!("Checking for active nodes & edges to highlight..");
             self.check_and_activate_nodes();
@@ -134,6 +131,7 @@ impl eframe::App for TreeVis<'_> {
 
         // drawing
         self.redraw_tree(ctx);
+
         // TODO: maybe we highlight in the redraw_tree() call?
         self.draw_color_and_highlights(ctx);
 

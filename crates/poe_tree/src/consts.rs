@@ -4,26 +4,45 @@ pub const ORBIT_RADII: [f32; 10] = [
 ];
 pub const ORBIT_SLOTS: [u32; 10] = [1, 12, 24, 24, 72, 72, 72, 24, 72, 144];
 
+/// Starting nodes for each character class in the passive tree.
+///
+/// | Node ID | Name      | Class     | Location       |
+/// |---------|-----------|-----------|----------------|
+/// | 50459   | RANGER    | Ranger    | 4 o'clock      |
+/// | 47175   | WARRIOR   | Warrior   | 8 o'clock      |
+/// | 50986   | DUELIST   | Mercenary | 6 o'clock      |
+/// | 61525   | TEMPLAR   | Unknown   | 10 o'clock     |
+/// | 54447   | WITCH     | Witch     | 12 o'clock     |
+/// | 44683   | SIX       | Monk      | 2 o'clock      |
 pub const CHAR_START_NODES: [u32; 6] = [
-    50459, // Ranger 4 o'clock
-    47175, // Warrior 8'oclock
-    50986, // Mercenary 6'oclock
-    61525, // 10 oclock ?? mystery character...
-    54447, // Witch top  12'oclock, Sorceress too..
-    44683, // Monk 2'clock
+    50459, // RANGER (Ranger, 4 o'clock)
+    47175, // WARRIOR (Warrior, 8 o'clock)
+    50986, // DUELIST (Mercenary, 6 o'clock)
+    61525, // TEMPLAR (Unknown, 10 o'clock)
+    54447, // WITCH (Witch, 12 o'clock)
+    44683, // SIX (Monk, 2 o'clock)
 ];
 
-pub const LEVEL_ONE_NODES: [u32; 12] = [
-    // monk
-    10364, 52980, 
-    // ranger
-    56651, 1328, 
-    // merc
-    59915, 59779, 
-    // warrior
-    38646, 3936, 
-    // unknown
-    50084, 13855, 
-    // sorc-n-witch
-    4739, 44871,
+/// Level one nodes grouped by character class, excluding `is_just_icon: true`.
+///
+/// | Node ID | Name                      | Class          |
+/// |---------|---------------------------|----------------|
+/// | 10364   | Skill Speed               | Monk           |
+/// | 52980   | Evasion and Energy Shield | Monk           |
+/// | 56651   | Projectile Damage         | Ranger         |
+/// | 59915   | Projectile Damage         | Mercenary      |
+/// | 59779   | Armour and Evasion        | Mercenary      |
+/// | 38646   | Armour                    | Warrior        |
+/// | 3936    | Melee Damage              | Warrior        |
+/// | 50084   | Damage                    | Unknown        |
+/// | 13855   | Armour and Energy Shield  | Unknown        |
+/// | 4739    | Spell Damage              | Sorcerer/Witch |
+/// | 44871   | Energy Shield             | Sorcerer/Witch |
+pub const LEVEL_ONE_NODES: [u32; 11] = [
+    10364, 52980, // Monk: Skill Speed, Evasion and Energy Shield
+    56651, // Ranger: Projectile Damage
+    59915, 59779, // Mercenary: Projectile Damage, Armour and Evasion
+    38646, 3936, // Warrior: Armour, Melee Damage
+    50084, 13855, // Unknown: Damage, Armour and Energy Shield
+    4739, 44871, // Sorcerer/Witch: Spell Damage, Energy Shield
 ];

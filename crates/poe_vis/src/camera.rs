@@ -38,7 +38,16 @@ impl TreeVis<'_> {
     }
     #[allow(unused)]
     pub fn load_character<P: AsRef<std::path::Path>>(&mut self, path: P) {
-        todo!()
+        let p = path.as_ref();
+
+        match Character::load_from_toml(p) {
+            Some(c) => {
+                self.user_config.character = c;
+            }
+            None => {
+                log::error!("Unable to load Character from path :{}", p.display());
+            }
+        }
     }
 
     pub fn current_zoom_level(&self) -> f32 {

@@ -2,10 +2,9 @@
 use super::edges::Edge;
 use super::stats::Stat;
 use super::type_wrappings::NodeId;
-
-use std::collections::HashSet;
-
 use super::PassiveTree;
+
+use std::collections::{HashMap, HashSet, VecDeque};
 
 // Pathfinding algos..
 impl PassiveTree {
@@ -147,16 +146,21 @@ fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<u32> {
 }
 impl PassiveTree {
     pub fn bfs(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
-        use std::collections::{HashMap, HashSet, VecDeque};
-
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
         let mut predecessors = HashMap::new();
 
-        queue.push_back(start);
+        // Push the start node with depth 0
+        queue.push_back((start, 0));
         visited.insert(start);
 
-        while let Some(current) = queue.pop_front() {
+        while let Some((current, depth)) = queue.pop_front() {
+            // Stop traversal if the step limit is reached
+            if depth > Self::STEP_LIMIT {
+                log::warn!("Step limit reached without finding the target");
+                break;
+            }
+
             if current == target {
                 // Reconstruct the path
                 let mut path = vec![target];
@@ -183,7 +187,7 @@ impl PassiveTree {
                 })
                 .for_each(|neighbor| {
                     if visited.insert(neighbor) {
-                        queue.push_back(neighbor);
+                        queue.push_back((neighbor, depth + 1)); // Increment depth
                         predecessors.insert(neighbor, current);
                     }
                 });
@@ -275,20 +279,4 @@ mod test {
         let actual_path = tree.bfs(start, target);
         assert_eq!(actual_path, expected_path, "Paths do not match!");
     }
-
-    // #[test]
-    // fn equivalent_path_lengths_to_target() {
-    //     let tree = quick_tree();
-
-    //     // Define the two expected paths
-    //     let path1 = [10364, 42736, 56045, 58329]; // Path via Attack Damage nodes
-    //     let path2 = [10364, 42736, 13419, 42076]; // Path via Critical Damage nodes
-
-    //     // Find the shortest path to the target for both paths
-    //     let actual_path1 = tree.find_shortest_path(path1[0], path1[3]);
-    //     let actual_path2 = tree.find_shortest_path(path2[0], path1[3]);
-
-    //     println!("Path 1 (via Attack Damage): {:?}", actual_path1);
-    //     println!("Path 2 (via Critical Damage): {:?}", actual_path2);
-    // }
 }
