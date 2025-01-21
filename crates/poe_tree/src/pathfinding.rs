@@ -142,10 +142,10 @@ impl PassiveTree {
     }
 
     pub fn find_shortest_path(&self, a: NodeId, b: NodeId) -> Vec<usize> {
-        todo!()
+        self.bfs(a, b)
     }
     pub fn find_path(&self, a: NodeId, b: NodeId) -> Vec<usize> {
-        todo!()
+        self.bfs(a, b)
     }
 }
 fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<usize> {
@@ -166,7 +166,7 @@ fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<usize> {
 }
 impl PassiveTree {
     pub fn bfs(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
-        use std::collections::{HashMap, VecDeque};
+        use std::collections::{HashMap, HashSet, VecDeque};
 
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
@@ -188,19 +188,27 @@ impl PassiveTree {
                 return path;
             }
 
-            // Explore neighbours
-            if let Some(neighbours) = self.adjacency_list.get(&current) {
-                for &neighbour in neighbours {
-                    if visited.insert(neighbour) {
-                        queue.push_back(neighbour);
-                        predecessors.insert(neighbour, current);
+            // Explore neighbors via edges
+            self.edges
+                .iter()
+                .filter_map(|edge| {
+                    if edge.start == current {
+                        Some(edge.end)
+                    } else if edge.end == current {
+                        Some(edge.start)
+                    } else {
+                        None
                     }
-                }
-            }
+                })
+                .for_each(|neighbor| {
+                    if visited.insert(neighbor) {
+                        queue.push_back(neighbor);
+                        predecessors.insert(neighbor, current);
+                    }
+                });
         }
 
-        log::warn!("No path found!");
-        eprintln!("No path found!");
+        log::warn!("No path found from {} to {}", start, target);
         vec![] // No path found
     }
 }
@@ -219,6 +227,33 @@ pub fn quick_tree() -> PassiveTree {
 mod test {
 
     use super::*;
+
+    #[test]
+    fn path_between_flow_like_water_and_chaos_inoculation() {
+        let tree: PassiveTree = quick_tree();
+
+        // Use fuzzy search to find nodes
+        let flow_ids = tree.fuzzy_search_nodes("flow like water");
+        let chaos_ids = tree.fuzzy_search_nodes("chaos inoculation");
+
+        assert!(!flow_ids.is_empty(), "No node found for 'flow like water'");
+        assert!(
+            !chaos_ids.is_empty(),
+            "No node found for 'chaos inoculation'"
+        );
+
+        let start_id = flow_ids[0];
+        let target_id = chaos_ids[0];
+
+        // Find shortest path using Dijkstra's Algorithm
+        let path = tree.find_shortest_path(start_id, target_id);
+        if path.is_empty() {
+            println!("No path found between {} and {}", start_id, target_id);
+        }
+        // Update this value based on expected path length after refactoring
+        assert_eq!(path.len(), 15, "Path length mismatch");
+        println!("{:#?}", path);
+    }
 
     #[test]
     fn test_path_avatar_of_fire_to_over_exposure() {
@@ -252,13 +287,12 @@ mod test {
     fn bfs_pathfinding() {
         let tree = quick_tree();
 
-        let start = 44683;
-        let target = 52980;
+        let start = 10364;
+        let target = 58329;
+        let expected_path = vec![10364, 42736, 56045, 58329];
 
-        let path = tree.bfs(start, target);
-        assert!(!path.is_empty(), "No path found!");
-        assert_eq!(path.first(), Some(&start));
-        assert_eq!(path.last(), Some(&target));
+        let actual_path = tree.bfs(start, target);
+        assert_eq!(actual_path, expected_path, "Paths do not match!");
     }
 
     // #[test]

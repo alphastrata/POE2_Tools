@@ -32,7 +32,6 @@ pub struct PassiveTree {
     pub nodes: HashMap<NodeId, PoeNode>,
     pub edges: HashSet<Edge>,
     pub passive_skills: HashMap<String, skills::PassiveSkill>,
-    pub adjacency_list: HashMap<NodeId, HashSet<NodeId>>,
 }
 
 impl PassiveTree {
@@ -73,15 +72,6 @@ impl PassiveTree {
         self.nodes
             .retain(|&nid, _| retained_node_ids.contains(&nid));
         let removed_node_count = initial_node_count - self.nodes.len();
-
-        // Prune adjacency list
-        // 1. Remove any node not in retained_node_ids
-        self.adjacency_list
-            .retain(|&node_id, _| retained_node_ids.contains(&node_id));
-        // 2. Within each retained node's adjacency set, remove any neighbours not in retained_node_ids
-        for (_, neighbours) in self.adjacency_list.iter_mut() {
-            neighbours.retain(|neighbour_id| retained_node_ids.contains(neighbour_id));
-        }
 
         // Size after pruning but before shrink
         let edges_size_after_prune = self.edges.len() * size_of::<Edge>();
@@ -288,49 +278,11 @@ impl PassiveTree {
             }
         };
 
-        // Build the adjacency set
-        let adjacency_set: HashMap<NodeId, HashSet<NodeId>> = {
-            let mut adj_list = HashMap::new();
-
-            if let Some(tree) = val.get("passive_tree") {
-                if let Some(nodes) = tree.get("nodes") {
-                    if let Some(obj) = nodes.as_object() {
-                        for (node_id_str, node_val) in obj {
-                            let from_id = node_id_str.parse::<NodeId>().unwrap();
-                            if let Some(cons) =
-                                node_val.get("connections").and_then(|c| c.as_array())
-                            {
-                                for conn in cons {
-                                    if let Some(to_id) = conn.get("id").and_then(|x| x.as_u64()) {
-                                        let to_id = to_id as NodeId;
-
-                                        // Insert the forward connection
-                                        adj_list
-                                            .entry(from_id)
-                                            .or_insert_with(HashSet::new)
-                                            .insert(to_id);
-
-                                        // Insert the reverse connection
-                                        adj_list
-                                            .entry(to_id)
-                                            .or_insert_with(HashSet::new)
-                                            .insert(from_id);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            adj_list
-        };
-
         Ok(PassiveTree {
             groups,
             nodes,
             edges,
             passive_skills,
-            adjacency_list: adjacency_set,
         })
     }
 }
@@ -394,32 +346,6 @@ mod tests {
 
     use crate::{edges::Edge, pathfinding::quick_tree, PassiveTree};
 
-    #[test]
-    fn path_between_flow_like_water_and_chaos_inoculation() {
-        let tree: PassiveTree = quick_tree();
-
-        // Use fuzzy search to find nodes
-        let flow_ids = tree.fuzzy_search_nodes("flow like water");
-        let chaos_ids = tree.fuzzy_search_nodes("chaos inoculation");
-
-        assert!(!flow_ids.is_empty(), "No node found for 'flow like water'");
-        assert!(
-            !chaos_ids.is_empty(),
-            "No node found for 'chaos inoculation'"
-        );
-
-        let start_id = flow_ids[0];
-        let target_id = chaos_ids[0];
-
-        // Find shortest path using Dijkstra's Algorithm
-        let path = tree.find_shortest_path(start_id, target_id);
-        if path.is_empty() {
-            println!("No path found between {} and {}", start_id, target_id);
-        }
-        // Update this value based on expected path length after refactoring
-        assert_eq!(path.len(), 15, "Path length mismatch");
-        println!("{:#?}", path);
-    }
 
     #[test]
     fn bidirectional_edges() {

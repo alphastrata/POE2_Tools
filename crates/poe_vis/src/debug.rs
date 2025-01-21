@@ -4,7 +4,7 @@ use super::*;
 // DEBUG BAR
 impl TreeVis<'_> {
     /// Draw the debug information bar
-    pub fn draw_debug_bar(&self, ctx: &egui::Context) {
+    pub fn draw_debug_bar(&mut self, ctx: &egui::Context) {
         let (
             mouse_info,
             zoom_info,
@@ -28,6 +28,49 @@ impl TreeVis<'_> {
                 ui.separator();
                 ui.label(camera_pos);
             });
+        });
+
+        // Left-hand side debug menu
+        egui::SidePanel::left("debug_menu").show(ctx, |ui| {
+            ui.heading("🔧 Debug Menu");
+
+            ui.collapsing("Active Nodes", |ui| {
+                if ui.button("Add Node").clicked() {
+                    if let Some(node_id) = self.hovered_node {
+                        if self.passive_tree.nodes.contains_key(&node_id) {
+                            self.active_nodes.insert(node_id);
+                            log::debug!("Added node {} to active_nodes.", node_id);
+                        } else {
+                            log::warn!("Hovered node {} not found in passive_tree.", node_id);
+                        }
+                    } else {
+                        log::warn!("No node hovered to add.");
+                    }
+                }
+
+                // Temporary storage for nodes to remove
+                let mut nodes_to_remove = Vec::new();
+
+                // Display current active nodes
+                ui.label("Current Active Nodes:");
+                for &node_id in &self.active_nodes {
+                    ui.horizontal(|ui| {
+                        ui.label(format!("Node ID: {}", node_id));
+                        if ui.button("Remove").clicked() {
+                            nodes_to_remove.push(node_id);
+                            log::debug!("Queued node {} for removal from active_nodes.", node_id);
+                        }
+                    });
+                }
+
+                // Remove nodes outside the iteration
+                for node_id in nodes_to_remove {
+                    self.active_nodes.remove(&node_id);
+                    log::debug!("Removed node {} from active_nodes.", node_id);
+                }
+            });
+
+            // Add other debug options here if needed
         });
     }
 

@@ -94,9 +94,9 @@ pub struct TreeVis<'p> {
 impl eframe::App for TreeVis<'_> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Check if a character is loaded, and show class selection popup if not
-        if self.current_character.is_none() || self.start_node_id == 0usize {
-            self.show_class_popup(ctx);
-        }
+        // if self.current_character.is_none() || self.start_node_id == 0usize {
+        //     self.show_class_popup(ctx);
+        // }
 
         // IO
         self.handle_mouse(ctx);
@@ -173,8 +173,6 @@ impl TreeVis<'_> {
                 //             ui.selectable_value(selected_class, class, format!("{:?}", class));
                 //         });
                 //     });
-
-              
             });
     }
 }
