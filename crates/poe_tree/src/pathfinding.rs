@@ -203,73 +203,14 @@ impl PassiveTree {
         eprintln!("No path found!");
         vec![] // No path found
     }
-
-    pub fn dijkstra(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
-        use std::cmp::Reverse;
-        use std::collections::{BinaryHeap, HashMap};
-
-        let mut distances = HashMap::new();
-        let mut predecessors = HashMap::new();
-        let mut priority_queue = BinaryHeap::new();
-
-        for &node_id in self.nodes.keys() {
-            distances.insert(node_id, usize::MAX);
-        }
-        distances.insert(start, 0);
-
-        priority_queue.push(Reverse(NodeCost {
-            node_id: start,
-            cost: 0,
-        }));
-
-        while let Some(Reverse(NodeCost { node_id, cost })) = priority_queue.pop() {
-            if node_id == target {
-                // Reconstruct the path
-                let mut path = vec![target];
-                let mut step = target;
-                while let Some(&prev) = predecessors.get(&step) {
-                    path.push(prev);
-                    step = prev;
-                }
-                path.reverse();
-                return path;
-            }
-
-            // Skip outdated entries
-            if cost > *distances.get(&node_id).unwrap_or(&usize::MAX) {
-                continue;
-            }
-
-            // Process neighbours
-            if let Some(neighbours) = self.adjacency_list.get(&node_id) {
-                for &neighbour in neighbours {
-                    let new_cost = cost + 1; // Weight of 1 for all edges
-                    if new_cost < *distances.get(&neighbour).unwrap_or(&usize::MAX) {
-                        distances.insert(neighbour, new_cost);
-                        predecessors.insert(neighbour, node_id);
-                        priority_queue.push(Reverse(NodeCost {
-                            node_id: neighbour,
-                            cost: new_cost,
-                        }));
-                    }
-                }
-            }
-        }
-
-        log::warn!("No path found!");
-        eprintln!("No path found!");
-        vec![] // No path found
-    }
 }
-
-
 
 pub fn quick_tree() -> PassiveTree {
     let file = std::fs::File::open("../../data/POE2_Tree.json").unwrap();
     let reader = std::io::BufReader::new(file);
     let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
     let mut tree = PassiveTree::from_value(&tree_data).unwrap();
-    
+
     tree.remove_hidden();
     tree
 }
@@ -278,37 +219,6 @@ pub fn quick_tree() -> PassiveTree {
 mod test {
 
     use super::*;
-   
-
-
-    #[test]
-    fn test_large_path_bfs_dijkstra() {
-        let tree = quick_tree();
-
-        // Define the start and target nodes
-        let start_id = 10364; // Example: Attack Damage start
-        let target_id = 58329; // Example: Target node in a different area
-
-        // Find paths using BFS and Dijkstra
-        let bfs_path = tree.bfs(start_id, target_id);
-        let dijkstra_path = tree.dijkstra(start_id, target_id);
-
-        // Assertions
-        assert!(!bfs_path.is_empty(), "No path found using BFS!");
-        assert!(!dijkstra_path.is_empty(), "No path found using Dijkstra!");
-        assert_eq!(
-            bfs_path, dijkstra_path,
-            "Paths returned by BFS and Dijkstra do not match!"
-        );
-
-        println!("BFS Path: {:?}", bfs_path);
-        println!("Dijkstra Path: {:?}", dijkstra_path);
-        assert_eq!(
-            bfs_path.len(),
-            dijkstra_path.len(),
-            "Path lengths do not match!"
-        );
-    }
 
     #[test]
     fn test_path_avatar_of_fire_to_over_exposure() {
@@ -327,21 +237,14 @@ mod test {
         let start_id = avatar_ids[0];
         let target_id = over_exposure_ids[0];
 
-        // Find paths using BFS and Dijkstra
+        // Find paths using BFS
         let bfs_path = tree.bfs(start_id, target_id);
-        let dijkstra_path = tree.dijkstra(start_id, target_id);
 
         // Assertions
         assert!(!bfs_path.is_empty(), "No path found using BFS!");
-        assert!(!dijkstra_path.is_empty(), "No path found using Dijkstra!");
-        assert_eq!(
-            bfs_path, dijkstra_path,
-            "Paths returned by BFS and Dijkstra do not match!"
-        );
 
         println!("Path from Avatar of Fire to Overexposure:");
         println!("BFS Path: {:?}", bfs_path);
-        println!("Dijkstra Path: {:?}", dijkstra_path);
         assert_eq!(bfs_path.len(), 27, "Expected path length does not match.");
     }
 
@@ -358,46 +261,6 @@ mod test {
         assert_eq!(path.last(), Some(&target));
     }
 
-    #[test]
-    fn dijkstra_pathfinding() {
-        let tree = quick_tree();
-
-        let start = 44683;
-        let target = 52980;
-
-        let path = tree.dijkstra(start, target);
-        assert!(!path.is_empty(), "No path found!");
-        assert_eq!(path.first(), Some(&start));
-        assert_eq!(path.last(), Some(&target));
-    }
-
-    // #[test]
-    fn test_bidirectional_edges() {
-        let tree = quick_tree();
-
-        let mut bidirectional_issues = Vec::new();
-
-        for edge in &tree.edges {
-            // Check if the reverse edge exists
-            let reverse_edge_exists = tree
-                .edges
-                .iter()
-                .any(|e| e.start == edge.end && e.end == edge.start);
-            if !reverse_edge_exists {
-                bidirectional_issues.push((edge.start, edge.end));
-            }
-        }
-
-        if !bidirectional_issues.is_empty() {
-            eprintln!("Found non-bidirectional edges: {:?}", bidirectional_issues);
-        }
-
-        assert!(
-            bidirectional_issues.is_empty(),
-            "Some edges are not bidirectional."
-        );
-    }
-
     // #[test]
     // fn equivalent_path_lengths_to_target() {
     //     let tree = quick_tree();
@@ -412,40 +275,5 @@ mod test {
 
     //     println!("Path 1 (via Attack Damage): {:?}", actual_path1);
     //     println!("Path 2 (via Critical Damage): {:?}", actual_path2);
-    // }
-
-    // #[test]
-    // fn connected_path() {
-    //     let tree = quick_tree();
-
-    //     // Node IDs for the test
-    //     let node_a = 63064; // 54413, 32683, 40068, 48198
-    //     let node_b = 48198;
-
-    //     // Check if the nodes are connected
-    //     let are_connected = tree.are_nodes_connected(node_a, node_b);
-    //     assert!(
-    //         are_connected,
-    //         "Nodes {} and {} should be connected, but they are not, .are_node_connected returned {}",
-    //         node_a, node_b, are_connected
-    //     );
-
-    //     // Find the shortest path between the nodes
-    //     let path = tree.find_shortest_path(node_a, node_b);
-    //     assert!(
-    //         !path.is_empty(),
-    //         "No path found between {} and {}.",
-    //         node_a,
-    //         node_b
-    //     );
-
-    //     // Verify the path contains the correct nodes
-    //     assert!(
-    //         path.contains(&node_a) && path.contains(&node_b),
-    //         "Path does not include both nodes {} and {}: {:?}",
-    //         node_a,
-    //         node_b,
-    //         path
-    //     );
     // }
 }
