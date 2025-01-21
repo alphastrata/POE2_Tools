@@ -11,9 +11,8 @@ pub mod drawing;
 pub mod io;
 
 use poe_tree::{
-    character::{Character, CharacterClass},
+    character::Character,
     config::UserConfig,
-    consts::{CHAR_START_NODES, LEVEL_ONE_NODES},
     PassiveTree,
 };
 
