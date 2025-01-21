@@ -20,7 +20,7 @@ fn main() {
     tree.remove_hidden();
     log::debug!("Hidden nodes removed.");
     // Load the character data, defaulting to `None` if the file is missing or invalid
-    let character = Character::load_from_toml("data/character22.toml");
+    let character = Character::load_from_toml("data/character.toml");
 
     log::debug!(
         "Found {} nodes and {} groups",

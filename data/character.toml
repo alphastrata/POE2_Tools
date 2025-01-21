@@ -5,3 +5,4 @@ activated_node_ids = [10364]
 date_created = "2025-01-13T12:34:56Z"
 level = 1
 quest_passive_skills = 0
+starting_node = 10364

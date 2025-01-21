@@ -20,8 +20,9 @@ pub mod rhs_menu {
                     // Search Functionality
                     self.search(ui);
 
-                    // Start and Target Node Configuration
-                    self.pathing(ui);
+                    ui.separator();
+                    ui.heading("Character");
+                    self.display_character_section(ui);
                 })
                 .response
                 .rect; // Capture the rectangle of the RHS menu
@@ -37,7 +38,7 @@ pub mod rhs_menu {
 
             // Get and log the mouse position
             if let Some(mouse_pos) = ctx.input(|input| input.pointer.hover_pos()) {
-                log::debug!(
+                log::trace!(
                     "Mouse position: x = {:.2}, y = {:.2}",
                     mouse_pos.x,
                     mouse_pos.y,
@@ -60,6 +61,19 @@ pub mod rhs_menu {
                     egui::TextStyle::Monospace.resolve(&ctx.style()),
                     egui::Color32::RED,
                 );
+            }
+        }
+
+        fn display_character_section(&mut self, ui: &mut egui::Ui) {
+            if let Some(character) = &self.current_character {
+                ui.label(format!("Class: {}", character.character_class));
+                ui.label(format!("Starting node: {}", character.starting_node));
+                ui.label(format!("Name: {}", character.name));
+                ui.label(format!("Activated Nodes: {}", self.active_nodes.len()));
+                ui.label(format!("Date Created: {}", character.date_created));
+                ui.label(format!("Level: {}", character.level));
+            } else {
+                ui.label("No character loaded.");
             }
         }
 
@@ -140,51 +154,6 @@ pub mod rhs_menu {
                     }
                 }
             }
-        }
-
-        fn pathing(&mut self, ui: &mut egui::Ui) {
-            ui.separator();
-            ui.heading("Node Configuration");
-
-            // Start Node Configuration
-            ui.horizontal(|ui| {
-                ui.label("Start Node:");
-                let mut start_node_str = self.start_node_id.to_string();
-                if ui.text_edit_singleline(&mut start_node_str).changed() {
-                    if let Ok(parsed) = start_node_str.parse::<u32>() {
-                        if self.passive_tree.nodes.contains_key(&parsed) {
-                            self.start_node_id = parsed;
-                            log::info!("Start Node updated: {}", self.start_node_id);
-                        } else {
-                            log::warn!("Invalid Start Node ID: {}", parsed);
-                        }
-                    }
-                }
-            });
-
-            // Target Node Configuration
-            ui.horizontal(|ui| {
-                ui.label("Target Node:");
-                let mut target_node_str = self.target_node_id.to_string();
-                if ui.text_edit_singleline(&mut target_node_str).changed() {
-                    if let Ok(parsed) = target_node_str.parse::<u32>() {
-                        if self.passive_tree.is_node_within_distance(
-                            self.start_node_id,
-                            parsed,
-                            123,
-                        ) {
-                            self.target_node_id = parsed;
-                            log::info!("Target Node updated: {}", self.target_node_id);
-                        } else {
-                            log::warn!(
-                                "Node {} is not within 123 steps of Start Node {}",
-                                parsed,
-                                self.start_node_id
-                            );
-                        }
-                    }
-                }
-            });
         }
     }
 }
@@ -305,56 +274,59 @@ impl TreeVis<'_> {
     }
 }
 
-use rfd::FileDialog;
-use std::path::PathBuf;
+pub mod top_menu {
+    use rfd::FileDialog;
+    use std::path::PathBuf;
 
-impl TreeVis<'_> {
-    pub(crate) fn draw_top_bar(&mut self, ctx: &egui::Context) {
-        egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                // File menu
-                ui.menu_button("File", |ui| {
-                    if ui.button("Open").clicked() {
-                        if let Some(target) = self.open_file_dialog() {
-                            // TODO: Handle the opened file
-                            log::info!("Opened file: {:?}", target);
-                            self.load_character(target);
+    use super::TreeVis;
+    impl TreeVis<'_> {
+        pub(crate) fn draw_top_bar(&mut self, ctx: &egui::Context) {
+            egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
+                egui::menu::bar(ui, |ui| {
+                    // File menu
+                    ui.menu_button("File", |ui| {
+                        if ui.button("Open").clicked() {
+                            if let Some(target) = self.open_file_dialog() {
+                                // TODO: Handle the opened file
+                                log::info!("Opened file: {:?}", target);
+                                self.load_character(target);
+                            }
+                            ui.close_menu();
                         }
-                        ui.close_menu();
-                    }
-                    if ui.button("Save").clicked() {
-                        log::info!("Save clicked");
-                        ui.close_menu();
-                    }
-                    if ui.button("Save As").clicked() {
-                        log::info!("Save As clicked");
-                        ui.close_menu();
-                    }
-                });
+                        if ui.button("Save").clicked() {
+                            log::info!("Save clicked");
+                            ui.close_menu();
+                        }
+                        if ui.button("Save As").clicked() {
+                            log::info!("Save As clicked");
+                            ui.close_menu();
+                        }
+                    });
 
-                // View menu remains unchanged
-                ui.menu_button("View", |ui| {
-                    // if ui.button("Reset Zoom").clicked() {
-                    //     self.reset_zoom();
-                    //     ui.close_menu();
-                    // }
-                    // if ui.button("Zoom In").clicked() {
-                    //     self.zoom_in();
-                    //     ui.close_menu();
-                    // }
-                    // if ui.button("Zoom Out").clicked() {
-                    //     self.zoom_out();
-                    //     ui.close_menu();
-                    // }
+                    // View menu remains unchanged
+                    ui.menu_button("View", |ui| {
+                        // if ui.button("Reset Zoom").clicked() {
+                        //     self.reset_zoom();
+                        //     ui.close_menu();
+                        // }
+                        // if ui.button("Zoom In").clicked() {
+                        //     self.zoom_in();
+                        //     ui.close_menu();
+                        // }
+                        // if ui.button("Zoom Out").clicked() {
+                        //     self.zoom_out();
+                        //     ui.close_menu();
+                        // }
+                    });
                 });
             });
-        });
-    }
+        }
 
-    fn open_file_dialog(&self) -> Option<PathBuf> {
-        FileDialog::new()
-            .add_filter("TOML files", &["toml"])
-            .set_directory(std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
-            .pick_file()
+        fn open_file_dialog(&self) -> Option<PathBuf> {
+            FileDialog::new()
+                .add_filter("TOML files", &["toml"])
+                .set_directory(PathBuf::from("./data"))
+                .pick_file()
+        }
     }
 }
