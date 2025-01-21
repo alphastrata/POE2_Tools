@@ -27,6 +27,9 @@ fn main() {
         tree.nodes.len(),
         tree.groups.len(),
     );
+    if character.is_none() {
+        log::warn!("Loaded without a Character, default values will be supplied.");
+    }
 
     // Initialize the visualization
     let options = eframe::NativeOptions {

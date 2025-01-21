@@ -157,4 +157,82 @@ impl TreeVis<'_> {
             self.active_edges
         );
     }
+
+    pub fn repair_broken_paths(&mut self) {
+        dbg!(
+            &self.active_edges,
+            &self.active_nodes,
+            &self.highlighted_path
+        );
+        /*
+                  > No active node found to connect to 0
+        [crates\poe_vis\src\background_services.rs:162:9] &self.active_edges = {
+            (
+                10364,
+                55342,
+            ),
+        }
+        [crates\poe_vis\src\background_services.rs:162:9] &self.active_nodes = {
+            55342,
+            10364,
+            53960,
+        }
+        [crates\poe_vis\src\background_services.rs:162:9] &self.highlighted_path = [
+            36778,
+            49220,
+            53960,
+        ]
+             */
+        unimplemented!("We should, when a user deselects nodes, thereby removing them from our active_nodes, also remove them from the active_edges, then attpemt to repair paths and recompute the actually active nodes.")
+    }
+}
+
+impl TreeVis<'_> {
+    pub const DEFAULT_CHARACTER_SAVE_PATH: &'static str = "./data/character.toml";
+
+    pub fn character(&self) -> &Character {
+        &self.user_config.character
+    }
+    //TODO: rate-limit
+    pub(crate) fn update_character(&mut self) {
+        if self.active_nodes != self.character().activated_node_ids {
+            self.active_nodes
+                .insert(self.user_config.character.starting_node);
+            self.highlighted_path
+                .push(self.user_config.character.starting_node);
+            self.active_nodes.remove(&0); // remove the default placeholder JIC
+
+            self.user_config.character.activated_node_ids = self.active_nodes.clone();
+            self.save_character();
+        } else {
+            log::trace!("Character data unchanged, no update required");
+        }
+    }
+
+    pub fn save_character(&mut self) {
+        if let Err(e) = self
+            .character()
+            .save_to_toml(Self::DEFAULT_CHARACTER_SAVE_PATH)
+        {
+            log::error!("Unable to save Character updates, Error: {e}");
+        };
+    }
+
+    pub fn load_character<P: AsRef<std::path::Path>>(&mut self, path: P) {
+        let p = path.as_ref();
+
+        match Character::load_from_toml(p) {
+            Some(c) => {
+                log::debug!("Character before loading: {}", self.character());
+                self.start_node_id = c.starting_node;
+                self.active_nodes = c.activated_node_ids.clone();
+
+                self.user_config.character = c;
+                log::debug!("Character after loading: {}", self.character());
+            }
+            None => {
+                log::error!("Unable to load Character from path :{}", p.display());
+            }
+        }
+    }
 }

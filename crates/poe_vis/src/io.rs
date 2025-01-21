@@ -5,18 +5,13 @@ use super::*;
 // IO
 impl TreeVis<'_> {
     pub fn select_node(&mut self, node_id: u32) {
-        if let Some(character) = &mut self.current_character {
-            if !character.activated_node_ids.contains(&node_id) {
-                log::info!("Selecting node: {}", node_id);
-                self.target_node_id = node_id;
-                self.process_path_to_active_node(node_id, true); // Activate the path
-            }
-        }
+        self.target_node_id = node_id;
+        self.process_path_to_active_node(node_id, true); // Activate the path
     }
     pub fn hover_node(&mut self, node_id: u32) {
         if let Some(node) = self.passive_tree.nodes.get(&node_id) {
             if !node.active {
-                log::info!("Hovering over node: {}", node_id);
+                log::trace!("Hovering over node: {}", node_id);
 
                 // Highlight the shortest path to an active node (do not activate)
                 if let Some(shortest_path) = self.process_path_to_active_node(node_id, false) {
@@ -69,10 +64,7 @@ impl TreeVis<'_> {
     }
 
     /// Finds the shortest path from the given node to the nearest active node.
-    pub fn find_shortest_path_to_active_node(
-        &self,
-        target_node: u32,
-    ) -> Option<(Vec<u32>, u32)> {
+    pub fn find_shortest_path_to_active_node(&self, target_node: u32) -> Option<(Vec<u32>, u32)> {
         self.passive_tree
             .nodes
             .iter()
