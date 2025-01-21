@@ -15,6 +15,7 @@ use consts::{CHAR_START_NODES, ORBIT_RADII, ORBIT_SLOTS};
 use debug_utils::format_bytes;
 use edges::Edge;
 use nodes::PoeNode;
+use skills::PassiveSkill;
 use type_wrappings::{GroupId, NodeId};
 
 use serde_json::Value;
@@ -193,7 +194,6 @@ impl PassiveTree {
                             .cloned()
                             .unwrap_or_default();
                         let is_notable = skill.map(|s| s.is_notable).unwrap_or(false);
-                        let stats = skill.map(|s| s.stats.clone()).unwrap_or_default();
 
                         Some((
                             node_id,
@@ -205,7 +205,6 @@ impl PassiveTree {
                                 position,
                                 name,
                                 is_notable,
-                                stats,
                                 wx,
                                 wy,
                                 active: false,
@@ -292,6 +291,10 @@ impl PassiveTree {
             edges,
             passive_skills,
         })
+    }
+
+    fn stats_for_node(&self, arg: &PoeNode) -> &PassiveSkill {
+        self.passive_skills.get(&arg.skill_id).unwrap()
     }
 }
 

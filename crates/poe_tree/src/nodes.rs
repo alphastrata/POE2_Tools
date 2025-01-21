@@ -1,5 +1,6 @@
 //$ crates/poe_tree/src/nodes.rs
 use crate::config::{parse_color, UserConfig};
+use crate::skills::PassiveSkill;
 
 use super::stats::Stat;
 use super::type_wrappings::{GroupId, NodeId};
@@ -14,7 +15,6 @@ pub struct PoeNode {
     pub position: u32,
     pub name: String,
     pub is_notable: bool,
-    pub stats: Vec<Stat>,
     pub wx: f32,
     pub wy: f32,
     pub active: bool,
@@ -73,5 +73,9 @@ impl PoeNode {
         }
 
         parse_color(config.colors.get("all_nodes").unwrap())
+    }
+
+    pub(crate) fn as_passive_skill<'t>(&self, tree: &'t PassiveTree) -> &'t PassiveSkill {
+        tree.stats_for_node(self)
     }
 }
