@@ -93,7 +93,7 @@ impl TreeVis<'_> {
         let camera_pos = format!("Camera: ({:.2}, {:.2})", camera_x, camera_y);
 
         // Get zoom level
-        let zoom_info = format!("Zoom: {:.2}", self.zoom);
+        let zoom_info = format!("Zoom: {:.2}", self.zoom.borrow());
 
         // Get hovered node info
         let hovered_node_info = if let Some(hovered_node_id) = self.hovered_node {

@@ -13,11 +13,6 @@ pub mod io;
 use poe_tree::{character::Character, config::UserConfig, type_wrappings::NodeId, PassiveTree};
 
 impl<'p> TreeVis<'p> {
-    pub(crate) const BASE_RADIUS: f32 = 8.0;
-    pub(crate) const NOTABLE_MULTIPLIER: f32 = 1.5; // Scale notable nodes
-    pub(crate) const NAMELESS_MULTIPLIER: f32 = 1.0; // Scale nameless nodes
-    pub(crate) const CAMERA_OFFSET: (f32, f32) = (-2_600.0, -1_300.0);
-
     pub fn new(
         passive_tree: &'p mut PassiveTree,
         user_config: UserConfig,
@@ -25,7 +20,7 @@ impl<'p> TreeVis<'p> {
     ) -> Self {
         Self {
             camera: RefCell::new(Self::CAMERA_OFFSET),
-            zoom: 0.09,
+            zoom: 0.09.into(),
             passive_tree,
             hovered_node: None, // No node hovered initially
 
@@ -53,9 +48,9 @@ impl<'p> TreeVis<'p> {
 
 pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
-    zoom: f32,
+    zoom: RefCell<f32>,
     passive_tree: &'p mut PassiveTree,
-    hovered_node: Option<u32>,
+    hovered_node: Option<NodeId>,
 
     #[allow(unused)]
     // Fuzzy-search-related
@@ -95,23 +90,29 @@ impl eframe::App for TreeVis<'_> {
         // bg updates:
         if self.requires_activation_check {
             log::debug!("Checking for active nodes & edges to highlight..");
-            self.check_and_activate_edges();
+
+            self.repair_broken_paths();
+
             self.check_and_activate_nodes();
+
+            self.check_and_activate_edges();
+
             self.requires_activation_check = false;
+
+            // Is it true the number of nodes / 2 == the number of edges?
         }
         self.update_character();
 
         // IO
         self.handle_mouse(ctx);
-        // Example: Process node hovering
         if let Some(hovered_node_id) = self.get_hovered_node(ctx) {
             self.hover_node(hovered_node_id);
         }
 
-        // Example: Check and activate nodes if target node changes
-        if let Some(target_node_id) = self.get_target_node() {
-            self.select_node(target_node_id);
-        }
+        // // Example: Check and activate nodes if target node changes
+        // if let Some(target_node_id) = self.get_target_node() {
+        //     self.select_node(target_node_id);
+        // }
 
         ctx.input(|input| {
             if let Some(hovered) = self.hovered_node {
@@ -126,16 +127,14 @@ impl eframe::App for TreeVis<'_> {
             }
         });
 
+        // DRAWING:
         self.draw_top_bar(ctx);
         self.draw_rhs_menu(ctx);
 
         //DEBUG:
         self.draw_debug_bar(ctx);
 
-        // drawing
         self.redraw_tree(ctx);
-
-        self.draw_color_and_highlights(ctx);
 
         //todo: draw top menu (open tree, char etc..)
     }

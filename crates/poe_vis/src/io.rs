@@ -23,7 +23,8 @@ impl TreeVis<'_> {
     }
 
     /// Processes the shortest path from a given node to the nearest active node.
-    /// If `activate` is true, nodes and edges along the path will be activated.
+    /// If `activate` is true, nodes and edges along the path will be activated,
+    /// activating the edges resulting in a highlighted path and a character update
     pub fn process_path_to_active_node(
         &mut self,
         node_id: u32,
@@ -32,7 +33,7 @@ impl TreeVis<'_> {
         if let Some((shortest_path, active_node_id)) =
             self.find_shortest_path_to_active_node(node_id)
         {
-            log::debug!(
+            log::trace!(
                 "Shortest path from {} to {}: {:?}",
                 node_id,
                 active_node_id,
@@ -57,7 +58,7 @@ impl TreeVis<'_> {
 
             return Some(shortest_path);
         } else {
-            log::warn!("No active node found to connect to {}", node_id);
+            log::trace!("No active node found to connect to {}", node_id);
         }
 
         None
@@ -152,14 +153,22 @@ impl TreeVis<'_> {
     pub fn click_node(&mut self, node_id: NodeId) {
         if let Some(node) = self.passive_tree.nodes.get_mut(&node_id) {
             node.active = !node.active;
+            log::debug!("Flipping node {} to active= {}", node_id, node.active);
             if node.active {
                 if !self.highlighted_path.contains(&node_id) {
                     self.highlighted_path.push(node_id);
                 }
             } else {
+                // When we deactivate a node we potentially need to update three of our out-of-bounds tracking lists.
+                // tedious cleanup indeed.
                 self.highlighted_path.retain(|&id| id != node_id);
+                self.active_edges
+                    .retain(|(a, b)| a != &node_id || b != &node_id);
+                self.active_nodes.retain(|nid| nid != &node_id);
             }
         }
+
+        // A little spammy but we always rebuild our 'paths' to ensure they're valid post editing the connected nodes we have etc.
         self.requires_activation_check = true;
     }
 

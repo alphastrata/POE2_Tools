@@ -150,40 +150,20 @@ impl TreeVis<'_> {
                 ControlFlow::Continue::<()>(())
             })
         });
+        log::debug!(
+            "Nodes in the 'visited' we just looked at: [ {:#?} ]",
+            &visited_edges
+        );
+
         self.active_edges = visited_edges;
 
         log::debug!(
             "Edge activation completed. Active edges: {:?}",
             self.active_edges
         );
-    }
-
-    pub fn repair_broken_paths(&mut self) {
-        dbg!(
-            &self.active_edges,
-            &self.active_nodes,
-            &self.highlighted_path
-        );
-        /*
-                  > No active node found to connect to 0
-        [crates\poe_vis\src\background_services.rs:162:9] &self.active_edges = {
-            (
-                10364,
-                55342,
-            ),
-        }
-        [crates\poe_vis\src\background_services.rs:162:9] &self.active_nodes = {
-            55342,
-            10364,
-            53960,
-        }
-        [crates\poe_vis\src\background_services.rs:162:9] &self.highlighted_path = [
-            36778,
-            49220,
-            53960,
-        ]
-             */
-        unimplemented!("We should, when a user deselects nodes, thereby removing them from our active_nodes, also remove them from the active_edges, then attpemt to repair paths and recompute the actually active nodes.")
+        log::debug!("Active edges:     {:?}", self.active_edges.len());
+        log::debug!("Active nodes:     {:?}", self.active_nodes.len());
+        log::debug!("highlighted path: {:?}", self.highlighted_path.len());
     }
 }
 
@@ -203,7 +183,9 @@ impl TreeVis<'_> {
             self.active_nodes.remove(&0); // remove the default placeholder JIC
 
             self.user_config.character.activated_node_ids = self.active_nodes.clone();
-            self.save_character();
+
+            // NOTE: auto-save on changes is disabled.
+            // self.save_character();
         } else {
             log::trace!("Character data unchanged, no update required");
         }
@@ -218,21 +200,135 @@ impl TreeVis<'_> {
         };
     }
 
+    /// Loads a character, sets the uploaded character's path to ours on Self.
+    /// sets the checks flag so we rehighlight paths etc.
     pub fn load_character<P: AsRef<std::path::Path>>(&mut self, path: P) {
         let p = path.as_ref();
 
         match Character::load_from_toml(p) {
             Some(c) => {
                 log::debug!("Character before loading: {}", self.character());
+                log::debug!(
+                    "TreeVis before loading:\n starting_id:{}, active_nodes{}",
+                    self.start_node_id,
+                    self.active_nodes.len()
+                );
+
                 self.start_node_id = c.starting_node;
                 self.active_nodes = c.activated_node_ids.clone();
+                let loaded_active_nodes = c
+                    .activated_node_ids
+                    .iter()
+                    .filter_map(|v| match self.passive_tree.nodes.get_mut(v) {
+                        Some(m_node) => Some(m_node.active = true),
+                        None => None,
+                    })
+                    .count();
 
+                assert_eq!(loaded_active_nodes, self.active_nodes.len());
                 self.user_config.character = c;
                 log::debug!("Character after loading: {}", self.character());
+                log::debug!(
+                    "TreeVis after loading:\n starting_id:{}, active_nodes{}",
+                    self.start_node_id,
+                    loaded_active_nodes
+                );
+                self.requires_activation_check = true;
             }
             None => {
                 log::error!("Unable to load Character from path :{}", p.display());
             }
         }
+    }
+}
+
+impl TreeVis<'_> {
+    /*
+    Initial State:
+
+        start_node_id = 1
+        active_nodes = {1, 2, 3, 4, 5, 7, 8}
+        active_edges = { (1, 2), (2, 3), (3, 4), (4, 5), (5, 7), (7, 8) }
+
+    Node Removal:
+
+        User removes 5.
+
+    After Repair:
+
+        Nodes 7 and 8 are unreachable.
+        active_nodes = {1, 2, 3, 4}
+        active_edges = { (1, 2), (2, 3), (3, 4) }
+        highlighted_path is recalculated or cleared.
+    */
+    pub fn repair_broken_paths(&mut self) {
+        // Debug initial state
+        // dbg!(
+        //     &self.active_edges,
+        //     &self.active_nodes,
+        //     &self.highlighted_path
+        // );
+
+        // // Record the initial state for delta comparison
+        // let initial_active_nodes = self.active_nodes.clone();
+        // let initial_active_edges = self.active_edges.clone();
+
+        // Step 1: Find all reachable nodes from `self.start_node_id`
+        let mut reachable_nodes = HashSet::new();
+        let mut repaired_edges = HashSet::new();
+
+        self.active_nodes.iter().for_each(|&node_id| {
+            let path = self.passive_tree.bfs(self.start_node_id, node_id);
+
+            reachable_nodes.insert(node_id);
+
+            // Add edges from the valid path
+            path.windows(2).for_each(|window| {
+                if let [start, end] = window {
+                    repaired_edges.insert((*start, *end));
+                }
+            });
+        });
+
+        // Step 2: Remove unreachable nodes and associated edges
+        self.active_nodes
+            .difference(&reachable_nodes)
+            .cloned()
+            .for_each(|unreachable| {
+                log::warn!("Removing unreachable node: {}", unreachable);
+
+                // Remove edges involving the unreachable node
+                self.active_edges
+                    .retain(|&(start, end)| start != unreachable && end != unreachable);
+            });
+
+        // Step 3: Update active nodes and edges
+        self.active_nodes = reachable_nodes;
+        self.active_edges = repaired_edges;
+
+        // Step 4: Recalculate `highlighted_path`
+        self.highlighted_path = self
+            .passive_tree
+            .bfs(self.start_node_id, self.target_node_id);
+
+        // Debug deltas directly without undeclared bindings
+        // dbg!({
+        //     let delta_nodes: HashSet<_> = initial_active_nodes
+        //         .difference(&self.active_nodes)
+        //         .cloned()
+        //         .collect();
+        //     let delta_edges: HashSet<_> = initial_active_edges
+        //         .difference(&self.active_edges)
+        //         .cloned()
+        //         .collect();
+        //     (delta_nodes, delta_edges)
+        // });
+
+        // // Debug final state
+        // dbg!(
+        //     &self.active_edges,
+        //     &self.active_nodes,
+        //     &self.highlighted_path
+        // );
     }
 }
