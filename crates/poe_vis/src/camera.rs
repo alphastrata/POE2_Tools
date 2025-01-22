@@ -5,9 +5,9 @@ use super::*;
 
 // Helper Functions
 impl TreeVis<'_> {
-    pub(crate) const CAMERA_OFFSET: (f32, f32) = (-2_600.0, -1_300.0);
+    pub(crate) const CAMERA_OFFSET: (f32, f32) = (-10_000.0, -6_000.0);
     pub(crate) const ZOOM_MIN: f32 = 0.0; // Minimum zoom level
-    pub(crate) const ZOOM_MAX: f32 = 1.3; // Maximum zoom level
+    pub(crate) const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
     pub(crate) const ZOOM_STEP: f32 = 0.0008; // Step size for zoom changes
     pub(crate) const DEFAULT_ZOOM_IN_WHEN_MOVE_TO_NODE: f32 = 0.38;
     pub(crate) const DEFAULT_STARTING_CAMERA_ZOOM: f32 = 0.09;
@@ -72,26 +72,20 @@ impl TreeVis<'_> {
     }
 
     pub fn world_to_screen_x(&self, wx: f32) -> f32 {
-        (wx - self.camera.borrow().0) * *self.zoom.borrow() + 500.0
-    }
-    pub fn screen_to_world_x(&self, sx: f32) -> f32 {
-        (sx - 500.0) / *self.zoom.borrow() + self.camera.borrow().0
+        (wx - self.camera.borrow().0) * *self.zoom.borrow()
     }
 
     pub fn world_to_screen_y(&self, wy: f32) -> f32 {
-        (wy - self.camera.borrow().1) * *self.zoom.borrow() + 500.0
+        (wy - self.camera.borrow().1) * *self.zoom.borrow()
     }
+
+    pub fn screen_to_world_x(&self, sx: f32) -> f32 {
+        (sx) / *self.zoom.borrow() + self.camera.borrow().0
+    }
+
     pub fn screen_to_world_y(&self, sy: f32) -> f32 {
-        (sy - 500.0) / *self.zoom.borrow() + self.camera.borrow().1
+        (sy) / *self.zoom.borrow() + self.camera.borrow().1
     }
-
-    // pub fn world_to_screen_y(&self, wy: f32) -> f32 {
-    //     500.0 - (wy - self.camera.borrow().1) * *self.zoom.borrow()
-    // }
-
-    // pub fn screen_to_world_y(&self, sy: f32) -> f32 {
-    //     (500.0 - sy) / *self.zoom.borrow() + self.camera.borrow().1
-    // }
 
     pub fn cam_xy(&self) -> (f32, f32) {
         (*self.camera.borrow()).clone()
@@ -133,5 +127,20 @@ impl TreeVis<'_> {
             let node_pos = egui::pos2(node.wx, node.wy);
             view_rect.contains(node_pos)
         })
+    }
+    pub fn calculate_dynamic_cull_region(&self, ctx: &egui::Context) -> egui::Rect {
+        let screen_rect = ctx.screen_rect();
+        let screen_width = screen_rect.width();
+        let screen_height = screen_rect.height();
+        let zoom = self.current_zoom_level();
+        let (cam_x, cam_y) = *self.camera.borrow();
+
+        let half_width = screen_width / (2.0 * zoom);
+        let half_height = screen_height / (2.0 * zoom);
+
+        egui::Rect::from_min_max(
+            egui::pos2(cam_x - half_width, cam_y - half_height),
+            egui::pos2(cam_x + half_width, cam_y + half_height),
+        )
     }
 }

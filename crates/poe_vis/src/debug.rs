@@ -1,133 +1,177 @@
-//!$ crates/poe_vis/src/debug.rs
-use super::*;
+use std::fmt;
 
-// DEBUG BAR
-impl TreeVis<'_> {
-    /// Draw the debug information bar
-    pub fn draw_debug_bar(&mut self, ctx: &egui::Context) {
-        let (
-            mouse_info,
-            zoom_info,
-            hovered_node_info,
-            node_dist_from_origin,
-            world_mouse_pos,
-            camera_pos,
-        ) = self.get_debug_bar_contents(ctx);
+use crate::TreeVis;
 
-        egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(mouse_info);
-                ui.separator();
-                ui.label(zoom_info);
-                ui.separator();
-                ui.label(hovered_node_info);
-                ui.separator();
-                ui.label(node_dist_from_origin);
-                ui.separator();
-                ui.label(world_mouse_pos);
-                ui.separator();
-                ui.label(camera_pos);
-            });
-        });
+/// A struct representing the content displayed in the debug bar.
+pub struct BottomDebugDisplay {
+    pub mouse_pos: (f32, f32),
+    pub mouse_distance_from_camera_pos: f32,
+    pub zoom_level: f32,
+    pub hovered_node_id: Option<u32>,
+    pub hovered_node_name: Option<String>,
+    pub node_dist_from_origin: Option<f32>,
+    pub world_mouse_pos: (f32, f32),
+    pub camera_pos: (f32, f32),
+}
 
-        // Left-hand side debug menu
-        egui::SidePanel::left("debug_menu").show(ctx, |ui| {
-            ui.heading("🔧 Debug Menu");
-
-            ui.collapsing("Active Nodes", |ui| {
-                if ui.button("Add Node").clicked() {
-                    if let Some(node_id) = self.hovered_node {
-                        if self.passive_tree.nodes.contains_key(&node_id) {
-                            self.active_nodes.insert(node_id);
-                            log::debug!("Added node {} to active_nodes.", node_id);
-                        } else {
-                            log::warn!("Hovered node {} not found in passive_tree.", node_id);
-                        }
-                    } else {
-                        log::warn!("No node hovered to add.");
-                    }
-                }
-
-                // Temporary storage for nodes to remove
-                let mut nodes_to_remove = Vec::new();
-
-                // Display current active nodes
-                ui.label("Current Active Nodes:");
-                for &node_id in &self.active_nodes {
-                    ui.horizontal(|ui| {
-                        ui.label(format!("Node ID: {}", node_id));
-                        if ui.button("Remove").clicked() {
-                            nodes_to_remove.push(node_id);
-                            log::debug!("Queued node {} for removal from active_nodes.", node_id);
-                        }
-                    });
-                }
-
-                // Remove nodes outside the iteration
-                for node_id in nodes_to_remove {
-                    self.active_nodes.remove(&node_id);
-                    log::debug!("Removed node {} from active_nodes.", node_id);
-                }
-            });
-
-            // Add other debug options here if needed
-        });
-    }
-
-    /// Precompute debug bar contents to avoid borrow conflicts
-    pub fn get_debug_bar_contents(
-        &self,
-        ctx: &egui::Context,
-    ) -> (String, String, String, String, String, String) {
+impl BottomDebugDisplay {
+    /// Create a new `BottomDebugDisplay` instance from the `TreeVis` state.
+    pub fn from_tree_vis(tree_vis: &TreeVis, ctx: &egui::Context) -> Self {
         // Get mouse position
         let mouse_pos = ctx.input(|input| input.pointer.hover_pos().unwrap_or_default());
-        let mouse_info = format!("Mouse: ({:.2}, {:.2})", mouse_pos.x, mouse_pos.y);
 
         // Convert mouse position to world coordinates
-        let world_mouse_x = self.screen_to_world_x(mouse_pos.x);
-        let world_mouse_y = self.screen_to_world_y(mouse_pos.y);
-        let world_mouse_pos = format!("World Mouse: ({:.2}, {:.2})", world_mouse_x, world_mouse_y);
+        let world_mouse_x = tree_vis.screen_to_world_x(mouse_pos.x);
+        let world_mouse_y = tree_vis.screen_to_world_y(mouse_pos.y);
 
         // Get camera position
-        let (camera_x, camera_y) = *self.camera.borrow();
-        let camera_pos = format!("Camera: ({:.2}, {:.2})", camera_x, camera_y);
+        let camera_pos = *tree_vis.camera.borrow();
+
+        // Calculate distance from mouse to camera position
+        let mouse_distance_from_camera_pos = ((world_mouse_x - camera_pos.0).powi(2)
+            + (world_mouse_y - camera_pos.1).powi(2))
+        .sqrt();
 
         // Get zoom level
-        let zoom_info = format!("Zoom: {:.2}", self.zoom.borrow());
+        let zoom_level = *tree_vis.zoom.borrow();
 
         // Get hovered node info
-        let hovered_node_info = if let Some(hovered_node_id) = self.hovered_node {
-            if let Some(node) = self.passive_tree.nodes.get(&hovered_node_id) {
-                format!("Hovered Node: {:?}", node)
+        let (hovered_node_id, hovered_node_name, node_dist_from_origin) =
+            if let Some(hovered_node_id) = tree_vis.hovered_node {
+                if let Some(node) = tree_vis.passive_tree.nodes.get(&hovered_node_id) {
+                    let dist = (node.wx.powi(2) + node.wy.powi(2)).sqrt();
+                    (Some(hovered_node_id), Some(node.name.clone()), Some(dist))
+                } else {
+                    (Some(hovered_node_id), None, None)
+                }
             } else {
-                format!(
-                    "Hovered Node: {} (not found in passive_tree)",
-                    hovered_node_id
-                )
-            }
-        } else {
-            "Hovered Node: None".to_string()
-        };
+                (None, None, None)
+            };
 
-        // Get distance from (0,0) for hovered node
-        let node_dist_from_origin = if let Some(hovered_node_id) = self.hovered_node {
-            if let Some(node) = self.passive_tree.nodes.get(&hovered_node_id) {
-                let dist = (node.wx.powi(2) + node.wy.powi(2)).sqrt();
-                format!("Distance from Origin: {:.2}", dist)
-            } else {
-                "Distance from Origin: N/A".to_string()
-            }
-        } else {
-            "Distance from Origin: N/A".to_string()
-        };
-
-        (
-            mouse_info,
-            zoom_info,
-            hovered_node_info,
+        Self {
+            mouse_pos: (mouse_pos.x, mouse_pos.y),
+            mouse_distance_from_camera_pos,
+            zoom_level,
+            hovered_node_id,
+            hovered_node_name,
             node_dist_from_origin,
-            world_mouse_pos,
+            world_mouse_pos: (world_mouse_x, world_mouse_y),
             camera_pos,
+        }
+    }
+}
+
+impl fmt::Display for BottomDebugDisplay {
+    /// Render the `BottomDebugDisplay` contents to the UI.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "MOUSE: ({:.2}, {:.2}) | ZOOM: {:.2} | W_MOUSE: ({:.2}, {:.2}) | CAM: ({:.2}, {:.2}) | CAM_DIST: {:.2}",
+            self.mouse_pos.0, self.mouse_pos.1, self.zoom_level,
+            self.world_mouse_pos.0, self.world_mouse_pos.1,
+            self.camera_pos.0, self.camera_pos.1,
+            self.mouse_distance_from_camera_pos,
+        )?;
+
+        writeln!(
+            f,
+            "Hovered Node: {} | Distance from Origin: {:.2}",
+            self.hovered_node_name.as_deref().unwrap_or("None"),
+            self.node_dist_from_origin.unwrap_or(f32::NAN),
         )
+    }
+}
+
+impl TreeVis<'_> {
+    pub fn draw_debug_bar(&mut self, ctx: &egui::Context) {
+        let debug_display = BottomDebugDisplay::from_tree_vis(self, ctx);
+
+        egui::TopBottomPanel::bottom("debug_panel").show(ctx, |ui| {
+            ui.label(format!("{}", debug_display));
+        });
+
+        let painter = ctx.layer_painter(egui::LayerId::new(
+            egui::Order::Foreground,
+            "crosshair".into(),
+        ));
+
+        // Get camera world and screen positions
+        let (cam_x, cam_y) = *self.camera.borrow();
+        let screen_x = self.world_to_screen_x(cam_x);
+        let screen_y = self.world_to_screen_y(cam_y);
+
+        // log::debug!(
+        //     "Camera world position: ({:.2}, {:.2}), Screen position: ({:.2}, {:.2})",
+        //     cam_x,
+        //     cam_y,
+        //     screen_x,
+        //     screen_y
+        // );
+        let view_rect = self.get_camera_view_rect(ctx);
+        log::debug!("Camera View Rect: {:?}", view_rect);
+
+        self.draw_crosshair(ctx, &painter);
+    }
+
+    pub fn draw_crosshair(&self, ctx: &egui::Context, painter: &egui::Painter) {
+        let (cam_x, cam_y) = *self.camera.borrow();
+
+        // Transform world-space (0, 0) to screen-space
+        let screen_x = self.world_to_screen_x(0.0);
+        let screen_y = self.world_to_screen_y(0.0);
+
+        log::debug!(
+            "World (0, 0) transformed to screen ({:.2}, {:.2}), Camera: ({:.2}, {:.2})",
+            screen_x,
+            screen_y,
+            cam_x,
+            cam_y
+        );
+
+        let crosshair_color = egui::Color32::RED;
+        let crosshair_size = 10.0;
+
+        // Draw horizontal and vertical lines for the crosshair
+        painter.line_segment(
+            [
+                egui::pos2(screen_x - crosshair_size, screen_y),
+                egui::pos2(screen_x + crosshair_size, screen_y),
+            ],
+            (1.0, crosshair_color),
+        );
+
+        painter.line_segment(
+            [
+                egui::pos2(screen_x, screen_y - crosshair_size),
+                egui::pos2(screen_x, screen_y + crosshair_size),
+            ],
+            (1.0, crosshair_color),
+        );
+        self.draw_centered_cull_region(ctx, painter);
+    }
+
+    pub fn draw_centered_cull_region(&self, ctx: &egui::Context, painter: &egui::Painter) {
+        let (cam_x, cam_y) = self.cam_xy();
+        let cull_min = egui::pos2(cam_x, cam_y);
+
+        let max_screen_x = cam_x + Self::CAMERA_OFFSET.0.abs();
+        let max_screen_y = cam_y + Self::CAMERA_OFFSET.1.abs();
+
+        let cull_max = egui::pos2(max_screen_x, max_screen_y);
+
+        // Draw the cull region as a rectangle
+        painter.rect_stroke(
+            egui::Rect::from_min_max(cull_min, cull_max),
+            0.0, // No rounding
+            egui::Stroke::new(1.0, egui::Color32::GREEN),
+        );
+
+        log::debug!(
+            "Cull Region: Min ({:.2}, {:.2}), Max ({:.2}, {:.2})",
+            cull_min.x,
+            cull_min.y,
+            cull_max.x,
+            cull_max.y,
+        );
     }
 }

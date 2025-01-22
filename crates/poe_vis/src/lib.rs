@@ -1,4 +1,5 @@
 //!$ crates/poe_vis/src/lib.rs
+use core::panic;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -67,6 +68,27 @@ impl<'p> TreeVis<'p> {
         self.fuzzy_search_open.swap(false, Ordering::Acquire);
     }
 }
+impl TreeVis<'_> {
+    pub fn initialize_camera(&mut self, ctx: &egui::Context) {
+        // Get screen dimensions
+        let screen_rect = ctx.screen_rect();
+        let screen_width = screen_rect.width();
+        let screen_height = screen_rect.height();
+
+        // Set camera to center on (0, 0)
+        *self.camera.borrow_mut() = (0.0, 0.0);
+
+        // Calculate zoom level to fit the entire tree
+        let tree_width = 12000.0; // Replace with actual tree width in world coordinates
+        let tree_height = 12000.0; // Replace with actual tree height in world coordinates
+        let zoom_x = screen_width / tree_width;
+        let zoom_y = screen_height / tree_height;
+        let optimal_zoom = zoom_x.min(zoom_y);
+        dbg!(optimal_zoom);
+
+        *self.zoom.borrow_mut() = optimal_zoom;
+    }
+}
 
 pub struct TreeVis<'p> {
     camera: RefCell<(f32, f32)>,
@@ -107,8 +129,17 @@ pub struct TreeVis<'p> {
     requires_activation_check: bool,
 }
 
+static CAMERA_INIT: AtomicBool = AtomicBool::new(false);
+
 impl eframe::App for TreeVis<'_> {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // do once:
+        // it'd be nice if egui had a way to ... do this nicer.
+        // if !CAMERA_INIT.load(Ordering::Acquire) {
+        //     self.initialize_camera(ctx);
+        //     CAMERA_INIT.swap(true, Ordering::SeqCst);
+        // }
+
         // bg updates:
         if self.requires_activation_check {
             log::debug!("Checking for active nodes & edges to highlight..");
