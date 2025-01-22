@@ -1,4 +1,4 @@
-//$ crates/poe_vis/src/io.rs
+//!$ crates/poe_vis/src/io.rs
 use poe_tree::type_wrappings::NodeId;
 
 use super::*;
@@ -184,5 +184,101 @@ impl TreeVis<'_> {
         self.highlighted_path.clear();
         self.active_edges.clear();
         log::info!("Cleared all active nodes and paths.");
+    }
+}
+impl TreeVis<'_> {
+    pub fn handle_keyboard(&mut self, ctx: &egui::Context) {
+        ctx.input(|input| {
+            // Trigger fuzzy search popup on `/`
+            if input.key_pressed(egui::Key::Slash) {
+                self.open_fuzzy_search();
+            }
+
+            // Exit application on `Escape`
+            if input.key_pressed(egui::Key::Escape) {
+                std::process::exit(0);
+            }
+        });
+    }
+}
+
+// pub mod search {
+// use super::TreeVis;
+//}
+// Adjusted code without `.hint_text` since `Response` doesn't have that method
+impl TreeVis<'_> {
+    pub fn show_fuzzy_search_popup(&mut self, ctx: &egui::Context) {
+        if let Some(mouse_pos) = ctx.input(|i| i.pointer.hover_pos()) {
+            let popup_id = egui::Id::new("fuzzy_search_popup");
+
+            egui::Window::new("🔍 Fuzzy Search")
+                .id(popup_id)
+                .collapsible(false)
+                .resizable(false)
+                .fixed_pos(mouse_pos) // Position the popup at the mouse location
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]) // Center the popup
+                .show(ctx, |ui| {
+                    ui.label("🔍 Search");
+
+                    // Text input for the search query
+                    let response = ui.text_edit_singleline(&mut self.search_query);
+                    if response.changed() {
+                        if !self.search_query.is_empty() {
+                            self.search_results =
+                                self.passive_tree.fuzzy_search_nodes(&self.search_query);
+                            log::debug!("Search query updated: {}", self.search_query);
+                            log::debug!("Search results: {:?}", self.search_results);
+                        } else {
+                            self.search_results.clear();
+                            log::debug!("Search query cleared, search results reset.");
+                        }
+                    }
+
+                    // Request focus for the text input field
+                    response.request_focus();
+
+                    // Display search results
+                    if !self.search_query.is_empty() {
+                        ui.separator();
+                        ui.label("Search results:");
+                        for &node_id in &self.search_results {
+                            if let Some(node) = self.passive_tree.nodes.get(&node_id) {
+                                ui.horizontal(|ui| {
+                                    if ui.button(&node.name).clicked() {
+                                        self.go_to_node(node_id);
+                                        self.close_fuzzy_search();
+                                        log::debug!(
+                                            "Navigated to node: {} ({})",
+                                            node.name,
+                                            node_id
+                                        );
+                                    }
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| {
+                                            if ui.button("📋").clicked() {
+                                                ui.output_mut(|o| {
+                                                    o.copied_text = node_id.to_string()
+                                                });
+                                                log::info!(
+                                                    "Copied Node ID {} to clipboard",
+                                                    node_id
+                                                );
+                                            }
+                                        },
+                                    );
+                                });
+                            }
+                        }
+                    }
+
+                    // Close the popup on Enter key
+                    ctx.input(|input| {
+                        if input.key_pressed(egui::Key::Enter) {
+                            ui.close_menu(); // Close the popup
+                        }
+                    });
+                });
+        }
     }
 }

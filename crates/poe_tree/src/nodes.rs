@@ -1,7 +1,6 @@
-//$ crates/poe_tree/src/nodes.rs
+//!$ crates/poe_tree/src/nodes.rs
 use super::type_wrappings::{GroupId, NodeId};
 use super::PassiveTree;
-use crate::config::{parse_color, UserConfig};
 use crate::skills::PassiveSkill;
 
 #[derive(Debug, Clone, Default)]
@@ -54,24 +53,6 @@ impl PoeNode {
         "maximum life",
         "life on kill",
     ];
-
-    pub fn base_color(&self, config: &UserConfig) -> egui::Color32 {
-        let name = self.name.to_lowercase();
-        if Self::INTELLIGENCE_KEYWORDS
-            .iter()
-            .any(|&kw| name.contains(kw))
-        {
-            return parse_color(config.colors.get("intelligence").unwrap());
-        }
-        if Self::DEXTERITY_KEYWORDS.iter().any(|&kw| name.contains(kw)) {
-            return parse_color(config.colors.get("dexterity").unwrap());
-        }
-        if Self::STRENGTH_KEYWORDS.iter().any(|&kw| name.contains(kw)) {
-            return parse_color(config.colors.get("strength").unwrap());
-        }
-
-        parse_color(config.colors.get("all_nodes").unwrap())
-    }
 
     pub(crate) fn as_passive_skill<'t>(&self, tree: &'t PassiveTree) -> &'t PassiveSkill {
         tree.stats_for_node(self)

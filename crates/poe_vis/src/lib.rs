@@ -1,11 +1,12 @@
-//$ crates/poe_vis/src/lib.rs
+//!$ crates/poe_vis/src/lib.rs
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    sync::atomic::AtomicBool,
+    sync::atomic::{AtomicBool, Ordering},
 };
 pub mod background_services;
 pub mod camera;
+pub mod config;
 pub(crate) mod debug;
 pub mod drawing;
 pub mod io;
@@ -20,7 +21,7 @@ impl<'p> TreeVis<'p> {
     ) -> Self {
         Self {
             camera: RefCell::new(Self::CAMERA_OFFSET),
-            zoom: 0.09.into(),
+            zoom: Self::DEFAULT_STARTING_CAMERA_ZOOM.into(),
             passive_tree,
             hovered_node: None, // No node hovered initially
 
@@ -43,6 +44,20 @@ impl<'p> TreeVis<'p> {
             controls: HashMap::new(),
             requires_activation_check: false,
         }
+    }
+
+    pub fn is_fuzzy_search_open(&self) -> bool {
+        self.fuzzy_search_open.load(Ordering::Relaxed)
+    }
+
+    pub fn open_fuzzy_search(&self) {
+        self.fuzzy_search_open.swap(true, Ordering::Acquire);
+        // Let em see...
+        self.set_zoom_level(0.035); //approximately the whole tree at 1080p
+    }
+
+    pub fn close_fuzzy_search(&self) {
+        self.fuzzy_search_open.swap(false, Ordering::Acquire);
     }
 }
 
@@ -103,7 +118,9 @@ impl eframe::App for TreeVis<'_> {
         }
         self.update_character();
 
-        // IO
+        // IO, no mouse when searching...
+        self.handle_keyboard(ctx);
+        // IO, keyboard:
         self.handle_mouse(ctx);
         if let Some(hovered_node_id) = self.get_hovered_node(ctx) {
             self.hover_node(hovered_node_id);
@@ -114,6 +131,10 @@ impl eframe::App for TreeVis<'_> {
         //     self.select_node(target_node_id);
         // }
 
+        if self.is_fuzzy_search_open() {
+            self.show_fuzzy_search_popup(ctx);
+        }
+
         ctx.input(|input| {
             if let Some(hovered) = self.hovered_node {
                 if input.pointer.primary_clicked() {
@@ -121,15 +142,10 @@ impl eframe::App for TreeVis<'_> {
                     self.repair_broken_paths();
                 }
             }
-
-            if input.key_pressed(egui::Key::Escape) {
-                std::process::exit(0);
-            }
         });
-
         // DRAWING:
         self.draw_top_bar(ctx);
-        self.draw_rhs_menu(ctx);
+        // self.draw_rhs_menu(ctx);
 
         //DEBUG:
         self.draw_debug_bar(ctx);
@@ -141,33 +157,5 @@ impl eframe::App for TreeVis<'_> {
 }
 
 impl TreeVis<'_> {
-    pub fn show_class_popup(&mut self, ctx: &egui::Context) {
-        // Ensure character exists, or initialize with default
-        let character = self
-            .current_character
-            .get_or_insert_with(Character::default);
-
-        // let selected_class = &mut character.character_class;
-
-        egui::Window::new("Choose Your Class")
-            .collapsible(false)
-            .resizable(false)
-            .title_bar(false)
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .show(ctx, |ui| {
-                ui.label("Please select your class:");
-
-                //TODO: match the tuples of opportunity to the right class.
-                // // Dropdown for class selection
-                // egui::ComboBox::from_label("Class")
-                //     .selected_text(format!("{:?}", selected_class))
-                //     .show_ui(ui, |ui| {
-                //       LEVEL_ONE_NODES
-                //         .into_iter()
-                //         .for_each(|class| {
-                //             ui.selectable_value(selected_class, class, format!("{:?}", class));
-                //         });
-                //     });
-            });
-    }
+    pub fn show_class_popup(&mut self, ctx: &egui::Context) {}
 }

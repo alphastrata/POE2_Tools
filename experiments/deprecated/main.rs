@@ -1,2 +1,2 @@
-//$ experiments/deprecated/main.rs
+//!$ experiments/deprecated/main.rs
 fn main() {}

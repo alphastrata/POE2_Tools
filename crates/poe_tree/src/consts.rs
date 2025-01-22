@@ -1,4 +1,4 @@
-//$ crates/poe_tree/src/consts.rs
+//!$ crates/poe_tree/src/consts.rs
 pub const ORBIT_RADII: [f32; 10] = [
     0.0, 82.0, 162.0, 335.0, 493.0, 662.0, 846.0, 251.0, 1080.0, 1322.0,
 ];

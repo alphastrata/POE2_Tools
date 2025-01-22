@@ -1,5 +1,4 @@
-//$ notes.rs
-// Camera consts
+//!$ notes.rs
 
 #[allow(unused)]
 fn enable_fuzzy_search(&self) {

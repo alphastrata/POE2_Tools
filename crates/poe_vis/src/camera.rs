@@ -1,13 +1,14 @@
-//$ crates/poe_vis/src/camera.rs
+//!$ crates/poe_vis/src/camera.rs
 use super::*;
 
 // Helper Functions
 impl TreeVis<'_> {
     pub(crate) const CAMERA_OFFSET: (f32, f32) = (-2_600.0, -1_300.0);
     pub(crate) const ZOOM_MIN: f32 = 0.0; // Minimum zoom level
-    pub(crate) const ZOOM_MAX: f32 = 1.0; // Maximum zoom level
-    pub(crate) const ZOOM_STEP: f32 = 0.0001; // Step size for zoom changes
-    pub(crate) const DEFAULT_ZOOM_IN_WHEN_MOVE_TO_NODE: f32 = 0.50;
+    pub(crate) const ZOOM_MAX: f32 = 1.3; // Maximum zoom level
+    pub(crate) const ZOOM_STEP: f32 = 0.0008; // Step size for zoom changes
+    pub(crate) const DEFAULT_ZOOM_IN_WHEN_MOVE_TO_NODE: f32 = 0.38;
+    pub(crate) const DEFAULT_STARTING_CAMERA_ZOOM: f32 = 0.09;
 
     pub fn move_camera_to_node(&self, node_id: u32) {
         if let Some(node) = self.passive_tree.nodes.get(&node_id) {
@@ -27,7 +28,7 @@ impl TreeVis<'_> {
     }
     pub fn go_to_node(&self, id: u32) {
         self.move_camera_to_node(id);
-        // self.disable_fuzzy_search();
+        self.close_fuzzy_search();
     }
 
     pub fn current_zoom_level(&self) -> f32 {

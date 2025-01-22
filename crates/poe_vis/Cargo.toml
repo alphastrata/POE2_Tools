@@ -16,3 +16,5 @@ eframe = { workspace = true }
 pretty_env_logger = { workspace = true }
 serde_json = { workspace = true }
 rfd = { workspace = true }
+serde.workspace = true
+toml.workspace = true

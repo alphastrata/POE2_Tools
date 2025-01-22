@@ -1,6 +1,5 @@
-//$ crates/poe_tree/src/lib.rs
+//!$ crates/poe_tree/src/lib.rs
 pub mod character;
-pub mod config;
 pub mod consts;
 pub mod coordinates;
 pub mod debug_utils;

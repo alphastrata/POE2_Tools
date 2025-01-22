@@ -1,1 +1,2 @@
-//$ src/lib.rs
+//!$ src/lib.rs
+

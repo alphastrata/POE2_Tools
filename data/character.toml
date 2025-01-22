@@ -1,3 +1,4 @@
+#$ data/character.toml
 character_class = "Monk"
 name = "jengablox"
 activated_node_ids = [30555, 49046, 53960, 10364, 55342, 17248]

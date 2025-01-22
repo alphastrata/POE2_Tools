@@ -10,7 +10,7 @@ def add_relative_path_comment(directory):
                 relative_path = os.path.relpath(filepath, directory)
 
                 # Determine the comment prefix based on file type
-                comment_prefix = "//" if file.endswith(".rs") else "#"
+                comment_prefix = "//!" if file.endswith(".rs") else "#"
 
                 # Read file content
                 with open(filepath, 'r') as f:

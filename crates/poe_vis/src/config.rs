@@ -1,7 +1,7 @@
-//$ crates/poe_tree/src/config.rs
-use std::collections::HashMap;
-
+//!$ crates/poe_vis/src/config.rs
 use egui::Key;
+use poe_tree::character::Character;
+use std::collections::HashMap;
 
 pub fn parse_color(col_str: &str) -> egui::Color32 {
     // Parse color from hex string (e.g., "#FF0000")
@@ -22,7 +22,7 @@ pub struct UserConfig {
 
     #[serde(skip_deserializing)]
     #[serde(default)]
-    pub character: crate::character::Character,
+    pub character: Character,
 }
 
 impl UserConfig {

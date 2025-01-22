@@ -1,4 +1,4 @@
-//$ crates/poe_vis/src/background_services.rs
+//!$ crates/poe_vis/src/background_services.rs
 use std::{
     collections::HashSet,
     ops::ControlFlow,
@@ -220,7 +220,10 @@ impl TreeVis<'_> {
                     .activated_node_ids
                     .iter()
                     .filter_map(|v| match self.passive_tree.nodes.get_mut(v) {
-                        Some(m_node) => Some(m_node.active = true),
+                        Some(m_node) => {
+                            m_node.active = true;
+                            Some(())
+                        }
                         None => None,
                     })
                     .count();

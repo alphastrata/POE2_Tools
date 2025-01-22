@@ -1,15 +1,105 @@
 .
+├── __pycache__
+│   ├── a2b.cpython-311.pyc
+│   ├── common.cpython-311.pyc
+│   └── poe_tree_types.cpython-311.pyc
+├── assets
+│   ├── _1.png
+│   ├── _2.png
+│   ├── _3.png
+│   ├── _4.png
+│   ├── _5.png
+│   ├── attributions.txt
+│   ├── frame-3.png
+│   ├── line-3.png
+│   ├── node_the-power-within.png
+│   ├── Orbit1Active.png
+│   ├── Orbit1Intermediate.png
+│   ├── Orbit1Normal.png
+│   ├── Orbit2Active.png
+│   ├── Orbit2Intermediate.png
+│   ├── Orbit2Normal.png
+│   ├── Orbit3Active.png
+│   ├── Orbit3Intermediate.png
+│   ├── Orbit3Normal.png
+│   ├── Orbit4Active.png
+│   ├── Orbit4Intermediate.png
+│   ├── Orbit4Normal.png
+│   ├── Orbit5Active.png
+│   ├── Orbit5Intermediate.png
+│   ├── Orbit5Normal.png
+│   ├── Orbit6Active.png
+│   ├── Orbit6Intermediate.png
+│   ├── Orbit6Normal.png
+│   ├── platform-tools-latest-windows.zip
+│   ├── range_guide.png
+│   └── tree_py.png
 ├── Cargo.lock
 ├── Cargo.toml
+├── config.toml
 ├── crates
-│   ├── poe_tree/src/
-│   └── poe_vis/src
+│   ├── poe_tree
+│   └── poe_vis
 ├── data
 │   ├── character.toml
 │   ├── POE2_Tree.json
 │   └── user_config.toml
+├── experiments
+│   ├── __init__.py
+│   ├── __pycache__
+│   ├── a2b.html
+│   ├── a2b.py
+│   ├── bokeh_plot.png
+│   ├── common.py
+│   ├── deprecated
+│   ├── dist-from.html
+│   ├── dist-from.py
+│   ├── expand-tree.py
+│   ├── find-node-by-name.py
+│   ├── flow-of-water-tree-maker.py
+│   ├── log-search.py
+│   ├── loggy
+│   ├── maxroll
+│   ├── notes7.md
+│   ├── notes8.md
+│   ├── orbit_calcs_opt1.png
+│   ├── orbit_calcs_opt1_invertedY.png
+│   ├── orbit_calcs_opt2.png
+│   ├── orbit_calcs_opt2_invertedY.png
+│   ├── orbit_calcs_opt3_minus90.png
+│   ├── orbit_calcs_opt4_minus90.png
+│   ├── passive_tree.html
+│   ├── path.py
+│   ├── poe_tree_types.py
+│   ├── proper-node-placement.py
+│   ├── runme.sh
+│   ├── shop
+│   ├── trader_ideas.py
+│   ├── tree-vis-4o.py
+│   ├── tree-vis_gemini.py
+│   ├── treedump.sh
+│   ├── trim-flow.py
+│   ├── tsx-inspired-vis.py
+│   ├── Untitled-2023-03-04-0640(3).png
+│   ├── vis-poe-tree-selection-dist.html
+│   ├── vis-poe-tree-selection-dist.py
+│   ├── vis-poe-tree-selection-dist2.html
+│   ├── vis-poe-tree-selection-dist2.py
+│   └── what-fmr.py
+├── notes
+│   ├── notes.md
+│   ├── notes4.md
+│   ├── notes5.md
+│   ├── notes6.md
+│   └── notes7.md
+├── notes.rs
+├── notes9.md
 ├── project_structure.txt
+├── repo_maintenence.py
 ├── src
 │   ├── data
 │   └── lib.rs
 └── target
+    ├── CACHEDIR.TAG
+    ├── debug
+    └── release

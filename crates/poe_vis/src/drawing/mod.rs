@@ -1,5 +1,4 @@
-//$ crates/poe_vis/src/drawing.rs
-
+//!$ crates/poe_vis/src/drawing/mod.rs
 use super::*;
 
 pub mod nodes;

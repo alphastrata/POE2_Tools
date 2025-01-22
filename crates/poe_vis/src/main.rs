@@ -1,5 +1,4 @@
-//$ crates/poe_vis/src/main.rs
-
+//!$ crates/poe_vis/src/main.rs
 use std::{fs::File, io::BufReader};
 
 use poe_tree::{character::Character, config::UserConfig, PassiveTree};

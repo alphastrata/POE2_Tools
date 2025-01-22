@@ -1,3 +1,4 @@
+//!$ crates/poe_vis/src/drawing/rhs_menu.rs
 use super::TreeVis;
 
 impl TreeVis<'_> {

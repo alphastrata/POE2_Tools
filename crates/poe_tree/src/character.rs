@@ -1,4 +1,4 @@
-//$ crates/poe_tree/src/character.rs
+//!$ crates/poe_tree/src/character.rs
 use chrono::{DateTime, Utc};
 use core::fmt;
 use serde::{Deserialize, Serialize};
