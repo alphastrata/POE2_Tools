@@ -91,22 +91,32 @@ impl TreeVis<'_> {
     }
 
     // Draw base nodes
-    pub fn draw_nodes(&self, painter: &egui::Painter) {
+    pub fn draw_nodes(&self, painter: &egui::Painter, boundaries: &egui::Rect) {
         let base_color = egui::Color32::GRAY;
 
-        self.passive_tree.nodes.values().for_each(|node| {
-            let x = self.world_to_screen_x(node.wx);
-            let y = self.world_to_screen_y(node.wy);
+        self.passive_tree
+            .nodes
+            .values()
+            .filter(|node| {
+                let x = self.world_to_screen_x(node.wx);
+                let y = self.world_to_screen_y(node.wy);
 
-            let radius = self.calculate_radius(
-                Self::BASE_RADIUS,
-                node.is_notable,
-                !node.name.chars().any(|c| c.is_ascii_digit()),
-                0.0,
-            );
+                boundaries.contains(egui::Pos2 { x, y })
+            })
+            .for_each(|node| {
+                //TODO: benchmark to see if the calculation of these is faster, or the lookup if we pass them down from the above..
+                let x = self.world_to_screen_x(node.wx);
+                let y = self.world_to_screen_y(node.wy);
 
-            self.draw_node_at(x, y, radius, base_color, painter, false);
-        });
+                let radius = self.calculate_radius(
+                    Self::BASE_RADIUS,
+                    node.is_notable,
+                    !node.name.chars().any(|c| c.is_ascii_digit()),
+                    0.0,
+                );
+
+                self.draw_node_at(x, y, radius, base_color, painter, false);
+            });
     }
 
     // Restyle active, hovered, and searched nodes
@@ -114,7 +124,7 @@ impl TreeVis<'_> {
         let active_color = parse_color(self.user_config.colors.get("yellow").unwrap());
         let search_color = parse_color(self.user_config.colors.get("purple").unwrap());
 
-        // Active nodes
+        // Active nodes (these are assumed to be so few in number we don't bother culling them)
         self.passive_tree.nodes.values().for_each(|node| {
             if node.active {
                 let x = self.world_to_screen_x(node.wx);
@@ -172,13 +182,13 @@ impl TreeVis<'_> {
     pub fn redraw_tree(&self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let painter = ui.painter();
-
+            let boundaries = self.get_camera_view_rect(ctx);
             // Draw edges first
             self.draw_edges(painter);
             self.restyle_edges(painter);
 
             // Draw nodes on top of edges
-            self.draw_nodes(painter);
+            self.draw_nodes(painter, &boundaries);
             self.restyle_nodes(painter);
 
             // Draw hovered node last

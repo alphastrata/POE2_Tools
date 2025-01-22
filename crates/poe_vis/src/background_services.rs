@@ -312,7 +312,7 @@ impl TreeVis<'_> {
         // Step 4: Recalculate `highlighted_path`
         self.highlighted_path = self
             .passive_tree
-            .bfs(self.start_node_id, self.target_node_id);
+            .bfs(self.start_node_id, self.selected_node_id);
 
         // Debug deltas directly without undeclared bindings
         // dbg!({

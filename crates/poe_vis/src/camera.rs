@@ -1,4 +1,6 @@
 //!$ crates/poe_vis/src/camera.rs
+use poe_tree::nodes::PoeNode;
+
 use super::*;
 
 // Helper Functions
@@ -72,16 +74,64 @@ impl TreeVis<'_> {
     pub fn world_to_screen_x(&self, wx: f32) -> f32 {
         (wx - self.camera.borrow().0) * *self.zoom.borrow() + 500.0
     }
-
-    pub fn world_to_screen_y(&self, wy: f32) -> f32 {
-        (wy - self.camera.borrow().1) * *self.zoom.borrow() + 500.0
-    }
-
     pub fn screen_to_world_x(&self, sx: f32) -> f32 {
         (sx - 500.0) / *self.zoom.borrow() + self.camera.borrow().0
     }
 
+    pub fn world_to_screen_y(&self, wy: f32) -> f32 {
+        (wy - self.camera.borrow().1) * *self.zoom.borrow() + 500.0
+    }
     pub fn screen_to_world_y(&self, sy: f32) -> f32 {
         (sy - 500.0) / *self.zoom.borrow() + self.camera.borrow().1
+    }
+
+    // pub fn world_to_screen_y(&self, wy: f32) -> f32 {
+    //     500.0 - (wy - self.camera.borrow().1) * *self.zoom.borrow()
+    // }
+
+    // pub fn screen_to_world_y(&self, sy: f32) -> f32 {
+    //     (500.0 - sy) / *self.zoom.borrow() + self.camera.borrow().1
+    // }
+
+    pub fn cam_xy(&self) -> (f32, f32) {
+        (*self.camera.borrow()).clone()
+    }
+}
+
+// Culling experiments:
+impl TreeVis<'_> {
+    /// Get the world-space bounds of the visible area
+    pub fn get_camera_view_rect(&self, ctx: &egui::Context) -> egui::Rect {
+        egui::Rect::from_min_max(
+            egui::pos2(
+                self.camera.borrow().0
+                    - (ctx.screen_rect().width() / (2.0 * self.current_zoom_level()))
+                    - ((ctx.screen_rect().width() / (2.0 * self.current_zoom_level())) * 0.30),
+                self.camera.borrow().1
+                    - (ctx.screen_rect().height() / (2.0 * self.current_zoom_level()))
+                    - ((ctx.screen_rect().height() / (2.0 * self.current_zoom_level())) * 0.30),
+            ),
+            egui::pos2(
+                self.camera.borrow().0
+                    + (ctx.screen_rect().width() / (2.0 * self.current_zoom_level()))
+                    + ((ctx.screen_rect().width() / (2.0 * self.current_zoom_level())) * 0.30),
+                self.camera.borrow().1
+                    + (ctx.screen_rect().height() / (2.0 * self.current_zoom_level()))
+                    + ((ctx.screen_rect().height() / (2.0 * self.current_zoom_level())) * 0.30),
+            ),
+        )
+    }
+
+    /// Find the world-space coordinates of the farthest visible nodes
+    pub fn get_farthest_visible_nodes(
+        &self,
+        ctx: &egui::Context,
+    ) -> impl Iterator<Item = &PoeNode> + '_ {
+        let view_rect = self.get_camera_view_rect(ctx);
+
+        self.passive_tree.nodes.values().filter(move |node| {
+            let node_pos = egui::pos2(node.wx, node.wy);
+            view_rect.contains(node_pos)
+        })
     }
 }

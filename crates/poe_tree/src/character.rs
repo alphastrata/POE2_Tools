@@ -1,10 +1,13 @@
 //!$ crates/poe_tree/src/character.rs
+use crate::type_wrappings::NodeId;
 use chrono::{DateTime, Utc};
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, fs, io, path::Path};
-
-use crate::type_wrappings::NodeId;
+use std::{
+    collections::{HashMap, HashSet},
+    default, fs, io,
+    path::Path,
+};
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Character {
@@ -98,5 +101,106 @@ mod tests {
         let test_file_path = "../../data/character.toml";
 
         _ = Character::load_from_toml(test_file_path).unwrap();
+    }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct CharacterStats {
+    // Basic Info
+    pub level: u8,
+    pub character_class: CharacterClass,
+    pub name: String,
+
+    // Attributes
+    pub strength: u32,
+    pub dexterity: u32,
+    pub intelligence: u32,
+
+    // Primary Stats
+    pub life: u32,
+    pub energy_shield: u32,
+    pub mana: u32,
+    pub spirit: u32,
+
+    // Defensive Stats (raw values, not percentages)
+    pub armour: u32,
+    pub evasion: u32,
+    pub block: u32,
+
+    // Resistances (current and capped values), it's not possible to get more than 255 right?!
+    pub fire_resistance: u8,
+    pub cold_resistance: u8,
+    pub lightning_resistance: u8,
+    pub chaos_resistance: u8,
+    pub resistance_cap: u8,
+
+    // Derived Stats
+    pub evasion_rating: u32,
+    pub estimated_chance_to_evade: f32,
+
+    pub mana_recovery_per_second: f32,
+    pub mana_recovery_from_regeneration: f32,
+
+    // Difficutly?
+    pub difficutly: Difficulty,
+
+    // Miscellaneous Stats
+    pub misc: HashMap<String, String>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub enum Difficulty {
+    #[default]
+    Normal,
+    Cruel,
+}
+impl CharacterStats {
+    pub fn new() -> Self {
+        Self {
+            resistance_cap: 75,
+            ..Default::default()
+        }
+    }
+
+    /// Calculate effective resistance after applying the cap
+    pub fn effective_resistance(&self, resistance: u8) -> u8 {
+        resistance.min(self.resistance_cap)
+    }
+
+    /// Display resistances with capped values
+    pub fn display_resistances(&self) -> String {
+        format!(
+            "Fire: {}% (Max {})\nCold: {}% (Max {})\nLightning: {}% (Max {})\nChaos: {}% (Max {})",
+            self.effective_resistance(self.fire_resistance),
+            self.resistance_cap,
+            self.effective_resistance(self.cold_resistance),
+            self.resistance_cap,
+            self.effective_resistance(self.lightning_resistance),
+            self.resistance_cap,
+            self.effective_resistance(self.chaos_resistance),
+            self.resistance_cap,
+        )
+    }
+
+    /// Create a default Monk character based on provided context
+    pub fn default_monk() -> Self {
+        Self {
+            level: 1,
+            character_class: CharacterClass::Monk,
+            name: String::from("Default Monk"),
+            strength: 7,
+            dexterity: 11,
+            intelligence: 11,
+            life: 42,
+            mana: 56,
+            evasion: 30,
+            resistance_cap: 75,
+            evasion_rating: 30,
+            estimated_chance_to_evade: 6.0,
+            mana_recovery_per_second: 2.2,
+            mana_recovery_from_regeneration: 2.2,
+            misc: HashMap::new(),
+            ..Default::default()
+        }
     }
 }

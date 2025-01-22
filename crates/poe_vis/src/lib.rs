@@ -11,7 +11,8 @@ pub(crate) mod debug;
 pub mod drawing;
 pub mod io;
 
-use poe_tree::{character::Character, config::UserConfig, type_wrappings::NodeId, PassiveTree};
+use config::UserConfig;
+use poe_tree::{character::Character, type_wrappings::NodeId, PassiveTree};
 
 impl<'p> TreeVis<'p> {
     pub fn new(
@@ -23,7 +24,10 @@ impl<'p> TreeVis<'p> {
             camera: RefCell::new(Self::CAMERA_OFFSET),
             zoom: Self::DEFAULT_STARTING_CAMERA_ZOOM.into(),
             passive_tree,
-            hovered_node: None, // No node hovered initially
+
+            // For virtual-paths && Hover
+            hovered_node: None,           // No node hovered initially
+            highlighted_path: Vec::new(), // No path initially
 
             // Fuzzy-search-related
             fuzzy_search_open: AtomicBool::new(false), // Search not open initially
@@ -32,16 +36,19 @@ impl<'p> TreeVis<'p> {
 
             // Path-finder-related
             start_node_id: 0,             // Default to the root or initial node
-            target_node_id: 0,            // Default to no target node
-            highlighted_path: Vec::new(), // No path initially
             active_edges: HashSet::new(), // No edges highlighted initially
             active_nodes: HashSet::new(),
+
+            //unused?
+            selected_node_id: 0, // Default to no target node
 
             current_character,
             last_save_time: std::time::Instant::now(), // Set to the current time
 
             user_config,
             controls: HashMap::new(),
+
+            // Rerun all the checks etc to look for, correct and so on broken paths.
             requires_activation_check: false,
         }
     }
@@ -75,7 +82,7 @@ pub struct TreeVis<'p> {
 
     // Path-finder-related
     start_node_id: NodeId,
-    target_node_id: NodeId,
+    selected_node_id: NodeId,
 
     // It _is_ possible to have a node highlighted without levelling to it, with gear, which is why this is already separate from the active_nodes
     highlighted_path: Vec<NodeId>,

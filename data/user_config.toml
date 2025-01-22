@@ -11,7 +11,7 @@ activated_nodes = "#29D398" # Green
 activated_edges = "#22A882" # Green
 
 # UI Colors
-background = "#1C1E26"
+background = "#000000"
 foreground = "#C7C9CB"
 red = "#E95678"
 orange = "#FAB795"

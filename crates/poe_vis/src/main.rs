@@ -1,13 +1,13 @@
 //!$ crates/poe_vis/src/main.rs
 use std::{fs::File, io::BufReader};
 
-use poe_tree::{character::Character, config::UserConfig, PassiveTree};
+use poe_tree::{character::Character, PassiveTree};
 use poe_vis::TreeVis;
 
 fn main() {
     pretty_env_logger::init();
 
-    let config: UserConfig = UserConfig::load_from_file("data/user_config.toml");
+    let config = poe_vis::config::UserConfig::load_from_file("data/user_config.toml");
     let file = File::open("data/POE2_Tree.json").unwrap();
     let reader = BufReader::new(file);
     let u = serde_json::from_reader(reader).unwrap();

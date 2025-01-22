@@ -5,7 +5,7 @@ use super::*;
 // IO
 impl TreeVis<'_> {
     pub fn select_node(&mut self, node_id: u32) {
-        self.target_node_id = node_id;
+        self.selected_node_id = node_id;
         self.process_path_to_active_node(node_id, true); // Activate the path
     }
     pub fn hover_node(&mut self, node_id: u32) {
@@ -109,7 +109,7 @@ impl TreeVis<'_> {
 
     pub fn get_target_node(&self) -> Option<u32> {
         // Logic to determine if a target node has been selected
-        Some(self.target_node_id)
+        Some(self.selected_node_id)
     }
     pub fn handle_mouse(&mut self, ctx: &egui::Context) {
         ctx.input(|input| {
