@@ -23,4 +23,5 @@ poe_tree = { path = "crates/poe_tree" }
 chrono = "0.4.39"
 
 [dependencies]
+bevy = "0.15.1"
 rfd.workspace = true
