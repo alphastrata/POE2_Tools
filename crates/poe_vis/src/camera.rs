@@ -1,6 +1,7 @@
 use bevy::input::common_conditions::input_just_pressed;
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
+use bevy::text::{TextFont, TextLayout}; // Explicit text components
 
 // Plugin definition
 pub struct PoeVisCameraPlugin;
@@ -34,8 +35,8 @@ impl Default for CameraSettings {
         Self {
             drag_sensitivity: 10.0,
             zoom_sensitivity: 0.15,
-            min_zoom: 0.1,
-            max_zoom: 1000.0,
+            min_zoom: 3.10,
+            max_zoom: 80.0,
         }
     }
 }
@@ -75,12 +76,47 @@ fn camera_zoom_system(
     }
 }
 // Drag system
+// fn camera_drag_system(
+//     mut drag_state: ResMut<DragState>,
+//     mouse_input: Res<ButtonInput<MouseButton>>,
+//     mut mouse_motion_events: EventReader<MouseMotion>,
+//     mut camera_query: Query<&mut Transform, With<Camera2d>>,
+//     windows: Query<&Window>,
+// ) {
+//     let window = windows.single();
+
+//     if mouse_input.just_pressed(MouseButton::Left) {
+//         drag_state.active = true;
+//         if let Some(cursor_pos) = window.cursor_position() {
+//             drag_state.start_position = cursor_pos;
+//         }
+//     }
+
+//     if mouse_input.just_released(MouseButton::Left) {
+//         drag_state.active = false;
+//     }
+
+//     if drag_state.active {
+//         let mut total_delta = Vec2::ZERO;
+//         for event in mouse_motion_events.read() {
+//             total_delta += event.delta;
+//         }
+
+//         if let Ok(mut transform) = camera_query.get_single_mut() {
+//             let sensitivity = 0.1; // Adjust sensitivity
+//             transform.translation.x -= total_delta.x * sensitivity;
+//             transform.translation.y += total_delta.y * sensitivity;
+//         }
+//     }
+// }
+
 fn camera_drag_system(
     mut drag_state: ResMut<DragState>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut mouse_motion_events: EventReader<MouseMotion>,
     mut camera_query: Query<&mut Transform, With<Camera2d>>,
     windows: Query<&Window>,
+    settings: Res<CameraSettings>, // Add this parameter
 ) {
     let window = windows.single();
 
@@ -102,15 +138,12 @@ fn camera_drag_system(
         }
 
         if let Ok(mut transform) = camera_query.get_single_mut() {
-            let sensitivity = 0.1; // Adjust sensitivity
-            transform.translation.x -= total_delta.x * sensitivity;
-            transform.translation.y += total_delta.y * sensitivity;
+            // Use the setting from CameraSettings
+            transform.translation.x -= total_delta.x * settings.drag_sensitivity;
+            transform.translation.y += total_delta.y * settings.drag_sensitivity;
         }
     }
 }
-
-use bevy::prelude::*;
-use bevy::text::{TextColor, TextFont, TextLayout}; // Explicit text components
 
 #[derive(Component)]
 struct DebugTextMarker;
