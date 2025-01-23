@@ -16,4 +16,5 @@ serde_json = { workspace = true }
 rfd = { workspace = true }
 serde.workspace = true
 toml.workspace = true
+bevy = { workspace = true, features = ["file_watcher"] }
 # bevy = { workspace = true }

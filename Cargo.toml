@@ -10,8 +10,6 @@ members = ["crates/poe_tree", "crates/poe_vis"]
 
 [workspace.dependencies]
 anyhow = "1.0.95"
-eframe = "0.30.0"
-egui = "0.30.0"
 log = "0.4.22"
 pretty_env_logger = "0.5.0"
 rfd = "0.15.2"
@@ -21,7 +19,6 @@ serde_yaml = "0.9.34"
 toml = "0.8.19"
 poe_tree = { path = "crates/poe_tree" }
 chrono = "0.4.39"
-
-[dependencies]
-bevy = "0.15.1"
-rfd.workspace = true
+bevy = { version = "0.15.1", features = [
+    "file_watcher",
+] } #, "bevy_dev_tools"] }

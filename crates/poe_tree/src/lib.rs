@@ -298,7 +298,11 @@ impl PassiveTree {
 }
 
 /// Make the world position (wx, wy) for a node.
-fn calculate_world_position(group: &coordinates::Group, radius: u8, position: u32) -> (f32, f32) {
+pub fn calculate_world_position(
+    group: &coordinates::Group,
+    radius: u8,
+    position: u32,
+) -> (f32, f32) {
     let r = radius as usize;
     let position = position as usize;
     let radius_value = ORBIT_RADII.get(r).unwrap_or_else(|| {
