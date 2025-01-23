@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use poe_tree::calculate_world_position;
-use poe_tree::PassiveTree; // Add this import
+use poe_tree::PassiveTree;
 
 pub mod camera;
 
@@ -20,7 +19,7 @@ fn main() {
 
     App::new()
         .insert_resource(nodes::PassiveTreeWrapper { tree: passive_tree })
-        .add_plugins(DefaultPlugins)
+        .add_plugins((DefaultPlugins, MeshPickingPlugin))
         .add_plugins(nodes::PoeVis)
         .run();
 }
