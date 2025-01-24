@@ -17,27 +17,6 @@ impl Plugin for KeyboardControlsPlugin {
     }
 }
 
-// pub fn handle_node_clicks(
-//     mut commands: Commands,
-//     mut drag_state: ResMut<crate::camera::DragState>,
-//     root: Res<crate::config::RootNode>,
-//     mut click_events: EventReader<Pointer<Down>>,
-//     inactive_nodes: Query<(Entity, &NodeMarker), With<NodeInactive>>,
-// ) {
-//     for event in click_events.read() {
-//         if let Ok((entity, _marker)) = inactive_nodes.get(event.target) {
-//             // Only activate if root exists (from character data)
-//             if root.0.is_some() {
-//                 drag_state.active = false;
-//                 commands
-//                     .entity(entity)
-//                     .remove::<NodeInactive>()
-//                     .insert(NodeActive);
-//             }
-//         }
-//     }
-// }
-
 pub fn handle_node_clicks(
     mut commands: Commands,
     mut drag_state: ResMut<crate::camera::DragState>,

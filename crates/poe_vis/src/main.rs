@@ -13,7 +13,7 @@ fn quick_tree() -> poe_tree::PassiveTree {
 fn main() {
     let passive_tree = quick_tree();
     let crate_name = env!("CARGO_PKG_NAME").replace('-', "_");
-    let log_filter = format!("{}=debug", crate_name);
+    let log_filter = format!("{}=trace", crate_name);
 
     App::new()
         .insert_resource(poe_vis::nodes::PassiveTreeWrapper { tree: passive_tree })

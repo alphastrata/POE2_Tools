@@ -48,18 +48,21 @@ impl Plugin for PoeVis {
         app.add_systems(
             Update,
             (
+                // highlight
                 crate::nodes::hover::highlight_hovered_inactive_nodes,
                 crate::nodes::hover::highlight_hovered_active_nodes,
+                // cleanups
                 crate::nodes::hover::handle_highlighted_inactive_nodes,
                 crate::nodes::hover::handle_highlighted_active_nodes,
                 crate::nodes::hover::cleanup_inactive_hovers,
                 crate::nodes::hover::cleanup_active_hovers,
                 crate::nodes::hover::revert_active_hovered_nodes,
+                // last
+                crate::nodes::hover::show_node_info,
             )
                 .chain(),
         );
 
-        app.add_systems(Startup, nodes::hover::spawn_hover_text)
-            .add_systems(Update, nodes::hover::show_node_info);
+        app.add_systems(Startup, nodes::hover::spawn_hover_text);
     }
 }
