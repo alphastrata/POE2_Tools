@@ -51,7 +51,7 @@ struct DragState {
 // Updated camera setup system
 pub fn setup_camera(mut commands: Commands) {
     commands.spawn((
-        Camera2d::default(), // The new recommended component
+        Camera2d, // The new recommended component
         OrthographicProjection {
             scale: 35.0,
             near: -1000.0,

@@ -1,10 +1,8 @@
-//!$ crates/poe_vis/src/config.rs
-use bevy::{
-    color::Color,
-    prelude::{KeyCode, Resource},
-};
-use poe_tree::character::Character;
+use bevy::{color::Color, prelude::*};
+use poe_tree::{character::Character, type_wrappings::NodeId};
 use std::collections::HashMap;
+
+use crate::components::{NodeActive, NodeInactive};
 
 // Update color parsing to use non-deprecated methods
 pub fn parse_hex_color(col_str: &str) -> Color {
@@ -90,6 +88,42 @@ impl UserConfig {
             _ => None,
         }
     }
+}
+
+// Add to your app's resources
+#[derive(Resource)]
+pub struct ActiveCharacter {
+    pub character: Character,
+}
+
+#[derive(Resource)]
+pub struct RootNode(pub Option<NodeId>);
+
+pub fn setup_character(
+    mut commands: Commands,
+    all_node_entities: Query<(Entity, &crate::components::NodeMarker)>,
+) {
+    let character =
+        Character::load_from_toml("data/character.toml").expect("Failed to load character data");
+
+    // Set root node from character data
+    commands.insert_resource(RootNode(Some(character.starting_node)));
+
+    // Activate pre-defined nodes
+    let node_entity_map: HashMap<NodeId, Entity> =
+        all_node_entities.iter().map(|(e, m)| (m.0, e)).collect();
+
+    for node_id in character.activated_node_ids.iter() {
+        if let Some(&entity) = node_entity_map.get(node_id) {
+            commands
+                .entity(entity)
+                .remove::<NodeInactive>()
+                .insert(NodeActive);
+        }
+    }
+
+    // Store character as resource
+    commands.insert_resource(ActiveCharacter { character });
 }
 
 mod tests {

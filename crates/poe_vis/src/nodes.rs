@@ -1,14 +1,13 @@
 use bevy::prelude::*;
-use bevy::utils::HashMap;
-use bevy::utils::HashSet;
 use poe_tree::calculate_world_position;
-use poe_tree::type_wrappings::NodeId;
 use poe_tree::PassiveTree;
 
 use crate::background_services::pathfinding_system;
 use crate::components::EdgeActive;
+use crate::components::EdgeInactive;
 use crate::components::EdgeMarker;
 use crate::components::NodeActive;
+use crate::components::NodeInactive;
 use crate::components::NodeMarker;
 use crate::config::parse_hex_color;
 use crate::config::UserConfig;
@@ -54,8 +53,15 @@ fn adjust_node_sizes(
 
 impl Plugin for PoeVis {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Time::<Fixed>::from_seconds(1.0))
-            .add_systems(FixedUpdate, pathfinding_system);
+        app.add_systems(PreStartup, crate::config::setup_character)
+            .insert_resource(Time::<Fixed>::from_seconds(0.8))
+            .add_systems(
+                FixedUpdate,
+                pathfinding_system
+                    .run_if(crate::background_services::node_active_changed)
+                    .run_if(crate::background_services::sufficient_active_nodes)
+                    .after(crate::controls::handle_node_clicks),
+            );
 
         app.insert_resource(NodeScaling {
             min_scale: 1.0,    // Nodes can shrink to 50% size
@@ -68,7 +74,7 @@ impl Plugin for PoeVis {
         .add_systems(
             Update,
             (
-                handle_node_clicks,
+                crate::controls::handle_node_clicks,
                 crate::background_services::bg_edge_updater,
                 update_materials,
             ),
@@ -94,7 +100,7 @@ fn spawn_nodes(
             MeshMaterial2d(materials.node_base.clone()),
             Transform::from_translation(Vec3::new(x, y, 0.0)),
             NodeMarker(node.node_id),
-            NodeActive(false),
+            NodeInactive,
         ));
     }
 }
@@ -134,65 +140,39 @@ fn spawn_edges(
             EdgeMarker((edge.start, edge.end)),
             Transform::from_translation(midpoint.extend(-0.01))
                 .with_rotation(Quat::from_rotation_z(angle)),
-            EdgeActive(false),
+            EdgeInactive,
         ));
     });
 }
 
-fn handle_node_clicks(
-    mut click_events: EventReader<Pointer<Down>>,
-    mut node_query: Query<&mut NodeActive, With<NodeMarker>>,
-) {
-    for event in click_events.read() {
-        // Access the target field directly from the event
-        if let Ok(mut active) = node_query.get_mut(event.target) {
-            active.0 = !active.0;
-        }
-    }
-}
-
+// Update materials system
 fn update_materials(
     materials: Res<GameMaterials>,
     mut materials_query: ParamSet<(
-        Query<(&NodeActive, &mut MeshMaterial2d<ColorMaterial>), Changed<NodeActive>>,
-        Query<(&EdgeActive, &mut MeshMaterial2d<ColorMaterial>), Changed<EdgeActive>>,
+        Query<(&mut MeshMaterial2d<ColorMaterial>, Option<&NodeActive>), Changed<NodeActive>>,
+        Query<(&mut MeshMaterial2d<ColorMaterial>, Option<&EdgeActive>), Changed<EdgeActive>>,
     )>,
 ) {
-    // Handle nodes first
-    let mut node_query: Query<
-        '_,
-        '_,
-        (&NodeActive, &mut MeshMaterial2d<ColorMaterial>),
-        Changed<NodeActive>,
-    > = materials_query.p0();
-    let num_active_nodes = node_query
-        .iter_mut()
-        .map(|(active, mut material)| {
-            material.0 = if active.0 {
-                materials.node_activated.clone()
-            } else {
-                materials.node_base.clone()
-            };
-        })
-        .count();
+    // Handle nodes
+    let mut node_query = materials_query.p0();
+    for (mut material, is_active) in node_query.iter_mut() {
+        material.0 = if is_active.is_some() {
+            materials.node_activated.clone()
+        } else {
+            materials.node_base.clone()
+        };
+    }
 
-    // Then handle edges
+    // Handle edges
     let mut edge_query = materials_query.p1();
-    let num_edges_active = edge_query
-        .iter_mut()
-        .map(|(active, mut material)| {
-            material.0 = if active.0 {
-                materials.edge_activated.clone()
-            } else {
-                materials.edge_base.clone()
-            };
-        })
-        .count();
-
-    log::trace!("Num active nodes: {}", num_active_nodes);
-    log::trace!("Num active edges: {}", num_edges_active);
+    for (mut material, is_active) in edge_query.iter_mut() {
+        material.0 = if is_active.is_some() {
+            materials.edge_activated.clone()
+        } else {
+            materials.edge_base.clone()
+        };
+    }
 }
-
 #[derive(Resource)]
 pub struct GameMaterials {
     // Node colors

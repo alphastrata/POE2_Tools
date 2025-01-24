@@ -1,80 +1,93 @@
 use bevy::{
-    core_pipeline::oit::resolve::node,
     prelude::*,
     utils::{HashMap, HashSet},
 };
 use poe_tree::type_wrappings::NodeId;
 
 use crate::{
-    components::{EdgeActive, EdgeMarker, NodeActive, NodeMarker},
+    components::{EdgeActive, EdgeInactive, EdgeMarker, NodeActive, NodeInactive, NodeMarker},
     nodes::PassiveTreeWrapper,
 };
 
+pub fn node_active_changed(query: Query<(), Changed<NodeActive>>) -> bool {
+    !query.is_empty()
+}
+
+pub fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
+    query.iter().count() >= 2 // Only run if at least 2 nodes are active
+}
+
+// Updated edge updater
 pub fn bg_edge_updater(
-    node_query: Query<(&NodeMarker, &NodeActive)>,
-    mut edge_query: Query<(&EdgeMarker, &mut EdgeActive)>,
+    node_query: Query<&NodeMarker, With<NodeActive>>,
+    mut commands: Commands,
+    edge_query: Query<(Entity, &EdgeMarker)>,
 ) {
     // Get active nodes first
-    let active_nodes: HashSet<NodeId> = node_query
-        .iter()
-        .filter(|(_, active)| active.0)
-        .map(|(marker, _)| marker.0)
-        .collect();
+    let active_nodes: HashSet<NodeId> = node_query.iter().map(|m| m.0).collect();
 
     // Update edges in a single pass
-    for (edge_marker, mut active) in &mut edge_query {
+    for (edge_entity, edge_marker) in &edge_query {
         let (start, end) = edge_marker.0;
-        active.0 = active_nodes.contains(&start) && active_nodes.contains(&end);
+        let should_be_active = active_nodes.contains(&start) && active_nodes.contains(&end);
 
+        // Update edge state
+        if should_be_active {
+            commands
+                .entity(edge_entity)
+                .remove::<EdgeInactive>()
+                .insert(EdgeActive);
+        } else {
+            commands
+                .entity(edge_entity)
+                .remove::<EdgeActive>()
+                .insert(EdgeInactive);
+        }
+
+        // Debug logging
         #[cfg(debug_assertions)]
-        {
-            //TODO: remove me
-            let initial = active.0;
-
-            if initial {
-                log::debug!("Edge was ACTIVE for {} to {}", start, end);
-                log::debug!(
-                    "flip == {}",
-                    active_nodes.contains(&start) && active_nodes.contains(&end)
-                );
-            }
+        if should_be_active {
+            log::debug!("Edge activated between {} and {}", start, end);
         }
     }
 }
 
 pub fn pathfinding_system(
     tree: Res<PassiveTreeWrapper>,
+    root: Res<crate::config::RootNode>,
+    character: Res<crate::config::ActiveCharacter>,
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
-    mut all_nodes: Query<(&NodeMarker, &mut NodeActive)>,
+    all_node_entities: Query<(Entity, &NodeMarker)>,
+    mut commands: Commands,
 ) {
-    // Get all active node IDs
+    let root_id = match root.0 {
+        Some(id) => id,
+        None => return,
+    };
+
     let active_ids: HashSet<NodeId> = active_nodes.iter().map(|m| m.0).collect();
-    let active_list: Vec<NodeId> = active_ids.iter().copied().collect();
-    let mut activated = HashSet::new();
+    let node_entity_map: HashMap<NodeId, Entity> =
+        all_node_entities.iter().map(|(e, m)| (m.0, e)).collect();
 
-    // Check all pairs of active nodes
-    (0..active_list.len()).for_each(|i| {
-        ((i + 1)..active_list.len()).for_each(|j| {
-            let a = active_list[i];
-            let b = active_list[j];
+    // Get newly activated nodes not in character data
+    let new_activations: Vec<NodeId> = active_ids
+        .iter()
+        .filter(|id| !character.character.activated_node_ids.contains(id))
+        .copied()
+        .collect();
 
-            // Find path between these nodes in the full tree
-            tree.tree.bfs(a, b).into_iter().for_each(|node_id| {
-                // Only activate nodes that weren't already active
-                if !active_ids.contains(&node_id) && !activated.contains(&node_id) {
-                    // Update node component directly
-                    if let Some((_, mut active)) =
-                        all_nodes.iter_mut().find(|(marker, _)| marker.0 == node_id)
-                    {
-                        active.0 = true;
-                        activated.insert(node_id);
-                        log::debug!("Pathfinding Activated {}", node_id);
-                    }
+    for new_node in new_activations {
+        let path = tree.tree.bfs(root_id, new_node);
+
+        for node_id in path {
+            if !active_ids.contains(&node_id) {
+                if let Some(&entity) = node_entity_map.get(&node_id) {
+                    commands
+                        .entity(entity)
+                        .remove::<NodeInactive>()
+                        .insert(NodeActive);
                 }
-                // NOTE:
-                // We leave the edges to be picked up for activation by another bg system,
-                // this is to simplify us having to manage them.
-            });
-        });
-    });
+            }
+        }
+    }
 }

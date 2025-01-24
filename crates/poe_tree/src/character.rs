@@ -4,8 +4,7 @@ use chrono::{DateTime, Utc};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
-    default, fs, io,
+    collections::{HashMap, HashSet}, fs, io,
     path::Path,
 };
 
