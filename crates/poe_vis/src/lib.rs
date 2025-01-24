@@ -18,9 +18,10 @@ impl Plugin for PoeVis {
         .add_systems(PreStartup, crate::config::setup_character)
         .insert_resource(Time::<Fixed>::from_seconds(0.024)) // limit the pathfinding!
         .insert_resource(nodes::NodeScaling {
-            min_scale: 4.0,    // Nodes can shrink to 50% size
-            max_scale: 8.0,    // Nodes can grow to 200% size
-            base_radius: 60.0, // Should match your node radius
+            min_scale: 4.0,         // Nodes can shrink to 50% size
+            max_scale: 8.0,         // Nodes can grow to 200% size
+            base_radius: 60.0,      // Should match your node radius
+            hover_multiplier: 1.03, // Nodes that are hovered are increased by %3 of their size
         });
 
         app.add_systems(
@@ -53,6 +54,8 @@ impl Plugin for PoeVis {
                 nodes::hover::handle_highlighted_active_nodes,
                 nodes::hover::cleanup_inactive_hovers,
                 nodes::hover::cleanup_active_hovers,
+                nodes::hover::revert_active_hovered_nodes,
+                nodes::hover::revert_inactive_hovered_nodes,
                 // nodes::hover::show_node_info,
             )
                 .chain(),
