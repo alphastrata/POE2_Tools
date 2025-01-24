@@ -216,28 +216,32 @@ pub fn init_materials(
 pub struct Hovered {
     timer: Timer,
 }
-
 pub mod hover {
     use super::*;
 
     #[derive(Component)]
     pub struct NodeHoverText;
 
+    #[derive(Component)]
+    pub struct Hovered {
+        pub timer: Timer,
+        pub base_scale: f32,
+    }
+
+    // Handles initial hover detection and visual changes
     pub fn highlight_hovered_node(
         mut commands: Commands,
         mut node_query: Query<(
             Entity,
-            &mut Transform,
+            &Transform,
             &mut MeshMaterial2d<ColorMaterial>,
             &NodeMarker,
             &GlobalTransform,
-            Option<&Hovered>,
         )>,
         windows: Query<&Window>,
         camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
         game_materials: Res<GameMaterials>,
         scaling: Res<NodeScaling>,
-        time: Res<Time>,
     ) {
         let window = windows.single();
         let (camera, camera_transform) = camera_query.single();
@@ -245,48 +249,59 @@ pub mod hover {
         let Some(cursor_pos) = window.cursor_position() else { return };
         let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else { return };
 
-        let mut any_hovered = false;
-
-        for (entity, mut transform, mut material, _marker, global_transform, hovered) in &mut node_query {
+        for (entity, transform, mut material, _marker, global_transform) in &mut node_query {
             let node_pos = global_transform.translation().truncate();
             let node_radius = scaling.base_radius * transform.scale.x;
             let is_hovered = world_pos.distance(node_pos) <= node_radius;
-    
-            if is_hovered {
-                // Apply hover effects immediately
-                transform.scale *= 1.15;
-                material.0 = game_materials.orange.clone();
-                any_hovered = true;
-    
-                // Manage hover timer
-                if let Some(hovered) = hovered {
-                    // Clone existing timer and tick it with delta time
-                    let mut new_timer = hovered.timer.clone();
-                    new_timer.tick(time.delta());
-                    commands.entity(entity).insert(Hovered { timer: new_timer });
-                } else {
-                    commands.entity(entity).insert(Hovered {
-                        timer: Timer::from_seconds(0.5, TimerMode::Once),
-                    });
-                }
-            } else if hovered.is_some() {
-                // Remove hover effects and components
-                transform.scale /= 1.15;
-                material.0 = game_materials.node_base.clone();
-                commands.entity(entity).remove::<Hovered>();
-            }
-        }
 
-        // Handle case where cursor moves off all nodes
-        if !any_hovered {
-            for (entity, _, _, _, _, hovered) in &mut node_query {
-                if hovered.is_some() {
-                    commands.entity(entity).remove::<Hovered>();
-                }
+            if is_hovered {
+                // Store initial base scale when hover starts
+                commands.entity(entity).insert(Hovered {
+                    timer: Timer::from_seconds(0.5, TimerMode::Once),
+                    base_scale: transform.scale.x,
+                });
+                
+                // Immediate color change
+                material.0 = game_materials.orange.clone();
             }
         }
     }
 
+    // Handles ongoing hover state and scaling
+    pub fn handle_highlighted_node(
+        mut commands: Commands,
+        mut node_query: Query<(
+            Entity,
+            &mut Transform,
+            &mut Hovered,
+            &mut MeshMaterial2d<ColorMaterial>,
+        )>,
+        game_materials: Res<GameMaterials>,
+        scaling: Res<NodeScaling>,
+        time: Res<Time>,
+    ) {
+        for (entity, mut transform, mut hovered, mut material) in &mut node_query {
+            // Update timer
+            hovered.timer.tick(time.delta());
+
+            // Calculate target scale relative to initial base scale
+            let target_scale = (hovered.base_scale * 1.15)
+                .clamp(scaling.min_scale, scaling.max_scale);
+            
+            // Apply scale if under limit
+            if transform.scale.x < target_scale {
+                transform.scale = Vec3::splat(target_scale);
+            }
+
+            // Cleanup if hover ends
+            if hovered.timer.finished() {
+                material.0 = game_materials.node_base.clone();
+                commands.entity(entity).remove::<Hovered>();
+            }
+        }
+    }
+
+    // show_node_info remains similar but uses Hovered component
     pub fn show_node_info(
         hovered_nodes: Query<(&Hovered, &NodeMarker)>,
         mut hover_text_query: Query<&mut Text, With<NodeHoverText>>,
@@ -311,85 +326,3 @@ pub mod hover {
         text.0 = node_info.unwrap_or_default();
     }
 }
-
-// pub mod hover {
-
-//     use bevy::prelude::*;
-
-//     use super::{GameMaterials, NodeScaling, PassiveTreeWrapper};
-//     use crate::components::NodeMarker;
-
-//     #[derive(Component)]
-//     pub struct NodeHoverText;
-
-//     pub fn handle_node_hover(
-//         mut node_query: Query<
-//             (&mut MeshMaterial2d<ColorMaterial>, &NodeMarker, &Transform),
-//             With<NodeMarker>,
-//         >,
-//         mut hover_text_query: Query<&mut Text, With<NodeHoverText>>,
-//         windows: Query<&Window>,
-//         camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
-//         mut pointer_events: EventReader<Pointer<Move>>,
-//         tree: Res<PassiveTreeWrapper>,
-//         scaling: Res<NodeScaling>,
-//         game_materials: Res<GameMaterials>,
-//     ) {
-//         let window = windows.single();
-//         let (camera, camera_transform) = camera_query.single();
-
-//         let mut hovered_node = None;
-
-//         for _event in pointer_events.read() {
-//             if let Some(cursor_pos) = window.cursor_position() {
-//                 if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
-//                     for (mut material, node_marker, transform) in &mut node_query {
-//                         let node_pos = transform.translation.truncate();
-//                         let node_radius = scaling.base_radius * transform.scale.x;
-//                         let is_hovered = world_pos.distance(node_pos) <= node_radius;
-
-//                         material.0 = if is_hovered {
-//                             hovered_node = Some((node_marker.0, cursor_pos));
-//                             game_materials.orange.clone()
-//                         } else {
-//                             game_materials.node_base.clone()
-//                         };
-//                     }
-//                 }
-//             }
-//         }
-
-//         if let Some((node_id, _cursor_pos)) = hovered_node {
-//             if let (Ok(mut text), Some(node_data)) = (
-//                 hover_text_query.get_single_mut(),
-//                 tree.tree.nodes.get(&node_id),
-//             ) {
-//                 // Replace .stats with actual field from PoeNode
-//                 text.0 = format!(
-//                     "Node {}\n{}",
-//                     node_id,
-//                     node_data.name // Use available fields like .name, .skill_id etc.
-//                 );
-//             }
-//         } else if let Ok(mut text) = hover_text_query.get_single_mut() {
-//             text.0.clear();
-//         }
-//     }
-
-//     pub fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
-//         let font = asset_server.load("fonts/FiraSans-Bold.ttf");
-
-//         commands.spawn((
-//             Text2d::new(""), // Empty initial text
-//             TextFont {
-//                 font,
-//                 font_size: 16.0,
-//                 ..default()
-//             },
-//             TextLayout::new(JustifyText::Left, LineBreak::WordBoundary),
-//             NodeHoverText,
-//             // Visibility::Hidden, // Start hidden
-//             Transform::from_translation(Vec3::new(0.0, 0.0, 100.0)),
-//         ));
-//     }
-// }
