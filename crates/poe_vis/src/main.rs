@@ -16,10 +16,18 @@ fn quick_tree() -> PassiveTree {
 // Main function
 fn main() {
     let passive_tree = quick_tree();
+    let crate_name = env!("CARGO_PKG_NAME").replace('-', "_");
+    let log_filter = format!("{}=debug", crate_name);
 
     App::new()
         .insert_resource(nodes::PassiveTreeWrapper { tree: passive_tree })
-        .add_plugins((DefaultPlugins, MeshPickingPlugin))
+        .add_plugins((
+            DefaultPlugins.set(bevy::log::LogPlugin {
+                filter: log_filter,
+                ..Default::default()
+            }),
+            MeshPickingPlugin,
+        ))
         .add_plugins(nodes::PoeVis)
         .run();
 }

@@ -164,55 +164,83 @@ fn spawn_edges(
     mut materials: ResMut<Assets<ColorMaterial>>,
     tree: Res<PassiveTreeWrapper>,
 ) {
+    log::info!("spawn_edges function was called");
+
     let edge_color = Color::srgb(0.3, 0.3, 0.3); // Dark gray for edges
-    let edge_thickness = 2.0;
+    let height = 2.0;
+
+    // Optional highlight materials:
     let normal_matl = materials.add(Color::srgb(0.6, 0.8, 1.0)); // Pale blue
     let hover_matl = materials.add(Color::srgb(0.0, 0.5, 0.5)); // Green
     let pressed_matl = materials.add(Color::srgb(1.0, 1.0, 0.0)); // Yellow
 
     for edge in &tree.tree.edges {
-        // Get both nodes from the edge
+        // Grab both connected nodes:
         let (Some(start_node), Some(end_node)) = (
             tree.tree.nodes.get(&edge.start),
             tree.tree.nodes.get(&edge.end),
         ) else {
+            // If either is missing, skip
             continue;
         };
 
-        // Get parent groups for both nodes
+        // Get each node’s parent group:
         let (Some(start_group), Some(end_group)) = (
             tree.tree.groups.get(&start_node.parent),
             tree.tree.groups.get(&end_node.parent),
         ) else {
+            // If either group is missing, skip
             continue;
         };
 
-        // Calculate world positions for both ends of the edge
+        // Calculate world positions for both node centers:
         let start_pos =
             calculate_world_position(start_group, start_node.radius, start_node.position);
         let end_pos = calculate_world_position(end_group, end_node.radius, end_node.position);
 
-        // // Flip the ys, for some reason...
-        // start_pos.1 *= -1.0;
-        // end_pos.1 *= -1.0;
-
-        // Create line segment between the points
+        // Convert to Vec2 for geometry:
         let start = Vec2::new(start_pos.0, start_pos.1);
         let end = Vec2::new(end_pos.0, end_pos.1);
-        let delta = end - start;
-        let length = delta.length();
 
-        // Create rectangle primitive for the edge
+        // Vector from start to end:
+        let delta = end - start;
+        let width = delta.length();
+
+        // Angle around Z = atan2(dy, dx)
+        let angle = delta.y.atan2(delta.x);
+
+        // Midpoint of the two nodes:
+        let midpoint = start.lerp(end, 0.5);
+
+        // Debug/logging
+        log::warn!(
+            "Edge: start_node: {:?}, end_node: {:?}, start: {:?}, end: {:?}, length: {:?}",
+            start_node.node_id,
+            end_node.node_id,
+            start,
+            end,
+            width
+        );
+
+        // Spawn a rectangle that spans from start to end:
+        //  - translation at the midpoint
+        //  - rotation to align with delta
+        //  - scale in X = 'length', Y = 'edge_thickness' if you’re using a custom mesh,
+        //    or pass them to a Rectangle struct that’s created accordingly
         commands
             .spawn((
-                Mesh2d(meshes.add(Rectangle::new(length, edge_thickness))),
+                // Provide the mesh (a rectangle) with correct length + thickness
+                Mesh2d(meshes.add(Rectangle::new(width, height))),
+                // Basic color material
                 MeshMaterial2d(materials.add(edge_color)),
+                // Transform: position and rotation
                 Transform {
-                    translation: start.lerp(end, 0.5).extend(0.0),
-                    rotation: Quat::from_rotation_z(delta.angle_to(Vec2::X)),
+                    translation: midpoint.extend(0.0),
+                    rotation: Quat::from_rotation_z(angle),
                     ..default()
                 },
             ))
+            // Optional: tie into pointer-based color changes
             .observe(update_color_material_on::<Pointer<Over>>(
                 hover_matl.clone(),
             ))
@@ -223,5 +251,7 @@ fn spawn_edges(
                 pressed_matl.clone(),
             ))
             .observe(update_color_material_on::<Pointer<Up>>(hover_matl.clone()));
+
+        // You can remove the second spawn if you only need one entity per edge
     }
 }
