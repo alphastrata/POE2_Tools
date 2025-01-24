@@ -39,7 +39,6 @@ pub fn adjust_node_sizes(
         let unscaled = 1.0 / projection.scale;
         let final_scale = unscaled.clamp(0.02, 2.0);
         // tweak these clamp values to taste
-        log::debug!("{}", final_scale);
 
         for mut transform in &mut node_query {
             transform.scale = Vec3::splat(final_scale);
@@ -211,11 +210,7 @@ pub fn init_materials(
         cyan: materials.add(parse_hex_color(&config.colors["cyan"])),
     });
 }
-// Add new Hovered component
-#[derive(Component)]
-pub struct Hovered {
-    timer: Timer,
-}
+
 pub mod hover {
     use super::*;
 
@@ -223,21 +218,29 @@ pub mod hover {
     pub struct NodeHoverText;
 
     #[derive(Component)]
-    pub struct Hovered {
-        pub timer: Timer,
-        pub base_scale: f32,
+    pub struct HoveredInactive {
+        timer: Timer,
+        base_scale: f32,
     }
 
-    // Handles initial hover detection and visual changes
-    pub fn highlight_hovered_node(
+    #[derive(Component)]
+    pub struct HoveredActive {
+        timer: Timer,
+        base_scale: f32,
+    }
+
+    // Hover system for INACTIVE nodes
+    pub fn highlight_hovered_inactive_nodes(
         mut commands: Commands,
-        mut node_query: Query<(
-            Entity,
-            &Transform,
-            &mut MeshMaterial2d<ColorMaterial>,
-            &NodeMarker,
-            &GlobalTransform,
-        )>,
+        mut node_query: Query<
+            (
+                Entity,
+                &Transform,
+                &mut MeshMaterial2d<ColorMaterial>,
+                &GlobalTransform,
+            ),
+            (With<NodeMarker>, Without<NodeActive>),
+        >,
         windows: Query<&Window>,
         camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
         game_materials: Res<GameMaterials>,
@@ -246,83 +249,229 @@ pub mod hover {
         let window = windows.single();
         let (camera, camera_transform) = camera_query.single();
 
-        let Some(cursor_pos) = window.cursor_position() else { return };
-        let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else { return };
+        let Some(cursor_pos) = window.cursor_position() else {
+            return;
+        };
+        let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else {
+            return;
+        };
 
-        for (entity, transform, mut material, _marker, global_transform) in &mut node_query {
+        for (entity, transform, mut material, global_transform) in &mut node_query {
             let node_pos = global_transform.translation().truncate();
             let node_radius = scaling.base_radius * transform.scale.x;
             let is_hovered = world_pos.distance(node_pos) <= node_radius;
 
             if is_hovered {
-                // Store initial base scale when hover starts
-                commands.entity(entity).insert(Hovered {
-                    timer: Timer::from_seconds(0.5, TimerMode::Once),
+                commands.entity(entity).insert(HoveredInactive {
+                    timer: Timer::from_seconds(0.100, TimerMode::Once),
                     base_scale: transform.scale.x,
                 });
-                
-                // Immediate color change
                 material.0 = game_materials.orange.clone();
             }
         }
     }
 
-    // Handles ongoing hover state and scaling
-    pub fn handle_highlighted_node(
+    // Hover system for ACTIVE nodes
+    pub fn highlight_hovered_active_nodes(
         mut commands: Commands,
-        mut node_query: Query<(
-            Entity,
-            &mut Transform,
-            &mut Hovered,
-            &mut MeshMaterial2d<ColorMaterial>,
-        )>,
+        mut node_query: Query<
+            (
+                Entity,
+                &Transform,
+                &mut MeshMaterial2d<ColorMaterial>,
+                &GlobalTransform,
+            ),
+            (With<NodeActive>, Without<HoveredInactive>),
+        >,
+        windows: Query<&Window>,
+        camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
         game_materials: Res<GameMaterials>,
         scaling: Res<NodeScaling>,
-        time: Res<Time>,
     ) {
-        for (entity, mut transform, mut hovered, mut material) in &mut node_query {
-            // Update timer
-            hovered.timer.tick(time.delta());
+        let window = windows.single();
+        let (camera, camera_transform) = camera_query.single();
 
-            // Calculate target scale relative to initial base scale
-            let target_scale = (hovered.base_scale * 1.15)
-                .clamp(scaling.min_scale, scaling.max_scale);
-            
-            // Apply scale if under limit
-            if transform.scale.x < target_scale {
-                transform.scale = Vec3::splat(target_scale);
-            }
+        let Some(cursor_pos) = window.cursor_position() else {
+            return;
+        };
+        let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else {
+            return;
+        };
 
-            // Cleanup if hover ends
-            if hovered.timer.finished() {
-                material.0 = game_materials.node_base.clone();
-                commands.entity(entity).remove::<Hovered>();
+        for (entity, transform, mut material, global_transform) in &mut node_query {
+            let node_pos = global_transform.translation().truncate();
+            let node_radius = scaling.base_radius * transform.scale.x;
+            let is_hovered = world_pos.distance(node_pos) <= node_radius;
+
+            if is_hovered {
+                commands.entity(entity).insert(HoveredActive {
+                    timer: Timer::from_seconds(0.100, TimerMode::Once),
+                    base_scale: transform.scale.x,
+                });
+                material.0 = game_materials.cyan.clone();
             }
         }
     }
 
-    // show_node_info remains similar but uses Hovered component
+    // Scaling system for inactive nodes
+    pub fn handle_highlighted_inactive_nodes(
+        mut node_query: Query<(&mut Transform, &HoveredInactive), Without<NodeActive>>,
+        scaling: Res<NodeScaling>,
+    ) {
+        for (mut transform, hovered) in &mut node_query {
+            let target_scale =
+                (hovered.base_scale * 1.05).clamp(scaling.min_scale, scaling.max_scale);
+
+            transform.scale = Vec3::splat(target_scale);
+        }
+    }
+
+    // Scaling system for active nodes
+    pub fn handle_highlighted_active_nodes(
+        mut node_query: Query<(&mut Transform, &HoveredActive), With<NodeActive>>,
+        scaling: Res<NodeScaling>,
+    ) {
+        for (mut transform, hovered) in &mut node_query {
+            let target_scale =
+                (hovered.base_scale * 1.08).clamp(scaling.min_scale, scaling.max_scale);
+
+            transform.scale = Vec3::splat(target_scale);
+        }
+    }
+
+    // Cleanup system for inactive hovers
+    pub fn cleanup_inactive_hovers(
+        mut commands: Commands,
+        mut node_query: Query<
+            (
+                Entity,
+                &mut Transform,
+                &mut MeshMaterial2d<ColorMaterial>,
+                Option<&HoveredInactive>,
+                &GlobalTransform,
+            ),
+            Without<NodeActive>,
+        >,
+        windows: Query<&Window>,
+        camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+        game_materials: Res<GameMaterials>,
+        scaling: Res<NodeScaling>,
+    ) {
+        let window = windows.single();
+        let (camera, camera_transform) = camera_query.single();
+
+        let Some(cursor_pos) = window.cursor_position() else {
+            return;
+        };
+        let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else {
+            return;
+        };
+
+        for (entity, mut transform, mut material, hovered, global_transform) in &mut node_query {
+            let node_pos = global_transform.translation().truncate();
+            let node_radius = scaling.base_radius * transform.scale.x;
+            let is_hovered = world_pos.distance(node_pos) <= node_radius;
+
+            if let Some(hovered) = hovered {
+                if !is_hovered {
+                    transform.scale = Vec3::splat(hovered.base_scale);
+                    material.0 = game_materials.node_base.clone();
+                    commands.entity(entity).remove::<HoveredInactive>();
+                }
+            }
+        }
+    }
+
+    // Cleanup system for active hovers
+    pub fn cleanup_active_hovers(
+        mut commands: Commands,
+        mut node_query: Query<
+            (
+                Entity,
+                &mut Transform,
+                &mut MeshMaterial2d<ColorMaterial>,
+                Option<&HoveredActive>,
+                &GlobalTransform,
+            ),
+            With<NodeActive>,
+        >,
+        windows: Query<&Window>,
+        camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+        game_materials: Res<GameMaterials>,
+        scaling: Res<NodeScaling>,
+    ) {
+        let window = windows.single();
+        let (camera, camera_transform) = camera_query.single();
+
+        let Some(cursor_pos) = window.cursor_position() else {
+            return;
+        };
+        let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else {
+            return;
+        };
+
+        for (entity, mut transform, mut material, hovered, global_transform) in &mut node_query {
+            let node_pos = global_transform.translation().truncate();
+            let node_radius = scaling.base_radius * transform.scale.x;
+            let is_hovered = world_pos.distance(node_pos) <= node_radius;
+
+            if let Some(hovered) = hovered {
+                if !is_hovered {
+                    transform.scale = Vec3::splat(hovered.base_scale);
+                    material.0 = game_materials.node_activated.clone();
+                    commands.entity(entity).remove::<HoveredActive>();
+                }
+            }
+        }
+    }
+
+   
+
+    // Hover tracking component (replaces custom Hovered)
+    #[derive(Component)]
+    pub struct NodeHoverState {
+        timer: Timer,
+        base_scale: f32,
+    }
+
+    pub fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
+        commands.spawn((
+            // Create a Text with multiple child spans.
+            Text::new(""),
+            TextFont {
+                // This font is loaded and will be used instead of the default font.
+                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                font_size: 42.0,
+                ..default()
+            },
+            NodeHoverText,
+        ));
+    }
+
     pub fn show_node_info(
-        hovered_nodes: Query<(&Hovered, &NodeMarker)>,
-        mut hover_text_query: Query<&mut Text, With<NodeHoverText>>,
+        hovered_nodes: Query<(&NodeHoverState, &NodeMarker)>,
+        mut hover_text_query: Query<(&mut Text, &mut Transform), With<NodeHoverText>>,
         tree: Res<PassiveTreeWrapper>,
     ) {
-        let Ok(mut text) = hover_text_query.get_single_mut() else { return };
+        let Ok((mut text, mut tf)) = hover_text_query.get_single_mut() else {
+            return;
+        };
+        let mut info = String::new();
 
-        let mut node_info = None;
         for (hovered, marker) in &hovered_nodes {
             if hovered.timer.elapsed_secs() >= 0.5 {
                 if let Some(node) = tree.tree.nodes.get(&marker.0) {
-                    node_info = Some(format!(
+                    info = format!(
                         "Node {}\n{}",
                         marker.0,
-                        &node.name
-                    ));
+                        node.name,
+                    );
                 }
                 break;
             }
         }
 
-        text.0 = node_info.unwrap_or_default();
+        text.0 = info;
+        //TODO: tf needs manipulating to be on the cursor... or ontop of the node?
     }
 }
