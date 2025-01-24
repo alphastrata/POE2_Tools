@@ -12,7 +12,7 @@ pub struct PoeVis;
 impl Plugin for PoeVis {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, crate::config::setup_character)
-            .insert_resource(Time::<Fixed>::from_seconds(0.8))
+            .insert_resource(Time::<Fixed>::from_seconds(0.16)) // maybe we need a framerate?
             .add_systems(
                 FixedUpdate,
                 (background_services::pathfinding_system
@@ -26,7 +26,10 @@ impl Plugin for PoeVis {
             max_scale: 8.0,    // Nodes can grow to 200% size
             base_radius: 60.0, // Should match your node radius
         })
-        .add_plugins(crate::camera::PoeVisCameraPlugin)
+        .add_plugins((
+            crate::camera::PoeVisCameraPlugin,
+            crate::controls::KeyboardControlsPlugin,
+        ))
         .add_systems(PreStartup, nodes::init_materials)
         .add_systems(
             Startup,

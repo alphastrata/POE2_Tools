@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use poe_tree::calculate_world_position;
 use poe_tree::PassiveTree;
 
-use crate::background_services::pathfinding_system;
 use crate::components::EdgeActive;
 use crate::components::EdgeInactive;
 use crate::components::EdgeMarker;
@@ -30,7 +29,6 @@ pub fn adjust_node_sizes(
     camera_query: Query<&OrthographicProjection, With<Camera2d>>,
     mut node_query: Query<&mut Transform, With<NodeMarker>>,
 ) {
-    // If you only have one main camera, just get_single()
     if let Ok(projection) = camera_query.get_single() {
         // By default, a larger `projection.scale` means you are "zoomed out"
         // so items appear smaller on screen, and vice versa.
@@ -212,4 +210,106 @@ pub fn init_materials(
         purple: materials.add(parse_hex_color(&config.colors["purple"])),
         cyan: materials.add(parse_hex_color(&config.colors["cyan"])),
     });
+}
+
+pub mod hover {
+    use bevy::prelude::*;
+
+    use bevy::text::cosmic_text::ttf_parser::Style;
+    use bevy::text::FontStyle;
+    use bevy::ui::{AlignItems, FlexDirection, JustifyContent, PositionType};
+
+    use crate::components::NodeMarker;
+
+    use super::{GameMaterials, NodeScaling, PassiveTreeWrapper};
+
+    #[derive(Component)]
+    struct NodeHoverText;
+
+    // Hover system using proper text components and layout
+    pub fn node_hover_system(
+        mut commands: Commands,
+        game_materials: Res<GameMaterials>,
+        mut node_query: Query<
+            (&mut MeshMaterial2d<ColorMaterial>, &NodeMarker, &Transform),
+            With<NodeMarker>,
+        >,
+        mut hover_text_query: Query<(&mut Text), With<NodeHoverText>>,
+        windows: Query<&Window>,
+        camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+        mut pointer_events: EventReader<Pointer<Move>>,
+        tree: Res<PassiveTreeWrapper>,
+        scaling: Res<NodeScaling>,
+    ) {
+        let window = windows.single();
+        let (camera, camera_transform) = camera_query.single();
+
+        for event in pointer_events.read() {
+            if let Some(cursor_pos) = window.cursor_position() {
+                if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
+                    let mut hovered = false;
+
+                    // Check node hover states
+                    for (mut material, node_marker, transform) in &mut node_query {
+                        let node_pos = transform.translation.truncate();
+                        let node_radius = scaling.base_radius * transform.scale.x;
+                        let is_hovered = world_pos.distance(node_pos) <= node_radius;
+
+                        material.0 = if is_hovered {
+                            hovered = true;
+                            game_materials.orange.clone()
+                        } else {
+                            game_materials.node_base.clone()
+                        };
+
+                        // Update text if hovered
+                        if is_hovered {
+                            if let (Ok(mut text), Some(node_data)) = (
+                                hover_text_query.get_single_mut(),
+                                tree.tree.nodes.get(&node_marker.0),
+                            ) {
+                                // Update text content
+                                text.0 = format!(
+                                    "Node {}\n{}",
+                                    node_marker.0,
+                                    node_data.name,
+                                    // node_data.stats.join("\n")
+                                );
+                            }
+                        }
+                    }
+
+                    // Hide text when not hovering
+                    if !hovered {
+                        // if let Ok((mut text, _)) = hover_text_query.get_single_mut() {
+                        //     text.0.clear();
+                        // }
+                    }
+                }
+            }
+        }
+    }
+
+    // Proper text initialization using modern Bevy patterns
+    pub fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
+        commands.spawn((
+            TextBundle::from_section(
+                "",
+                TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 16.0,
+                    color: Color::WHITE,
+                },
+            )
+            .with_style(Style {
+                position_type: PositionType::Absolute,
+                left: Val::Px(10.0),
+                top: Val::Px(10.0),
+                max_width: Val::Px(300.0),
+                padding: UiRect::all(Val::Px(8.0)),
+                ..default()
+            }),
+            NodeHoverText,
+        ));
+    }
 }

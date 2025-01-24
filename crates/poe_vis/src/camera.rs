@@ -16,7 +16,11 @@ impl Plugin for PoeVisCameraPlugin {
             .add_systems(Startup, (setup_camera, spawn_debug_text))
             .add_systems(
                 Update,
-                (camera_drag_system, camera_zoom_system, debug_camera_info),
+                (
+                    camera_drag_system.after(crate::controls::handle_node_clicks),
+                    camera_zoom_system,
+                    debug_camera_info,
+                ),
             );
     }
 }
@@ -43,8 +47,8 @@ impl Default for CameraSettings {
 
 // Camera drag state
 #[derive(Resource, Default)]
-struct DragState {
-    active: bool,
+pub struct DragState {
+    pub active: bool,
     start_position: Vec2,
 }
 
@@ -60,8 +64,6 @@ pub fn setup_camera(mut commands: Commands) {
             scaling_mode: ScalingMode::WindowSize,
             area: Rect::from_center_size(Vec2::ZERO, Vec2::new(1.0, 1.0)),
         },
-        // Transform::from_xyz(0.0, 0.0, 100.0),
-        // GlobalTransform::default(),
     ));
 }
 // Zoom system implementation
@@ -94,14 +96,14 @@ fn camera_drag_system(
 ) {
     let window = windows.single();
 
-    if mouse_input.just_pressed(MouseButton::Left) {
+    if mouse_input.just_pressed(MouseButton::Middle) {
         drag_state.active = true;
         if let Some(cursor_pos) = window.cursor_position() {
             drag_state.start_position = cursor_pos;
         }
     }
 
-    if mouse_input.just_released(MouseButton::Left) {
+    if mouse_input.just_released(MouseButton::Middle) {
         drag_state.active = false;
     }
 
