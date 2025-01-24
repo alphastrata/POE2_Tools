@@ -15,10 +15,10 @@ impl Plugin for PoeVis {
             .insert_resource(Time::<Fixed>::from_seconds(0.16)) // maybe we need a framerate?
             .add_systems(
                 FixedUpdate,
-                (background_services::pathfinding_system
+                background_services::pathfinding_system
                     .run_if(crate::background_services::node_active_changed)
                     .run_if(crate::background_services::sufficient_active_nodes)
-                    .after(crate::controls::handle_node_clicks)),
+                    .after(crate::controls::handle_node_clicks),
             );
 
         app.insert_resource(nodes::NodeScaling {
@@ -43,6 +43,8 @@ impl Plugin for PoeVis {
             Update,
             (
                 crate::controls::handle_node_clicks,
+                nodes::hover::highlight_hovered_node,
+                nodes::hover::show_node_info,
                 crate::background_services::bg_edge_updater,
                 nodes::update_materials,
             ),

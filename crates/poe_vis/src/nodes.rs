@@ -211,105 +211,185 @@ pub fn init_materials(
         cyan: materials.add(parse_hex_color(&config.colors["cyan"])),
     });
 }
+// Add new Hovered component
+#[derive(Component)]
+pub struct Hovered {
+    timer: Timer,
+}
 
 pub mod hover {
-    use bevy::prelude::*;
-
-    use bevy::text::cosmic_text::ttf_parser::Style;
-    use bevy::text::FontStyle;
-    use bevy::ui::{AlignItems, FlexDirection, JustifyContent, PositionType};
-
-    use crate::components::NodeMarker;
-
-    use super::{GameMaterials, NodeScaling, PassiveTreeWrapper};
+    use super::*;
 
     #[derive(Component)]
-    struct NodeHoverText;
+    pub struct NodeHoverText;
 
-    // Hover system using proper text components and layout
-    pub fn node_hover_system(
+    pub fn highlight_hovered_node(
         mut commands: Commands,
-        game_materials: Res<GameMaterials>,
-        mut node_query: Query<
-            (&mut MeshMaterial2d<ColorMaterial>, &NodeMarker, &Transform),
-            With<NodeMarker>,
-        >,
-        mut hover_text_query: Query<(&mut Text), With<NodeHoverText>>,
+        mut node_query: Query<(
+            Entity,
+            &mut Transform,
+            &mut MeshMaterial2d<ColorMaterial>,
+            &NodeMarker,
+            &GlobalTransform,
+            Option<&Hovered>,
+        )>,
         windows: Query<&Window>,
         camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
-        mut pointer_events: EventReader<Pointer<Move>>,
-        tree: Res<PassiveTreeWrapper>,
+        game_materials: Res<GameMaterials>,
         scaling: Res<NodeScaling>,
+        time: Res<Time>,
     ) {
         let window = windows.single();
         let (camera, camera_transform) = camera_query.single();
 
-        for event in pointer_events.read() {
-            if let Some(cursor_pos) = window.cursor_position() {
-                if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
-                    let mut hovered = false;
+        let Some(cursor_pos) = window.cursor_position() else { return };
+        let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) else { return };
 
-                    // Check node hover states
-                    for (mut material, node_marker, transform) in &mut node_query {
-                        let node_pos = transform.translation.truncate();
-                        let node_radius = scaling.base_radius * transform.scale.x;
-                        let is_hovered = world_pos.distance(node_pos) <= node_radius;
+        let mut any_hovered = false;
 
-                        material.0 = if is_hovered {
-                            hovered = true;
-                            game_materials.orange.clone()
-                        } else {
-                            game_materials.node_base.clone()
-                        };
+        for (entity, mut transform, mut material, _marker, global_transform, hovered) in &mut node_query {
+            let node_pos = global_transform.translation().truncate();
+            let node_radius = scaling.base_radius * transform.scale.x;
+            let is_hovered = world_pos.distance(node_pos) <= node_radius;
+    
+            if is_hovered {
+                // Apply hover effects immediately
+                transform.scale *= 1.15;
+                material.0 = game_materials.orange.clone();
+                any_hovered = true;
+    
+                // Manage hover timer
+                if let Some(hovered) = hovered {
+                    // Clone existing timer and tick it with delta time
+                    let mut new_timer = hovered.timer.clone();
+                    new_timer.tick(time.delta());
+                    commands.entity(entity).insert(Hovered { timer: new_timer });
+                } else {
+                    commands.entity(entity).insert(Hovered {
+                        timer: Timer::from_seconds(0.5, TimerMode::Once),
+                    });
+                }
+            } else if hovered.is_some() {
+                // Remove hover effects and components
+                transform.scale /= 1.15;
+                material.0 = game_materials.node_base.clone();
+                commands.entity(entity).remove::<Hovered>();
+            }
+        }
 
-                        // Update text if hovered
-                        if is_hovered {
-                            if let (Ok(mut text), Some(node_data)) = (
-                                hover_text_query.get_single_mut(),
-                                tree.tree.nodes.get(&node_marker.0),
-                            ) {
-                                // Update text content
-                                text.0 = format!(
-                                    "Node {}\n{}",
-                                    node_marker.0,
-                                    node_data.name,
-                                    // node_data.stats.join("\n")
-                                );
-                            }
-                        }
-                    }
-
-                    // Hide text when not hovering
-                    if !hovered {
-                        // if let Ok((mut text, _)) = hover_text_query.get_single_mut() {
-                        //     text.0.clear();
-                        // }
-                    }
+        // Handle case where cursor moves off all nodes
+        if !any_hovered {
+            for (entity, _, _, _, _, hovered) in &mut node_query {
+                if hovered.is_some() {
+                    commands.entity(entity).remove::<Hovered>();
                 }
             }
         }
     }
 
-    // Proper text initialization using modern Bevy patterns
-    pub fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
-        commands.spawn((
-            TextBundle::from_section(
-                "",
-                TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 16.0,
-                    color: Color::WHITE,
-                },
-            )
-            .with_style(Style {
-                position_type: PositionType::Absolute,
-                left: Val::Px(10.0),
-                top: Val::Px(10.0),
-                max_width: Val::Px(300.0),
-                padding: UiRect::all(Val::Px(8.0)),
-                ..default()
-            }),
-            NodeHoverText,
-        ));
+    pub fn show_node_info(
+        hovered_nodes: Query<(&Hovered, &NodeMarker)>,
+        mut hover_text_query: Query<&mut Text, With<NodeHoverText>>,
+        tree: Res<PassiveTreeWrapper>,
+    ) {
+        let Ok(mut text) = hover_text_query.get_single_mut() else { return };
+
+        let mut node_info = None;
+        for (hovered, marker) in &hovered_nodes {
+            if hovered.timer.elapsed_secs() >= 0.5 {
+                if let Some(node) = tree.tree.nodes.get(&marker.0) {
+                    node_info = Some(format!(
+                        "Node {}\n{}",
+                        marker.0,
+                        &node.name
+                    ));
+                }
+                break;
+            }
+        }
+
+        text.0 = node_info.unwrap_or_default();
     }
 }
+
+// pub mod hover {
+
+//     use bevy::prelude::*;
+
+//     use super::{GameMaterials, NodeScaling, PassiveTreeWrapper};
+//     use crate::components::NodeMarker;
+
+//     #[derive(Component)]
+//     pub struct NodeHoverText;
+
+//     pub fn handle_node_hover(
+//         mut node_query: Query<
+//             (&mut MeshMaterial2d<ColorMaterial>, &NodeMarker, &Transform),
+//             With<NodeMarker>,
+//         >,
+//         mut hover_text_query: Query<&mut Text, With<NodeHoverText>>,
+//         windows: Query<&Window>,
+//         camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+//         mut pointer_events: EventReader<Pointer<Move>>,
+//         tree: Res<PassiveTreeWrapper>,
+//         scaling: Res<NodeScaling>,
+//         game_materials: Res<GameMaterials>,
+//     ) {
+//         let window = windows.single();
+//         let (camera, camera_transform) = camera_query.single();
+
+//         let mut hovered_node = None;
+
+//         for _event in pointer_events.read() {
+//             if let Some(cursor_pos) = window.cursor_position() {
+//                 if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
+//                     for (mut material, node_marker, transform) in &mut node_query {
+//                         let node_pos = transform.translation.truncate();
+//                         let node_radius = scaling.base_radius * transform.scale.x;
+//                         let is_hovered = world_pos.distance(node_pos) <= node_radius;
+
+//                         material.0 = if is_hovered {
+//                             hovered_node = Some((node_marker.0, cursor_pos));
+//                             game_materials.orange.clone()
+//                         } else {
+//                             game_materials.node_base.clone()
+//                         };
+//                     }
+//                 }
+//             }
+//         }
+
+//         if let Some((node_id, _cursor_pos)) = hovered_node {
+//             if let (Ok(mut text), Some(node_data)) = (
+//                 hover_text_query.get_single_mut(),
+//                 tree.tree.nodes.get(&node_id),
+//             ) {
+//                 // Replace .stats with actual field from PoeNode
+//                 text.0 = format!(
+//                     "Node {}\n{}",
+//                     node_id,
+//                     node_data.name // Use available fields like .name, .skill_id etc.
+//                 );
+//             }
+//         } else if let Ok(mut text) = hover_text_query.get_single_mut() {
+//             text.0.clear();
+//         }
+//     }
+
+//     pub fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
+//         let font = asset_server.load("fonts/FiraSans-Bold.ttf");
+
+//         commands.spawn((
+//             Text2d::new(""), // Empty initial text
+//             TextFont {
+//                 font,
+//                 font_size: 16.0,
+//                 ..default()
+//             },
+//             TextLayout::new(JustifyText::Left, LineBreak::WordBoundary),
+//             NodeHoverText,
+//             // Visibility::Hidden, // Start hidden
+//             Transform::from_translation(Vec3::new(0.0, 0.0, 100.0)),
+//         ));
+//     }
+// }
