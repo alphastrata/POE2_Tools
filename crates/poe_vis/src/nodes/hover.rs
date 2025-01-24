@@ -16,7 +16,7 @@ pub struct Hovered {
 }
 
 /// If you want a default fade time, you can store it here or in NodeScaling
-const DEFAULT_HOVER_FADE_TIME: f32 = 0.460;
+const DEFAULT_HOVER_FADE_TIME: f32 = 0.760;
 
 // -------------------------------------------------------------------
 // 0) Spawn Hover Text (once). Uses your 0.15.1 style API
@@ -157,14 +157,14 @@ pub fn show_node_info(
     // 2) If we didn't find anything yet, check Active
     if found_info.is_none() {
         for (hovered_comp, marker, _maybe_active) in hovered.iter() {
-            // if you care about time
-            if hovered_comp.timer.elapsed_secs() >= 0.5 {
-                if let Some(node) = tree.tree.nodes.get(&marker.0) {
-                    let info = format!("Node {}:\n{}", node.node_id, node.name);
-                    found_info = Some(info);
-                    break;
-                }
+            //FIXME: there is something very skux about our timers we're inserting...
+            // if hovered_comp.timer.elapsed_secs() >= 0.250 {
+            if let Some(node) = tree.tree.nodes.get(&marker.0) {
+                let info = format!("Node {}:\n{}", node.node_id, node.name);
+                found_info = Some(info);
+                break;
             }
+            // }
         }
     }
 
@@ -172,7 +172,6 @@ pub fn show_node_info(
     if let Some(info_str) = &found_info {
         log::debug!("Setting text to: {}", info_str);
         text.0 = info_str.clone();
-        panic!("{}", &info_str); // to prove it's triggered
     }
 
     // 4) Move text near the cursor
@@ -180,7 +179,7 @@ pub fn show_node_info(
     let (camera, cam_tf) = camera_query.single();
     if let Some(cursor_pos) = window.cursor_position() {
         if let Ok(world_pos) = camera.viewport_to_world_2d(cam_tf, cursor_pos) {
-            text_tf.translation = Vec3::new(world_pos.x + 20.0, world_pos.y + 20.0, 200.0);
+            text_tf.translation = Vec3::new(0.0, 0.0, 100.0);
         }
     }
 }

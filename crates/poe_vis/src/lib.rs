@@ -49,11 +49,8 @@ impl Plugin for PoeVis {
         app.add_systems(
             Update,
             (
-                // last
                 crate::nodes::hover::show_node_info,
-                /*  */
-                // .before(crate::nodes::hover::revert_inactive_hovered_nodes)
-                // .before(crate::nodes::hover::revert_active_hovered_nodes)
+                //
                 nodes::hover::hover_started,
                 nodes::hover::hover_ended,
                 //
