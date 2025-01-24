@@ -1,14 +1,10 @@
 use bevy::prelude::*;
-use poe_tree::PassiveTree;
 
-pub mod camera;
-
-pub mod nodes;
-fn quick_tree() -> PassiveTree {
+fn quick_tree() -> poe_tree::PassiveTree {
     let file = std::fs::File::open("data/POE2_Tree.json").unwrap();
     let reader = std::io::BufReader::new(file);
     let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
-    let mut tree = PassiveTree::from_value(&tree_data).unwrap();
+    let mut tree = poe_tree::PassiveTree::from_value(&tree_data).unwrap();
 
     tree.remove_hidden();
     tree
@@ -20,7 +16,7 @@ fn main() {
     let log_filter = format!("{}=debug", crate_name);
 
     App::new()
-        .insert_resource(nodes::PassiveTreeWrapper { tree: passive_tree })
+        .insert_resource(poe_vis::nodes::PassiveTreeWrapper { tree: passive_tree })
         .add_plugins((
             DefaultPlugins.set(bevy::log::LogPlugin {
                 filter: log_filter,
@@ -28,6 +24,6 @@ fn main() {
             }),
             MeshPickingPlugin,
         ))
-        .add_plugins(nodes::PoeVis)
+        .add_plugins(poe_vis::nodes::PoeVis)
         .run();
 }

@@ -4,9 +4,15 @@ name = "poe_vis"
 version = "0.1.0"
 edition = "2021"
 
+
 [[bin]]
 name = "vis"
 path = "src/main.rs"
+
+[lib]
+name = "poe_vis"
+path = "src/lib.rs"
+
 
 [dependencies]
 poe_tree = { workspace = true }

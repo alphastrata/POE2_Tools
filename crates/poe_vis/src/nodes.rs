@@ -1,16 +1,9 @@
-use bevy::color::palettes::tailwind::{self, *};
 use bevy::prelude::*;
 use poe_tree::calculate_world_position;
-use poe_tree::type_wrappings::NodeId;
-use poe_tree::PassiveTree; // Add this import
+use poe_tree::PassiveTree;
 
-#[derive(Debug, Clone, Component)]
-pub struct PoeNode {
-    pub color: Color,
-    pub filled: bool,
-    pub active: bool,
-    pub node_id: NodeId,
-}
+use crate::components::EdgeMarker;
+use crate::components::NodeMarker;
 
 // Add Resource derive for PassiveTree
 #[derive(Resource, Debug, Clone)]
@@ -33,9 +26,6 @@ impl Plugin for PoeVis {
     }
 }
 // Add this helper function for ColorMaterial
-
-#[derive(Component)]
-struct NodeMarker; // Marker component for nodes
 
 #[derive(Resource)]
 struct NodeScaling {
@@ -120,10 +110,11 @@ fn spawn_nodes(
     let normal_matl = materials.add(Color::srgb(0.6, 0.8, 1.0)); // Pale blue
     let hover_matl = materials.add(Color::srgb(0.0, 0.5, 0.5)); // Green
     let pressed_matl = materials.add(Color::srgb(1.0, 1.0, 0.0)); // Yellow
-    let black_matl = materials.add(Color::BLACK);
+
+    // let black_matl = materials.add(Color::BLACK);
 
     let node_radius = scaling.base_radius;
-    let hollow_radius = scaling.base_radius * 0.75;
+    // let hollow_radius = scaling.base_radius * 0.75;
 
     for (_, node) in tree.tree.nodes.iter() {
         let group = tree.tree.groups.get(&node.parent).unwrap();
@@ -136,7 +127,7 @@ fn spawn_nodes(
                 Mesh2d(meshes.add(Circle::new(node_radius))),
                 MeshMaterial2d(normal_matl.clone()),
                 Transform::from_translation(position),
-                NodeMarker,
+                NodeMarker(node.node_id),
             ))
             .observe(update_color_material_on::<Pointer<Over>>(
                 hover_matl.clone(),
@@ -149,12 +140,13 @@ fn spawn_nodes(
             ))
             .observe(update_color_material_on::<Pointer<Up>>(hover_matl.clone()));
 
-        // Non-interactive hollow center
-        commands.spawn((
-            Mesh2d(meshes.add(Circle::new(hollow_radius))),
-            MeshMaterial2d(black_matl.clone()),
-            Transform::from_translation(position + Vec3::Z * 0.1),
-        ));
+        // // Non-interactive hollow center
+        // commands.spawn((
+        //     NodeMarker,
+        //     Mesh2d(meshes.add(Circle::new(hollow_radius))),
+        //     MeshMaterial2d(black_matl.clone()),
+        //     Transform::from_translation(position + Vec3::Z * 0.1),
+        // ));
     }
 }
 
@@ -174,31 +166,20 @@ fn spawn_edges(
     let hover_matl = materials.add(Color::srgb(0.0, 0.5, 0.5)); // Green
     let pressed_matl = materials.add(Color::srgb(1.0, 1.0, 0.0)); // Yellow
 
-    for edge in &tree.tree.edges {
-        // Grab both connected nodes:
-        let (Some(start_node), Some(end_node)) = (
-            tree.tree.nodes.get(&edge.start),
-            tree.tree.nodes.get(&edge.end),
-        ) else {
-            // If either is missing, skip
-            continue;
-        };
+    tree.tree.edges.iter().for_each(|edge| {
+        let (start_node, end_node) = (
+            tree.tree.nodes.get(&edge.start).unwrap(),
+            tree.tree.nodes.get(&edge.end).unwrap(),
+        );
 
-        // Get each node’s parent group:
-        let (Some(start_group), Some(end_group)) = (
-            tree.tree.groups.get(&start_node.parent),
-            tree.tree.groups.get(&end_node.parent),
-        ) else {
-            // If either group is missing, skip
-            continue;
-        };
+        let (start_group, end_group) = (
+            tree.tree.groups.get(&start_node.parent).unwrap(),
+            tree.tree.groups.get(&end_node.parent).unwrap(),
+        );
 
-        // Calculate world positions for both node centers:
         let start_pos =
             calculate_world_position(start_group, start_node.radius, start_node.position);
         let end_pos = calculate_world_position(end_group, end_node.radius, end_node.position);
-
-        // Convert to Vec2 for geometry:
         let start = Vec2::new(start_pos.0, start_pos.1);
         let end = Vec2::new(end_pos.0, end_pos.1);
 
@@ -212,27 +193,13 @@ fn spawn_edges(
         // Midpoint of the two nodes:
         let midpoint = start.lerp(end, 0.5);
 
-        // Debug/logging
-        log::warn!(
-            "Edge: start_node: {:?}, end_node: {:?}, start: {:?}, end: {:?}, length: {:?}",
-            start_node.node_id,
-            end_node.node_id,
-            start,
-            end,
-            width
-        );
-
-        // Spawn a rectangle that spans from start to end:
-        //  - translation at the midpoint
-        //  - rotation to align with delta
-        //  - scale in X = 'length', Y = 'edge_thickness' if you’re using a custom mesh,
-        //    or pass them to a Rectangle struct that’s created accordingly
         commands
             .spawn((
                 // Provide the mesh (a rectangle) with correct length + thickness
                 Mesh2d(meshes.add(Rectangle::new(width, height))),
                 // Basic color material
                 MeshMaterial2d(materials.add(edge_color)),
+                EdgeMarker((edge.start, edge.end)),
                 // Transform: position and rotation
                 Transform {
                     translation: midpoint.extend(0.0),
@@ -251,7 +218,5 @@ fn spawn_edges(
                 pressed_matl.clone(),
             ))
             .observe(update_color_material_on::<Pointer<Up>>(hover_matl.clone()));
-
-        // You can remove the second spawn if you only need one entity per edge
-    }
+    });
 }
