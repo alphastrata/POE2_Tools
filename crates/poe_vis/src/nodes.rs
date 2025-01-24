@@ -1,9 +1,11 @@
 use bevy::prelude::*;
+use bevy::utils::HashMap;
 use bevy::utils::HashSet;
 use poe_tree::calculate_world_position;
 use poe_tree::type_wrappings::NodeId;
 use poe_tree::PassiveTree;
 
+use crate::background_services::pathfinding_system;
 use crate::components::EdgeActive;
 use crate::components::EdgeMarker;
 use crate::components::NodeActive;
@@ -49,8 +51,12 @@ fn adjust_node_sizes(
         }
     }
 }
+
 impl Plugin for PoeVis {
     fn build(&self, app: &mut App) {
+        app.insert_resource(Time::<Fixed>::from_seconds(1.0))
+            .add_systems(FixedUpdate, pathfinding_system);
+
         app.insert_resource(NodeScaling {
             min_scale: 1.0,    // Nodes can shrink to 50% size
             max_scale: 4.0,    // Nodes can grow to 200% size
@@ -61,16 +67,13 @@ impl Plugin for PoeVis {
         .add_systems(Startup, (spawn_nodes, spawn_edges, adjust_node_sizes))
         .add_systems(
             Update,
-            (handle_node_clicks, update_edge_activation, update_materials),
+            (
+                handle_node_clicks,
+                crate::background_services::bg_edge_updater,
+                update_materials,
+            ),
         );
     }
-}
-
-// Add the ActivatedMaterials resource definition
-#[derive(Resource)]
-struct ActivatedMaterials {
-    node: Handle<ColorMaterial>,
-    edge: Handle<ColorMaterial>,
 }
 
 fn spawn_nodes(
@@ -148,53 +151,46 @@ fn handle_node_clicks(
     }
 }
 
-//---------UPDATES-----------//
-// System 1: Update edge activation states
-fn update_edge_activation(
-    node_query: Query<(&NodeMarker, &NodeActive), Changed<NodeActive>>,
-    mut edge_query: Query<(&EdgeMarker, &mut EdgeActive)>,
-) {
-    // Clear existing edge states
-    for (_, mut active) in &mut edge_query {
-        active.0 = false;
-    }
-
-    // Get active nodes
-    let active_nodes: HashSet<NodeId> = node_query
-        .iter()
-        .filter(|(_, active)| active.0)
-        .map(|(marker, _)| marker.0)
-        .collect();
-
-    // Update edges based on active nodes using EdgeMarker data
-    for (edge_marker, mut active) in &mut edge_query {
-        let (start, end) = edge_marker.0;
-        active.0 = active_nodes.contains(&start) && active_nodes.contains(&end);
-    }
-}
-
 fn update_materials(
     materials: Res<GameMaterials>,
-    mut nodes: Query<(&NodeActive, &mut MeshMaterial2d<ColorMaterial>), Changed<NodeActive>>,
-    mut edges: Query<(&EdgeActive, &mut MeshMaterial2d<ColorMaterial>), Changed<EdgeActive>>,
+    mut materials_query: ParamSet<(
+        Query<(&NodeActive, &mut MeshMaterial2d<ColorMaterial>), Changed<NodeActive>>,
+        Query<(&EdgeActive, &mut MeshMaterial2d<ColorMaterial>), Changed<EdgeActive>>,
+    )>,
 ) {
-    // Update nodes
-    for (active, mut material) in &mut nodes {
-        material.0 = if active.0 {
-            materials.node_activated.clone()
-        } else {
-            materials.node_base.clone()
-        };
-    }
+    // Handle nodes first
+    let mut node_query: Query<
+        '_,
+        '_,
+        (&NodeActive, &mut MeshMaterial2d<ColorMaterial>),
+        Changed<NodeActive>,
+    > = materials_query.p0();
+    let num_active_nodes = node_query
+        .iter_mut()
+        .map(|(active, mut material)| {
+            material.0 = if active.0 {
+                materials.node_activated.clone()
+            } else {
+                materials.node_base.clone()
+            };
+        })
+        .count();
 
-    // Update edges
-    for (active, mut material) in &mut edges {
-        material.0 = if active.0 {
-            materials.edge_activated.clone()
-        } else {
-            materials.edge_base.clone()
-        };
-    }
+    // Then handle edges
+    let mut edge_query = materials_query.p1();
+    let num_edges_active = edge_query
+        .iter_mut()
+        .map(|(active, mut material)| {
+            material.0 = if active.0 {
+                materials.edge_activated.clone()
+            } else {
+                materials.edge_base.clone()
+            };
+        })
+        .count();
+
+    log::trace!("Num active nodes: {}", num_active_nodes);
+    log::trace!("Num active edges: {}", num_edges_active);
 }
 
 #[derive(Resource)]
@@ -254,78 +250,3 @@ fn init_materials(
         cyan: materials.add(parse_hex_color(&config.colors["cyan"])),
     });
 }
-
-// fn spawn_nodes(
-//     mut commands: Commands,
-//     mut meshes: ResMut<Assets<Mesh>>,
-//     mut materials: ResMut<Assets<ColorMaterial>>,
-//     tree: Res<PassiveTreeWrapper>,
-//     scaling: Res<NodeScaling>,
-//     config: Res<UserConfig>,
-// ) {
-//     let node_radius = scaling.base_radius;
-
-//     // Create activated materials resource
-//     commands.insert_resource(ActivatedMaterials {
-//         node: materials.add(parse_hex_color(&config.colors["activated_nodes"])),
-//         edge: materials.add(parse_hex_color(&config.colors["activated_edges"])),
-//     });
-
-//     let base_node_matl = materials.add(parse_hex_color(&config.colors["all_nodes"]));
-
-//     for (_, node) in tree.tree.nodes.iter() {
-//         let group = tree.tree.groups.get(&node.parent).unwrap();
-//         let (x, y) = calculate_world_position(group, node.radius, node.position);
-
-//         commands.spawn((
-//             Mesh2d(meshes.add(Circle::new(node_radius))),
-//             MeshMaterial2d(base_node_matl.clone()),
-//             Transform::from_translation(Vec3::new(x, y, 0.0)),
-//             NodeMarker(node.node_id),
-//             NodeActive(false),
-//         ));
-//     }
-// }
-
-// fn spawn_edges(
-//     mut commands: Commands,
-//     mut meshes: ResMut<Assets<Mesh>>,
-//     mut materials: ResMut<Assets<ColorMaterial>>,
-//     tree: Res<PassiveTreeWrapper>,
-//     config: Res<UserConfig>,
-// ) {
-//     let edge_color = materials.add(parse_hex_color(&config.colors["all_nodes"]));
-
-//     tree.tree.edges.iter().for_each(|edge| {
-//         let (start_node, end_node) = (
-//             tree.tree.nodes.get(&edge.start).unwrap(),
-//             tree.tree.nodes.get(&edge.end).unwrap(),
-//         );
-
-//         let (start_group, end_group) = (
-//             tree.tree.groups.get(&start_node.parent).unwrap(),
-//             tree.tree.groups.get(&end_node.parent).unwrap(),
-//         );
-
-//         let start_pos =
-//             calculate_world_position(start_group, start_node.radius, start_node.position);
-//         let end_pos = calculate_world_position(end_group, end_node.radius, end_node.position);
-//         let start = Vec2::new(start_pos.0, start_pos.1);
-//         let end = Vec2::new(end_pos.0, end_pos.1);
-
-//         let delta = end - start;
-//         let width = delta.length();
-//         let height = 20.0;
-//         let angle = delta.y.atan2(delta.x);
-//         let midpoint = start.lerp(end, 0.5);
-
-//         commands.spawn((
-//             Mesh2d(meshes.add(Rectangle::new(width, height))),
-//             MeshMaterial2d(edge_color.clone()),
-//             EdgeMarker((edge.start, edge.end)),
-//             Transform::from_translation(midpoint.extend(-0.01)) // move slightly backward so it is behind a node.
-//                 .with_rotation(Quat::from_rotation_z(angle)),
-//             EdgeActive(false),
-//         ));
-//     });
-// }
