@@ -21,7 +21,7 @@ impl Plugin for PoeVis {
             min_scale: 4.0,         // Nodes can shrink to 50% size
             max_scale: 8.0,         // Nodes can grow to 200% size
             base_radius: 60.0,      // Should match your node radius
-            hover_multiplier: 1.03, // Nodes that are hovered are increased by %3 of their size
+            hover_multiplier: 1.06, // Nodes that are hovered are increased by %3 of their size
         });
 
         app.add_systems(

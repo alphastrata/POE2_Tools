@@ -17,22 +17,63 @@ impl Plugin for KeyboardControlsPlugin {
     }
 }
 
+// pub fn handle_node_clicks(
+//     mut commands: Commands,
+//     mut drag_state: ResMut<crate::camera::DragState>,
+//     root: Res<crate::config::RootNode>,
+//     mut click_events: EventReader<Pointer<Down>>,
+//     inactive_nodes: Query<(Entity, &NodeMarker), With<NodeInactive>>,
+// ) {
+//     for event in click_events.read() {
+//         if let Ok((entity, _marker)) = inactive_nodes.get(event.target) {
+//             // Only activate if root exists (from character data)
+//             if root.0.is_some() {
+//                 drag_state.active = false;
+//                 commands
+//                     .entity(entity)
+//                     .remove::<NodeInactive>()
+//                     .insert(NodeActive);
+//             }
+//         }
+//     }
+// }
+
 pub fn handle_node_clicks(
     mut commands: Commands,
     mut drag_state: ResMut<crate::camera::DragState>,
     root: Res<crate::config::RootNode>,
     mut click_events: EventReader<Pointer<Down>>,
-    inactive_nodes: Query<(Entity, &NodeMarker), With<NodeInactive>>,
+    nodes_query: Query<
+        (
+            Entity,
+            &NodeMarker,
+            Option<&NodeInactive>,
+            Option<&NodeActive>,
+        ),
+        Or<(With<NodeInactive>, With<NodeActive>)>,
+    >,
 ) {
     for event in click_events.read() {
-        if let Ok((entity, _marker)) = inactive_nodes.get(event.target) {
-            // Only activate if root exists (from character data)
-            if root.0.is_some() {
-                drag_state.active = false;
-                commands
-                    .entity(entity)
-                    .remove::<NodeInactive>()
-                    .insert(NodeActive);
+        if let Ok((entity, marker, inactive, active)) = nodes_query.get(event.target) {
+            drag_state.active = false; // so that we don't mess up ppl's camera when activating/deactivating nodes.
+            match (inactive, active) {
+                (Some(_), None) => {
+                    // Activate if root exists
+                    if root.0.is_some() {
+                        commands
+                            .entity(entity)
+                            .remove::<NodeInactive>()
+                            .insert(NodeActive);
+                    }
+                }
+                (None, Some(_)) => {
+                    // Deactivate regardless of root
+                    commands
+                        .entity(entity)
+                        .remove::<NodeActive>()
+                        .insert(NodeInactive);
+                }
+                _ => unreachable!(),
             }
         }
     }

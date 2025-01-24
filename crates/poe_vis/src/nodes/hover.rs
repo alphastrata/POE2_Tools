@@ -3,6 +3,7 @@ use crate::components::{NodeActive, NodeMarker};
 use crate::nodes::PassiveTreeWrapper;
 
 use bevy::prelude::*;
+use bevy::text::FontStyle;
 
 // -------------------------------------------------------------------
 // Components
@@ -302,37 +303,113 @@ pub fn revert_active_hovered_nodes(
     }
 }
 
-// -------------------------------------------------------------------
-// 6) Example "show_node_info" system, if you have NodeHoverState
-//    or you want to unify the logic. (You can adapt your code.)
-// -------------------------------------------------------------------
-
-#[derive(Component)]
-pub struct NodeHoverState {
-    pub timer: Timer,
-    pub base_scale: f32,
-}
-
-/// Example system that tries to display info after 0.5s
+/// This system checks if any node has been hovered (inactive or active)
+/// for >= 0.5s, then sets the text to show that node’s info.
+/// It also moves the text entity to the mouse cursor in world space.
 pub fn show_node_info(
-    hovered_nodes: Query<(&NodeHoverState, &NodeMarker)>,
+    windows: Query<&Window>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+
+    // We read from the hovered components you already have:
+    hovered_inactive: Query<(&HoveredInactive, &NodeMarker)>,
+    hovered_active: Query<(&HoveredActive, &NodeMarker)>,
+
+    // The text entity
     mut hover_text_query: Query<(&mut Text, &mut Transform), With<NodeHoverText>>,
+
+    // The passive tree data so we can look up node names, etc.
     tree: Res<PassiveTreeWrapper>,
 ) {
-    let Ok((mut text, mut tf)) = hover_text_query.get_single_mut() else {
+    // 0) Try to get the single text entity
+    let Ok((mut text, mut text_tf)) = hover_text_query.get_single_mut() else {
+        log::warn!("Found no text to mutate...");
         return;
     };
-    let mut info = String::new();
 
-    for (hovered, marker) in &hovered_nodes {
-        if hovered.timer.elapsed_secs() >= 0.5 {
+    // Reset to empty by default, in case no hovered node qualifies
+    text.0.clear();
+    log::trace!("HoverText reset");
+
+    // 1) Query debugging: how many hovered_inactive and hovered_active are present?
+    let count_inactive = hovered_inactive.iter().count();
+    let count_active = hovered_active.iter().count();
+    log::trace!(
+        "hovered_inactive count={}, hovered_active count={}",
+        count_inactive,
+        count_active
+    );
+
+    // 2) Attempt to find an *inactive* hovered node that’s been hovered >= 0.5s
+    let mut found_info = None;
+    for (hovered_comp, marker) in hovered_inactive.iter() {
+        log::trace!(
+            "Checking INACTIVE node marker={:?}, timer.elapsed={:.3}",
+            marker.0,
+            hovered_comp.timer.elapsed_secs()
+        );
+
+        if hovered_comp.timer.elapsed_secs() >= 0.250 {
             if let Some(node) = tree.tree.nodes.get(&marker.0) {
-                info = format!("Node {}\n{}", marker.0, node.name);
+                let info_str = format!("Node {}:\n{}", node.node_id, node.name);
+                log::debug!("Found INACTIVE hovered node: {}", &info_str);
+                found_info = Some(info_str);
+                break;
+            } else {
+                log::debug!("No matching node in tree for marker={:?}", marker.0);
             }
-            break;
         }
     }
+    log::trace!("Finished scanning INACTIVE hovers.");
 
-    text.0 = info;
-    // TODO: position tf near the node or the cursor
+    // 3) If not found among inactive, check active
+    if found_info.is_none() {
+        log::trace!("inactive empty of hovers...");
+        for (hovered_comp, marker) in hovered_active.iter() {
+            log::trace!(
+                "Checking ACTIVE node marker={:?}, timer.elapsed={:.3}",
+                marker.0,
+                hovered_comp.timer.elapsed_secs()
+            );
+
+            if hovered_comp.timer.elapsed_secs() >= 0.250 {
+                if let Some(node) = tree.tree.nodes.get(&marker.0) {
+                    let info_str = format!("Node {}:\n{}", node.node_id, node.name);
+                    log::debug!("Found ACTIVE hovered node: {}", &info_str);
+                    found_info = Some(info_str);
+                    break;
+                } else {
+                    log::debug!("No matching node in tree for marker={:?}", marker.0);
+                }
+            }
+        }
+        log::trace!("Finished scanning ACTIVE hovers.");
+    } else {
+        // We found something in the inactive loop
+        log::trace!("We found something inactive, skipping active check.");
+    }
+
+    // 4) If we found any hovered node info, set text
+    if let Some(info_str) = &found_info {
+        log::debug!("Setting text to: {}", info_str);
+        text.0 = info_str.clone();
+    } else {
+        log::trace!("No hovered node found => text stays empty.");
+    }
+
+    // 5) Move the text to the mouse cursor in "world space"
+    let window = windows.single();
+    let (camera, cam_tf) = camera_query.single();
+    if let Some(cursor_pos) = window.cursor_position() {
+        if let Ok(world_pos) = camera.viewport_to_world_2d(cam_tf, cursor_pos) {
+            log::trace!("Mouse pos : {}, {}", world_pos.x, world_pos.y);
+            // Add some offset so it doesn’t block the cursor
+            text_tf.translation = Vec3::new(world_pos.x + 20.0, world_pos.y + 20.0, 999.0);
+        } else {
+            log::trace!("viewport_to_world_2d failed??");
+        }
+    } else {
+        // If there's no cursor (e.g. out of window), optionally clear text:
+        log::warn!("We might be out of window?");
+        text.0.clear();
+    }
 }
