@@ -57,16 +57,16 @@ impl Plugin for PoeVis {
             .insert_resource(Time::<Fixed>::from_seconds(0.8))
             .add_systems(
                 FixedUpdate,
-                pathfinding_system
+                (pathfinding_system
                     .run_if(crate::background_services::node_active_changed)
                     .run_if(crate::background_services::sufficient_active_nodes)
-                    .after(crate::controls::handle_node_clicks),
+                    .after(crate::controls::handle_node_clicks)),
             );
 
         app.insert_resource(NodeScaling {
-            min_scale: 1.0,    // Nodes can shrink to 50% size
-            max_scale: 4.0,    // Nodes can grow to 200% size
-            base_radius: 40.0, // Should match your node radius
+            min_scale: 4.0,    // Nodes can shrink to 50% size
+            max_scale: 8.0,    // Nodes can grow to 200% size
+            base_radius: 60.0, // Should match your node radius
         })
         .add_plugins(crate::camera::PoeVisCameraPlugin)
         .add_systems(PreStartup, init_materials)
@@ -77,6 +77,14 @@ impl Plugin for PoeVis {
                 crate::controls::handle_node_clicks,
                 crate::background_services::bg_edge_updater,
                 update_materials,
+            ),
+        );
+
+        app.add_systems(
+            Update,
+            (
+                highlight_starting_node,
+                update_materials.after(highlight_starting_node),
             ),
         );
     }
@@ -145,6 +153,21 @@ fn spawn_edges(
     });
 }
 
+pub fn highlight_starting_node(
+    character: Res<crate::config::ActiveCharacter>,
+    mut commands: Commands,
+    node_query: Query<(Entity, &NodeMarker), With<NodeInactive>>,
+) {
+    // Find and activate the starting node
+    for (entity, marker) in node_query.iter() {
+        if marker.0 == character.character.starting_node {
+            commands
+                .entity(entity)
+                .remove::<NodeInactive>()
+                .insert(NodeActive);
+        }
+    }
+}
 // Update materials system
 fn update_materials(
     materials: Res<GameMaterials>,
@@ -173,6 +196,7 @@ fn update_materials(
         };
     }
 }
+
 #[derive(Resource)]
 pub struct GameMaterials {
     // Node colors

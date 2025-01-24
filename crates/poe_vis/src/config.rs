@@ -106,6 +106,12 @@ pub fn setup_character(
     let character =
         Character::load_from_toml("data/character.toml").expect("Failed to load character data");
 
+    log::debug!(
+        "Character {} loaded with active nodes {:#?}",
+        character.name,
+        character.activated_node_ids
+    );
+
     // Set root node from character data
     commands.insert_resource(RootNode(Some(character.starting_node)));
 
