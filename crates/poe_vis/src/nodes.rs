@@ -2,8 +2,11 @@ use bevy::prelude::*;
 use poe_tree::calculate_world_position;
 use poe_tree::PassiveTree;
 
+use crate::components::Active;
 use crate::components::EdgeMarker;
 use crate::components::NodeMarker;
+use crate::config::parse_hex_color;
+use crate::config::UserConfig;
 
 // Add Resource derive for PassiveTree
 #[derive(Resource, Debug, Clone)]
@@ -11,6 +14,12 @@ pub struct PassiveTreeWrapper {
     pub tree: PassiveTree,
 }
 
+#[derive(Resource)]
+struct NodeScaling {
+    min_scale: f32,
+    max_scale: f32,
+    base_radius: f32,
+}
 // Plugin to display nodes
 pub struct PoeVis;
 
@@ -22,17 +31,75 @@ impl Plugin for PoeVis {
             base_radius: 40.0, // Should match your node radius
         })
         .add_plugins(crate::camera::PoeVisCameraPlugin)
-        .add_systems(Startup, (spawn_nodes, spawn_edges, adjust_node_sizes));
+        .add_systems(Startup, (spawn_nodes, spawn_edges, adjust_node_sizes))
+        .add_systems(
+            Update,
+            (
+                handle_node_clicks,
+                update_active_edges,
+                update_active_materials,
+            ),
+        );
+    }
+}
+
+// System to handle node clicks
+fn handle_node_clicks(
+    mut click_events: EventReader<Pointer<Click>>,
+    mut node_query: Query<&mut Active, With<NodeMarker>>,
+) {
+    for event in click_events.read() {
+        if let Ok(mut active) = node_query.get_mut(event.entity()) {
+            active.0 = !active.0;
+        }
+    }
+}
+
+// System to update connected edges
+fn update_active_edges(
+    node_query: Query<(&NodeMarker, &Active), Changed<Active>>,
+    mut edge_query: Query<(&EdgeMarker, &mut Active)>,
+    tree: Res<PassiveTreeWrapper>,
+) {
+    for (node_marker, node_active) in &node_query {
+        for (edge_marker, mut edge_active) in &mut edge_query {
+            // Check if edge is connected to this node
+            if edge_marker.0 == node_marker.0 || edge_marker.1 == node_marker.0 {
+                edge_active.0 = node_active.0;
+            }
+        }
+    }
+}
+
+// System to update materials based on active state
+fn update_active_materials(
+    config: Res<UserConfig>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    activated_materials: Res<ActivatedMaterials>,
+    mut node_query: Query<(&Active, &mut MeshMaterial2d), Changed<Active>>,
+    mut edge_query: Query<(&Active, &mut MeshMaterial2d), Changed<Active>>,
+) {
+    // Update nodes
+    for (active, mut material) in &mut node_query {
+        material.0 = if active.0 {
+            activated_materials.node.clone()
+        } else {
+            // Get original material from config
+            materials.add(parse_hex_color(&config.colors["all_nodes"]))
+        };
+    }
+
+    // Update edges
+    for (active, mut material) in &mut edge_query {
+        material.0 = if active.0 {
+            activated_materials.edge.clone()
+        } else {
+            // Get original edge material from config
+            materials.add(parse_hex_color(&config.colors["all_nodes"]))
+        };
     }
 }
 // Add this helper function for ColorMaterial
-
-#[derive(Resource)]
-struct NodeScaling {
-    min_scale: f32,
-    max_scale: f32,
-    base_radius: f32,
-}
 
 /// Adjust each node’s `Transform.scale` so it doesn’t get too big or too small on screen.
 fn adjust_node_sizes(
@@ -128,17 +195,18 @@ fn spawn_nodes(
                 MeshMaterial2d(normal_matl.clone()),
                 Transform::from_translation(position),
                 NodeMarker(node.node_id),
+                Active(false),
             ))
             .observe(update_color_material_on::<Pointer<Over>>(
                 hover_matl.clone(),
             ))
-            .observe(update_color_material_on::<Pointer<Out>>(
-                normal_matl.clone(),
-            ))
+            // .observe(update_color_material_on::<Pointer<Out>>(
+            //     normal_matl.clone(),
+            // ))
             .observe(update_color_material_on::<Pointer<Down>>(
                 pressed_matl.clone(),
-            ))
-            .observe(update_color_material_on::<Pointer<Up>>(hover_matl.clone()));
+            ));
+        // .observe(update_color_material_on::<Pointer<Up>>(hover_matl.clone()));
 
         // // Non-interactive hollow center
         // commands.spawn((
@@ -200,6 +268,7 @@ fn spawn_edges(
                 // Basic color material
                 MeshMaterial2d(materials.add(edge_color)),
                 EdgeMarker((edge.start, edge.end)),
+                Active(false),
                 // Transform: position and rotation
                 Transform {
                     translation: midpoint.extend(0.0),
@@ -211,12 +280,12 @@ fn spawn_edges(
             .observe(update_color_material_on::<Pointer<Over>>(
                 hover_matl.clone(),
             ))
-            .observe(update_color_material_on::<Pointer<Out>>(
-                normal_matl.clone(),
-            ))
+            // .observe(update_color_material_on::<Pointer<Out>>(
+            //     normal_matl.clone(),
+            // ))
             .observe(update_color_material_on::<Pointer<Down>>(
                 pressed_matl.clone(),
-            ))
-            .observe(update_color_material_on::<Pointer<Up>>(hover_matl.clone()));
+            ));
+        // .observe(update_color_material_on::<Pointer<Up>>(hover_matl.clone()));
     });
 }

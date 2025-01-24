@@ -1,5 +1,8 @@
 //!$ crates/poe_vis/src/config.rs
-use bevy::{color::Color, input::keyboard::Key, prelude::KeyCode};
+use bevy::{
+    color::Color,
+    prelude::{KeyCode, Resource},
+};
 use poe_tree::character::Character;
 use std::collections::HashMap;
 
@@ -17,7 +20,7 @@ pub fn parse_hex_color(col_str: &str) -> Color {
     }
 }
 
-#[derive(Debug, serde::Deserialize, Default)]
+#[derive(Debug, serde::Deserialize, Default, Resource)]
 pub struct UserConfig {
     pub colors: HashMap<String, String>,
     pub controls: HashMap<String, Vec<String>>,

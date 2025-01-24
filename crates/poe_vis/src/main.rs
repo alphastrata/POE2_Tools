@@ -24,6 +24,6 @@ fn main() {
             }),
             MeshPickingPlugin,
         ))
-        .add_plugins(poe_vis::nodes::PoeVis)
+        .add_plugins((poe_vis::nodes::PoeVis, poe_vis::controls::ControlsPlugin))
         .run();
 }
