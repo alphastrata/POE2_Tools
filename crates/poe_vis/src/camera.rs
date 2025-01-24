@@ -23,7 +23,7 @@ impl Plugin for PoeVisCameraPlugin {
 
 // Add to your existing CameraSettings resource
 #[derive(Resource)]
-struct CameraSettings {
+pub struct CameraSettings {
     pub drag_sensitivity: f32,
     pub zoom_sensitivity: f32,
     pub min_zoom: f32,

@@ -19,16 +19,14 @@ pub struct PassiveTreeWrapper {
 }
 
 #[derive(Resource)]
-struct NodeScaling {
-    min_scale: f32,
-    max_scale: f32,
-    base_radius: f32,
+pub struct NodeScaling {
+    pub min_scale: f32,
+    pub max_scale: f32,
+    pub base_radius: f32,
 }
-// Plugin to display nodes
-pub struct PoeVis;
 
 /// Adjust each node’s `Transform.scale` so it doesn’t get too big or too small on screen.
-fn adjust_node_sizes(
+pub fn adjust_node_sizes(
     camera_query: Query<&OrthographicProjection, With<Camera2d>>,
     mut node_query: Query<&mut Transform, With<NodeMarker>>,
 ) {
@@ -51,46 +49,7 @@ fn adjust_node_sizes(
     }
 }
 
-impl Plugin for PoeVis {
-    fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, crate::config::setup_character)
-            .insert_resource(Time::<Fixed>::from_seconds(0.8))
-            .add_systems(
-                FixedUpdate,
-                (pathfinding_system
-                    .run_if(crate::background_services::node_active_changed)
-                    .run_if(crate::background_services::sufficient_active_nodes)
-                    .after(crate::controls::handle_node_clicks)),
-            );
-
-        app.insert_resource(NodeScaling {
-            min_scale: 4.0,    // Nodes can shrink to 50% size
-            max_scale: 8.0,    // Nodes can grow to 200% size
-            base_radius: 60.0, // Should match your node radius
-        })
-        .add_plugins(crate::camera::PoeVisCameraPlugin)
-        .add_systems(PreStartup, init_materials)
-        .add_systems(Startup, (spawn_nodes, spawn_edges, adjust_node_sizes))
-        .add_systems(
-            Update,
-            (
-                crate::controls::handle_node_clicks,
-                crate::background_services::bg_edge_updater,
-                update_materials,
-            ),
-        );
-
-        app.add_systems(
-            Update,
-            (
-                highlight_starting_node,
-                update_materials.after(highlight_starting_node),
-            ),
-        );
-    }
-}
-
-fn spawn_nodes(
+pub fn spawn_nodes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     materials: Res<GameMaterials>,
@@ -113,7 +72,7 @@ fn spawn_nodes(
     }
 }
 
-fn spawn_edges(
+pub fn spawn_edges(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     materials: Res<GameMaterials>,
@@ -169,7 +128,7 @@ pub fn highlight_starting_node(
     }
 }
 // Update materials system
-fn update_materials(
+pub fn update_materials(
     materials: Res<GameMaterials>,
     mut materials_query: ParamSet<(
         Query<(&mut MeshMaterial2d<ColorMaterial>, Option<&NodeActive>), Changed<NodeActive>>,
@@ -223,7 +182,7 @@ pub struct GameMaterials {
     pub purple: Handle<ColorMaterial>,
     pub cyan: Handle<ColorMaterial>,
 }
-fn init_materials(
+pub fn init_materials(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     config: Res<UserConfig>,

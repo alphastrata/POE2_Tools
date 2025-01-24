@@ -6,9 +6,9 @@ use crate::{
     config::UserConfig,
 };
 
-pub struct ControlsPlugin;
+pub struct KeyboardControlsPlugin;
 
-impl Plugin for ControlsPlugin {
+impl Plugin for KeyboardControlsPlugin {
     fn build(&self, app: &mut App) {
         let config: UserConfig = UserConfig::load_from_file("data/user_config.toml");
 
@@ -41,29 +41,6 @@ fn handle_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut camera_query: Query<&mut Transform, With<Camera2d>>,
 ) {
-    // Handle camera movement
-    let mut direction = Vec2::ZERO;
-
-    // Check configured keys for each movement action
-    if check_action(&config, "move_left", &keys) {
-        direction.x -= 1.0;
-    }
-    if check_action(&config, "move_right", &keys) {
-        direction.x += 1.0;
-    }
-    if check_action(&config, "move_up", &keys) {
-        direction.y += 1.0;
-    }
-    if check_action(&config, "move_down", &keys) {
-        direction.y -= 1.0;
-    }
-
-    // Apply camera movement
-    if let Ok(mut transform) = camera_query.get_single_mut() {
-        let speed = 10.0; // Adjust as needed
-        transform.translation += (direction * speed).extend(0.0);
-    }
-
     // Handle other actions
     if check_action_just_pressed(&config, "camera_reset_home", &keys) {
         if let Ok(mut transform) = camera_query.get_single_mut() {
@@ -80,10 +57,13 @@ fn handle_input(
 fn check_action(config: &UserConfig, action: &str, keys: &ButtonInput<KeyCode>) -> bool {
     config
         .controls
-        .get(action).map(|keys_str| keys_str
-                    .iter()
-                    .filter_map(|k| UserConfig::key_from_string(k))
-                    .any(|kc| keys.pressed(kc)))
+        .get(action)
+        .map(|keys_str| {
+            keys_str
+                .iter()
+                .filter_map(|k| UserConfig::key_from_string(k))
+                .any(|kc| keys.pressed(kc))
+        })
         .unwrap_or(false)
 }
 
@@ -95,9 +75,12 @@ fn check_action_just_pressed(
 ) -> bool {
     config
         .controls
-        .get(action).map(|keys_str| keys_str
-                    .iter()
-                    .filter_map(|k| UserConfig::key_from_string(k))
-                    .any(|kc| keys.just_pressed(kc)))
+        .get(action)
+        .map(|keys_str| {
+            keys_str
+                .iter()
+                .filter_map(|k| UserConfig::key_from_string(k))
+                .any(|kc| keys.just_pressed(kc))
+        })
         .unwrap_or(false)
 }
