@@ -24,6 +24,7 @@ pub struct NodeScaling {
     pub max_scale: f32,
     pub base_radius: f32,
     pub hover_multiplier: f32,
+    pub hover_fade_time: f32,
 }
 
 /// Adjust each node’s `Transform.scale` so it doesn’t get too big or too small on screen.

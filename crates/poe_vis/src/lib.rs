@@ -22,6 +22,7 @@ impl Plugin for PoeVis {
             max_scale: 8.0,         // Nodes can grow to 200% size
             base_radius: 60.0,      // Should match your node radius
             hover_multiplier: 1.06, // Nodes that are hovered are increased by %3 of their size
+            hover_fade_time: 0.120,
         });
 
         app.add_systems(
@@ -48,17 +49,15 @@ impl Plugin for PoeVis {
         app.add_systems(
             Update,
             (
-                // highlight
-                crate::nodes::hover::highlight_hovered_inactive_nodes,
-                crate::nodes::hover::highlight_hovered_active_nodes,
-                // cleanups
-                crate::nodes::hover::handle_highlighted_inactive_nodes,
-                crate::nodes::hover::handle_highlighted_active_nodes,
-                crate::nodes::hover::cleanup_inactive_hovers,
-                crate::nodes::hover::cleanup_active_hovers,
-                crate::nodes::hover::revert_active_hovered_nodes,
                 // last
                 crate::nodes::hover::show_node_info,
+                /*  */
+                // .before(crate::nodes::hover::revert_inactive_hovered_nodes)
+                // .before(crate::nodes::hover::revert_active_hovered_nodes)
+                nodes::hover::hover_started,
+                nodes::hover::hover_ended,
+                //
+                crate::nodes::hover::handle_highlighted_active_nodes,
             )
                 .chain(),
         );
