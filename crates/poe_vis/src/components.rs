@@ -8,7 +8,10 @@ pub struct NodeMarker(pub NodeId); // Marker component for nodes
 pub struct EdgeMarker(pub (EdgeId, EdgeId)); // Marker component for nodes
 
 #[derive(Component)]
-pub struct Active(pub bool);
+pub struct NodeActive(pub bool);
+
+#[derive(Component)]
+pub struct EdgeActive(pub bool);
 
 #[derive(Component)]
 pub struct GroupMarker(pub GroupId);
