@@ -6,16 +6,14 @@ pub(crate) struct BGServicesPlugin;
 
 impl Plugin for BGServicesPlugin {
     fn build(&self, app: &mut App) {
-      
-
         app.add_event::<ScaleNode>().add_event::<ColourNode>();
 
         app.add_systems(
             Update,
             //TODO: rate-limiting
             (
-                process_scale_requests,
-                process_colour_change_requests,
+                // process_scale_requests,
+                // process_colour_change_requests,
                 adjust_node_sizes,
             ),
         );
@@ -61,6 +59,8 @@ fn process_colour_change_requests(
     });
 }
 
+/// Adjust each node’s Transform.scale so it doesn’t get too big or too small on screen.
+/// Adjust each node’s Transform.scale based on camera zoom and node scaling constraints.
 fn adjust_node_sizes(
     camera_query: Query<&OrthographicProjection, With<Camera2d>>,
     scaling: Res<NodeScaling>,

@@ -8,6 +8,7 @@ use config::UserConfigPlugin;
 use hotkeys::HotkeysPlugin;
 use init_tree::TreeCanvasPlugin;
 use materials::PoeVisMaterials;
+use mouse::MouseControlsPlugin;
 
 mod background_services;
 mod camera;
@@ -18,6 +19,7 @@ mod consts;
 mod events;
 mod hotkeys;
 mod materials;
+mod mouse;
 mod resources;
 //  mod shaders;
 mod init_tree;
@@ -31,11 +33,12 @@ pub struct PoeVis;
 impl Plugin for PoeVis {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugins((
-            // BGServicesPlugin,
+            BGServicesPlugin,
             PoeVisCameraPlugin,
             TreeCanvasPlugin,
-            // CharacterPlugin,
+            CharacterPlugin,
             PoeVisMaterials,
+            MouseControlsPlugin,
             UserConfigPlugin,
             HotkeysPlugin,
             //  NodeInteractionPlugin,

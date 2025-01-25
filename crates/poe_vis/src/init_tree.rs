@@ -19,9 +19,9 @@ impl Plugin for TreeCanvasPlugin {
         }
 
         app.insert_resource(NodeScaling {
-            min_scale: 4.0,         // Nodes can shrink to 50% size
+            min_scale: 1.0,         // Nodes can shrink to 50% size
             max_scale: 8.0,         // Nodes can grow to 200% size
-            base_radius: 60.0,      // Should match your node radius
+            base_radius: 8.5,       //
             hover_multiplier: 1.06, // Nodes that are hovered are increased by %3 of their size
             hover_fade_time: 0.120,
         });
@@ -29,12 +29,11 @@ impl Plugin for TreeCanvasPlugin {
         let tree = quick_tree();
         log::debug!("Tree parsing complete.");
 
-
         app.insert_resource(PassiveTreeWrapper { tree });
 
         log::debug!("Tree in ECS");
         app.add_systems(Startup, (spawn_nodes, spawn_edges));
-    
+
         log::debug!("TreeCanvas plugin enabled");
     }
 }
