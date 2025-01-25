@@ -25,7 +25,3 @@ toml.workspace = true
 bevy = { workspace = true, features = ["file_watcher"] }
 tracing-subscriber.workspace = true
 # bevy = { workspace = true }
-
-
-[profile.dev]
-opt-level = 3
