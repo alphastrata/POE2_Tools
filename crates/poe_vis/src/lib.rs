@@ -1,8 +1,9 @@
 #![allow(dead_code, unused_imports)]
 use bevy::prelude::*;
 
+use config::UserConfigPlugin;
 use hotkeys::HotkeysPlugin;
-use crate::characters::CharacterPlugin;
+use characters::CharacterPlugin;
 use background_services::BGServicesPlugin;
 use camera::PoeVisCameraPlugin;
 use init_tree::TreeCanvasPlugin;
@@ -35,6 +36,7 @@ impl Plugin for PoeVis {
             // TreeCanvasPlugin,
             CharacterPlugin,
             PoeVisMaterials,
+            UserConfigPlugin,
             HotkeysPlugin,
             //  NodeInteractionPlugin,
 

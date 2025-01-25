@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{components::*, events::*, resources::*};
 
-pub struct BGServicesPlugin;
+pub(crate) struct BGServicesPlugin;
 
 impl Plugin for BGServicesPlugin {
     fn build(&self, app: &mut App) {
