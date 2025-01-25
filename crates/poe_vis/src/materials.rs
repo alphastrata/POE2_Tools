@@ -70,9 +70,7 @@ fn init_materials(
     });
 }
 
-
-
- fn parse_hex_color(col_str: &str) -> Color {
+fn parse_hex_color(col_str: &str) -> Color {
     if col_str.starts_with('#') && col_str.len() == 7 {
         let hex = u32::from_str_radix(&col_str[1..7], 16).unwrap_or(0x808080);
         Color::srgb_u8(

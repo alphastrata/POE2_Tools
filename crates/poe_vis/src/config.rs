@@ -19,7 +19,6 @@ impl Plugin for UserConfigPlugin {
     }
 }
 
-
 impl crate::resources::UserConfig {
     pub fn load_from_file(path: &str) -> Self {
         let config_str = std::fs::read_to_string(path).expect("Unable to read config file");

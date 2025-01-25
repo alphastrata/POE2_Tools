@@ -4,7 +4,7 @@ use poe_tree::calculate_world_position_with_negative_y;
 use crate::materials::GameMaterials;
 use crate::{components::*, resources::*, PassiveTreeWrapper};
 
- pub(crate) struct TreeCanvasPlugin;
+pub(crate) struct TreeCanvasPlugin;
 
 impl Plugin for TreeCanvasPlugin {
     fn build(&self, app: &mut App) {
@@ -24,7 +24,7 @@ impl Plugin for TreeCanvasPlugin {
     }
 }
 
- fn spawn_nodes(
+fn spawn_nodes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     materials: Res<GameMaterials>,
@@ -47,7 +47,7 @@ impl Plugin for TreeCanvasPlugin {
     }
 }
 
- fn spawn_edges(
+fn spawn_edges(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     materials: Res<GameMaterials>,

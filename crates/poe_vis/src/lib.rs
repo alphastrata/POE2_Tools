@@ -1,11 +1,11 @@
 #![allow(dead_code, unused_imports)]
 use bevy::prelude::*;
 
-use config::UserConfigPlugin;
-use hotkeys::HotkeysPlugin;
-use characters::CharacterPlugin;
 use background_services::BGServicesPlugin;
 use camera::PoeVisCameraPlugin;
+use characters::CharacterPlugin;
+use config::UserConfigPlugin;
+use hotkeys::HotkeysPlugin;
 use init_tree::TreeCanvasPlugin;
 use materials::PoeVisMaterials;
 
@@ -23,10 +23,10 @@ mod resources;
 mod init_tree;
 mod overlays_n_popups;
 
-mod nodes;
 mod edges;
+mod nodes;
 
- pub struct PoeVis;
+pub struct PoeVis;
 
 impl Plugin for PoeVis {
     fn build(&self, app: &mut bevy::prelude::App) {
@@ -46,8 +46,8 @@ impl Plugin for PoeVis {
 }
 
 #[derive(Resource)]
- struct PassiveTreeWrapper {
-     tree: poe_tree::PassiveTree,
+struct PassiveTreeWrapper {
+    tree: poe_tree::PassiveTree,
 }
 impl std::ops::Deref for PassiveTreeWrapper {
     type Target = poe_tree::PassiveTree;
