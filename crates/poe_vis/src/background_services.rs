@@ -40,9 +40,7 @@ impl Plugin for BGServicesPlugin {
                 process_node_activations,
                 process_edge_activations,
                 /* Only scan for edges when we KNOW the path is valid */
-                scan_edges_for_updates
-                    .run_if(resource_equals(PathRepairRequired(false)))
-                    .after(validate_paths_between_active_nodes),
+                scan_edges_for_updates.run_if(resource_equals(PathRepairRequired(false))),
                 /* happening all the time with camera moves. */
                 adjust_node_sizes,
                 /* Pretty lightweight, can be spammed.*/
@@ -140,9 +138,7 @@ fn process_edge_activations(
 
 fn scan_edges_for_updates(
     mut edge_activator: EventWriter<EdgeActivationReq>,
-
     haystack: Query<&EdgeMarker, With<EdgeInactive>>,
-
     needles: Query<&NodeMarker, With<NodeActive>>,
 ) {
     let active_nodes: HashSet<NodeId> = needles.into_iter().map(|marker| **marker).collect();
