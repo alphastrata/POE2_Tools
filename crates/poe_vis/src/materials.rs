@@ -2,6 +2,16 @@ use bevy::prelude::*;
 
 use crate::{config::parse_hex_color, resources::UserConfig};
 
+
+pub struct PoeVisMaterials;
+
+impl Plugin for PoeVisMaterials{
+    fn build(&self, app: &mut App) {
+        app.add_systems(PreStartup, init_materials);
+    }
+}
+
+
 #[derive(Resource)]
 pub struct GameMaterials {
     // Node colors
@@ -28,7 +38,7 @@ pub struct GameMaterials {
     pub purple: Handle<ColorMaterial>,
     pub cyan: Handle<ColorMaterial>,
 }
-pub fn init_materials(
+fn init_materials(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     config: Res<UserConfig>,

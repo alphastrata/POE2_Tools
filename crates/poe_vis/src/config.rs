@@ -7,10 +7,6 @@ use crate::{
     resources::{ActiveCharacter, RootNode},
 };
 
-
-
-
-
 // Update color parsing to use non-deprecated methods
 pub fn parse_hex_color(col_str: &str) -> Color {
     if col_str.starts_with('#') && col_str.len() == 7 {
@@ -86,7 +82,6 @@ impl crate::resources::UserConfig {
         }
     }
 }
-
 
 mod tests {
     use crate::resources::UserConfig;
