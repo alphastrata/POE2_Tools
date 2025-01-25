@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::config::parse_hex_color;
+use crate::{config::parse_hex_color, resources::UserConfig};
 
 #[derive(Resource)]
 pub struct GameMaterials {
@@ -31,7 +31,7 @@ pub struct GameMaterials {
 pub fn init_materials(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    config: Res<crate::config::UserConfig>,
+    config: Res<UserConfig>,
 ) {
     commands.insert_resource(GameMaterials {
         // Node materials

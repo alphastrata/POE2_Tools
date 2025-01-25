@@ -11,13 +11,14 @@ impl Plugin for PoeVisCameraPlugin {
         app
             // Configuration resource
             .init_resource::<CameraSettings>()
-            .init_resource::<DragState>() // Add this line
-            // Camera system dependencies
+            .init_resource::<DragState>() 
             .add_systems(Startup, (setup_camera, spawn_debug_text))
             .add_systems(
                 Update,
                 (
-                    camera_drag_system.after(crate::controls::handle_node_clicks),
+                    camera_drag_system
+                    // .after(crate::controls::handle_node_clicks)
+                    ,
                     camera_zoom_system,
                     debug_camera_info,
                 ),

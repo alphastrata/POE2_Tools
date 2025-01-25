@@ -1,136 +1,88 @@
-use bevy::{
-    prelude::*,
-    utils::{HashMap, HashSet},
-};
-use poe_tree::type_wrappings::NodeId;
+use bevy::prelude::*;
 
-use crate::{
-    components::{EdgeActive, EdgeInactive, EdgeMarker, NodeActive, NodeInactive, NodeMarker},
-    nodes::PassiveTreeWrapper,
-};
+use crate::{components::*, events::*, resources::*};
 
-pub fn node_active_changed(query: Query<(), Changed<NodeActive>>) -> bool {
-    !query.is_empty()
-}
+pub struct BGServicesPlugin;
 
-pub fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
-    query.iter().count() >= 2 // Only run if at least 2 nodes are active
-}
+impl Plugin for BGServicesPlugin {
+    fn build(&self, app: &mut App) {
 
-// // Updated edge updater
-// pub fn bg_edge_updater(
-//     node_query: Query<&NodeMarker, With<NodeActive>>,
-//     mut commands: Commands,
-//     edge_query: Query<(Entity, &EdgeMarker)>,
-// ) {
-//     // Get active nodes first
-//     let active_nodes: HashSet<NodeId> = node_query.iter().map(|m| m.0).collect();
+        app.insert_resource(NodeScaling {
+            min_scale: 4.0,         // Nodes can shrink to 50% size
+            max_scale: 8.0,         // Nodes can grow to 200% size
+            base_radius: 60.0,      // Should match your node radius
+            hover_multiplier: 1.06, // Nodes that are hovered are increased by %3 of their size
+            hover_fade_time: 0.120,
+        });
 
-//     // Update edges in a single pass
-//     for (edge_entity, edge_marker) in &edge_query {
-//         let (start, end) = edge_marker.0;
-//         let should_be_active = active_nodes.contains(&start) && active_nodes.contains(&end);
+        app.add_event::<ScaleNode>().add_event::<ColourNode>();
 
-//         // Update edge state
-//         if should_be_active {
-//             commands
-//                 .entity(edge_entity)
-//                 .remove::<EdgeInactive>()
-//                 .insert(EdgeActive);
-//         } else {
-//             commands
-//                 .entity(edge_entity)
-//                 .remove::<EdgeActive>()
-//                 .insert(EdgeInactive);
-//         }
-
-//         // Debug logging
-//         #[cfg(debug_assertions)]
-//         if should_be_active {
-//             log::debug!("Edge activated between {} and {}", start, end);
-//         }
-//     }
-// }
-pub fn bg_edge_updater(
-    node_query: Query<&NodeMarker, With<NodeActive>>,
-    mut commands: Commands,
-    edge_query: Query<(Entity, &EdgeMarker, Option<&EdgeActive>, Option<&EdgeInactive>)>,
-) {
-    // Get all active nodes
-    let active_nodes: HashSet<NodeId> = node_query.iter().map(|m| m.0).collect();
-
-    // Update edges
-    for (edge_entity, edge_marker, is_active, is_inactive) in edge_query.iter() {
-        let (start, end) = edge_marker.0;
-        let should_be_active = active_nodes.contains(&start) && active_nodes.contains(&end);
-
-        match (should_be_active, is_active.is_some(), is_inactive.is_some()) {
-            (true, false, true) => {
-                // Activate the edge
-                commands
-                    .entity(edge_entity)
-                    .remove::<EdgeInactive>()
-                    .insert(EdgeActive);
-            }
-            (false, true, false) => {
-                // Deactivate the edge
-                commands
-                    .entity(edge_entity)
-                    .remove::<EdgeActive>()
-                    .insert(EdgeInactive);
-            }
-            _ => {
-                // No state change needed
-            }
-        }
-
-        // Debug logging
-        #[cfg(debug_assertions)]
-        if should_be_active {
-            log::debug!("Edge activated between {} and {}", start, end);
-        } else {
-            log::debug!("Edge deactivated between {} and {}", start, end);
-        }
+        app.add_systems(
+            Update,
+            //TODO: rate-limiting
+            (
+                process_scale_requests, 
+                process_colour_change_requests, 
+                adjust_node_sizes 
+            ),
+        );
     }
 }
 
+// Conditional Helpers:
+fn node_active_changed(query: Query<(), Changed<NodeActive>>) -> bool {
+    !query.is_empty()
+}
 
-pub fn pathfinding_system(
-    tree: Res<PassiveTreeWrapper>,
-    root: Res<crate::config::RootNode>,
-    character: Res<crate::config::ActiveCharacter>,
-    active_nodes: Query<&NodeMarker, With<NodeActive>>,
-    all_node_entities: Query<(Entity, &NodeMarker)>,
-    mut commands: Commands,
+fn edge_active_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
+    !query.is_empty()
+}
+
+fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
+    query.iter().count() >= 2 // Only run if at least 2 nodes are active
+}
+
+
+// BG SERVICES:
+fn process_scale_requests(
+    mut scale_events: EventReader<ScaleNode>,
+    mut transforms: Query<&mut Transform>,
 ) {
-    let root_id = match root.0 {
-        Some(id) => id,
-        None => return,
-    };
-
-    let active_ids: HashSet<NodeId> = active_nodes.iter().map(|m| m.0).collect();
-    let node_entity_map: HashMap<NodeId, Entity> =
-        all_node_entities.iter().map(|(e, m)| (m.0, e)).collect();
-
-    // Get newly activated nodes not in character data
-    let new_activations: Vec<NodeId> = active_ids
-        .iter()
-        .filter(|id| !character.character.activated_node_ids.contains(id))
-        .copied()
-        .collect();
-
-    for new_node in new_activations {
-        let path = tree.tree.bfs(root_id, new_node);
-
-        for node_id in path {
-            if !active_ids.contains(&node_id) {
-                if let Some(&entity) = node_entity_map.get(&node_id) {
-                    commands
-                        .entity(entity)
-                        .remove::<NodeInactive>()
-                        .insert(NodeActive);
-                }
+    scale_events
+        .read()
+        .for_each(|ScaleNode(entity, new_scale)| {
+            if let Ok(mut t) = transforms.get_mut(*entity) {
+                t.scale = Vec3::splat(*new_scale);
             }
+        });
+}
+
+fn process_colour_change_requests(
+    mut colour_events: EventReader<ColourNode>,
+    mut materials_q: Query<&mut MeshMaterial2d<ColorMaterial>>,
+) {
+    colour_events.read().for_each(|ColourNode(entity, mat)| {
+        if let Ok(mut m) = materials_q.get_mut(*entity) {
+            m.0 = mat.clone_weak();
+        }
+    });
+}
+
+fn adjust_node_sizes(
+    camera_query: Query<&OrthographicProjection, With<Camera2d>>,
+    scaling: Res<NodeScaling>,
+    mut node_query: Query<&mut Transform, With<NodeMarker>>,
+) {
+    if let Ok(projection) = camera_query.get_single() {
+        // Compute zoom-based scaling factor.
+        let zoom_scale = 1.0 / projection.scale;
+        // Clamp the zoom scale to avoid extreme values.
+        let clamped_scale = zoom_scale.clamp(scaling.min_scale, scaling.max_scale);
+
+        // Apply scale adjustment to all nodes.
+        for mut transform in &mut node_query {
+            // Combine base scale with zoom scale.
+            transform.scale = Vec3::splat(scaling.base_radius * clamped_scale);
         }
     }
 }

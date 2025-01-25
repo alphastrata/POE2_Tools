@@ -2,7 +2,10 @@ use bevy::{color::Color, prelude::*};
 use poe_tree::{character::Character, type_wrappings::NodeId};
 use std::collections::HashMap;
 
-use crate::components::{NodeActive, NodeInactive};
+use crate::{
+    components::{NodeActive, NodeInactive},
+    resources::{ActiveCharacter, RootNode},
+};
 
 // Update color parsing to use non-deprecated methods
 pub fn parse_hex_color(col_str: &str) -> Color {
@@ -18,17 +21,7 @@ pub fn parse_hex_color(col_str: &str) -> Color {
     }
 }
 
-#[derive(Debug, serde::Deserialize, Default, Resource)]
-pub struct UserConfig {
-    pub colors: HashMap<String, String>,
-    pub controls: HashMap<String, Vec<String>>,
-
-    #[serde(skip_deserializing)]
-    #[serde(default)]
-    pub character: Character,
-}
-
-impl UserConfig {
+impl crate::resources::UserConfig {
     pub fn load_from_file(path: &str) -> Self {
         let config_str = std::fs::read_to_string(path).expect("Unable to read config file");
         log::trace!("{}", &config_str);
@@ -90,15 +83,6 @@ impl UserConfig {
     }
 }
 
-// Add to your app's resources
-#[derive(Resource, Deref, DerefMut)]
-pub struct ActiveCharacter {
-    pub character: Character,
-}
-
-#[derive(Resource)]
-pub struct RootNode(pub Option<NodeId>);
-
 pub fn setup_character(
     mut commands: Commands,
     all_node_entities: Query<(Entity, &crate::components::NodeMarker)>,
@@ -133,10 +117,10 @@ pub fn setup_character(
 }
 
 mod tests {
+    use crate::resources::UserConfig;
 
     #[test]
     fn can_parse_config() {
-        use crate::config::UserConfig;
         let _config: UserConfig = UserConfig::load_from_file("../../data/user_config.toml");
     }
 }

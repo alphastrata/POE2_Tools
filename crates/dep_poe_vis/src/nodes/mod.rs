@@ -3,11 +3,14 @@ use materials::GameMaterials;
 use poe_tree::{calculate_world_position, PassiveTree};
 
 use crate::components::{
-    EdgeActive, EdgeInactive, EdgeMarker, NodeActive, NodeInactive, NodeMarker,
+    EdgeActive, EdgeInactive, EdgeMarker, NodeActive, NodeInactive, NodeMarker, materials::*
 };
 
 pub mod hover;
-pub mod materials;
+
+
+
+
 
 // Add Resource derive for PassiveTree
 #[derive(Resource, Debug, Clone)]
@@ -24,28 +27,41 @@ pub struct NodeScaling {
     pub hover_fade_time: f32,
 }
 
-/// Adjust each node’s `Transform.scale` so it doesn’t get too big or too small on screen.
+/// Adjust each node’s `Transform.scale` based on camera zoom and node scaling constraints.
 pub fn adjust_node_sizes(
     camera_query: Query<&OrthographicProjection, With<Camera2d>>,
+    scaling: Res<NodeScaling>,
     mut node_query: Query<&mut Transform, With<NodeMarker>>,
 ) {
     if let Ok(projection) = camera_query.get_single() {
-        // By default, a larger `projection.scale` means you are "zoomed out"
-        // so items appear smaller on screen, and vice versa.
+        // Compute zoom-based scaling factor.
+        let zoom_scale = 1.0 / projection.scale;
+        // Clamp the zoom scale to avoid extreme values.
+        let clamped_scale = zoom_scale.clamp(scaling.min_scale, scaling.max_scale);
 
-        // For example, if you want the node scale to be simply the inverse:
-        //   "1.0 / projection.scale"
-        // you can then clamp that to keep it from vanishingly small or huge:
-        let unscaled = 1.0 / projection.scale;
-        let final_scale = unscaled.clamp(0.02, 2.0);
-        // tweak these clamp values to taste
-
+        // Apply scale adjustment to all nodes.
         for mut transform in &mut node_query {
-            transform.scale = Vec3::splat(final_scale);
+            // Combine base scale with zoom scale.
+            transform.scale = Vec3::splat(scaling.base_radius * clamped_scale);
         }
     }
 }
 
+pub fn highlight_starting_node(
+    character: Res<crate::config::ActiveCharacter>,
+    mut commands: Commands,
+    node_query: Query<(Entity, &NodeMarker), With<NodeInactive>>,
+){
+    for (entity, marker) in node_query.iter() {
+        if marker.0 == character.character.starting_node
+            || character.character.activated_node_ids.contains(&marker.0)
+        {
+            commands.entity(entity)
+                .remove::<NodeInactive>()
+                .insert(NodeActive); // no direct transform/material here
+        }
+    }
+}
 pub fn spawn_nodes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -109,27 +125,7 @@ pub fn spawn_edges(
     });
 }
 
-pub fn highlight_starting_node(
-    character: Res<crate::config::ActiveCharacter>,
-    mut commands: Commands,
-    node_query: Query<(Entity, &NodeMarker), With<NodeInactive>>,
-) {
 
-    let to_add = &character.character.activated_node_ids;
-
-    // Find and activate the starting node, and any additional nodes from the character.
-    for (entity, marker) in node_query.iter() {
-// If we found a starting_node, chances are there's more.
-
-        if marker.0 == character.character.starting_node || to_add.contains(&marker.0){
-            commands
-                .entity(entity)
-                .remove::<NodeInactive>()
-                .insert(NodeActive);
-
-        }
-    }
-}
 /// Updates inactive/active nodes' materials and size etc.
 pub fn update_nodes(
     materials: Res<materials::GameMaterials>,
@@ -158,34 +154,3 @@ pub fn update_nodes(
         };
     }
 }
-// pub fn update_edges(
-//     mut commands: Commands,
-//     edge_query: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
-//     node_query: Query<(&NodeMarker, Option<&NodeActive>)>,
-// ) {
-//     let active_nodes: HashSet<poe_tree::type_wrappings::NodeId> =
-//         node_query.iter().filter_map(|(n, active)| active.map(|_| n.0)).collect();
-
-//     edge_query.iter().for_each(|(entity, marker)| {
-//         let start_active = active_nodes.contains(&marker.0.0);
-//         let end_active = active_nodes.contains(&marker.0.1);
-
-        
-//         match (start_active, end_active) {
-//             (true, true) => {
-//                 commands
-//                     .entity(entity)
-//                     .remove::<EdgeInactive>()
-//                     .insert(EdgeActive);
-//                 log::debug!("Edge {:?} activated.", marker.0);
-//             }
-//             _ => {
-//                 commands
-//                     .entity(entity)
-//                     .remove::<EdgeActive>()
-//                     .insert(EdgeInactive);
-//                 log::debug!("Edge {:?} deactivated.", marker.0);
-//             }
-//         }
-//     });
-// }

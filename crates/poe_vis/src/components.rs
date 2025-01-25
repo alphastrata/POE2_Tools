@@ -21,3 +21,13 @@ pub struct EdgeInactive;
 
 #[derive(Component)]
 pub struct GroupMarker(pub GroupId);
+
+
+#[derive(Component)]
+pub struct NodeHoverText;
+
+#[derive(Component)]
+pub struct Hovered {
+    pub timer: bevy::time::Timer,
+    pub base_scale: f32,
+}
