@@ -6,9 +6,9 @@ use tracing_subscriber::{Layer, Registry};
 fn create_custom_layer(_app: &mut App) -> Option<Box<dyn Layer<Registry> + Send + Sync>> {
     Some(
         tracing_subscriber::fmt::Layer::default()
-            .with_file(true)
+            // .with_file(true)
             .with_line_number(true)
-            .with_span_events(FmtSpan::ACTIVE)
+            // .with_span_events(FmtSpan::ACTIVE)
             .boxed(),
     )
 }

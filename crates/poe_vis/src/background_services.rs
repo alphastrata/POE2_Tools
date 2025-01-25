@@ -39,6 +39,10 @@ impl Plugin for BGServicesPlugin {
                 /* Users need to see paths magically illuminate */
                 process_node_activations,
                 process_edge_activations,
+                /* Only scan for edges when we KNOW the path is valid */
+                scan_edges_for_updates
+                    .run_if(resource_equals(PathRepairRequired(false)))
+                    .after(validate_paths_between_active_nodes),
                 /* happening all the time with camera moves. */
                 adjust_node_sizes,
                 /* Pretty lightweight, can be spammed.*/
