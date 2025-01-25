@@ -9,7 +9,6 @@ pub mod pathfinding;
 pub mod skills;
 pub mod stats;
 
-
 pub mod type_wrappings;
 
 use consts::{CHAR_START_NODES, ORBIT_RADII, ORBIT_SLOTS};
@@ -358,7 +357,6 @@ pub fn calculate_world_position(
     )
 }
 
-
 /// Make the world position (wx, wy) for a node.
 pub fn calculate_world_position_with_negative_y(
     group: &coordinates::Group,
@@ -382,7 +380,6 @@ pub fn calculate_world_position_with_negative_y(
         eprintln!("Defaulting to 60 slots.");
         60
     }) as f32;
-
 
     let angle = match slots as u32 {
         16 => {
@@ -415,7 +412,6 @@ pub fn calculate_world_position_with_negative_y(
         -(group.y + radius_value * angle.sin()),
     )
 }
-
 
 #[cfg(test)]
 mod tests {

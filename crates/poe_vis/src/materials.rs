@@ -2,15 +2,13 @@ use bevy::prelude::*;
 
 use crate::{config::parse_hex_color, resources::UserConfig};
 
-
 pub struct PoeVisMaterials;
 
-impl Plugin for PoeVisMaterials{
+impl Plugin for PoeVisMaterials {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, init_materials);
     }
 }
-
 
 #[derive(Resource)]
 pub struct GameMaterials {

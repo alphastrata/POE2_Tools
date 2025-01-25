@@ -1,7 +1,7 @@
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
-use bevy::text::{TextFont, TextLayout}; // Explicit text components
+use bevy::text::{TextFont, TextLayout};
 
 // Plugin definition
 pub struct PoeVisCameraPlugin;
@@ -11,18 +11,17 @@ impl Plugin for PoeVisCameraPlugin {
         app
             // Configuration resource
             .init_resource::<CameraSettings>()
-            .init_resource::<DragState>() 
+            .init_resource::<DragState>()
             .add_systems(Startup, (setup_camera, spawn_debug_text))
             .add_systems(
                 Update,
                 (
-                    camera_drag_system
-                    // .after(crate::controls::handle_node_clicks)
-                    ,
+                    camera_drag_system, // .after(crate::controls::handle_node_clicks)
                     camera_zoom_system,
                     debug_camera_info,
                 ),
             );
+        log::debug!("PoeVisCamera plugin enabled");
     }
 }
 
@@ -138,7 +137,7 @@ fn spawn_debug_text(mut commands: Commands) {
 }
 
 // TODO: make JumpCameraTo Event
-fn jump_camera_to(){
+fn jump_camera_to() {
     todo!()
 }
 

@@ -22,7 +22,6 @@ pub struct EdgeInactive;
 #[derive(Component)]
 pub struct GroupMarker(pub GroupId);
 
-
 #[derive(Component)]
 pub struct NodeHoverText;
 

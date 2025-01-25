@@ -1,19 +1,18 @@
-use bevy::{color::Color, prelude::*, utils::HashMap};
-use poe_tree::{character::Character, type_wrappings::NodeId};
 use crate::{
     components::{NodeActive, NodeInactive},
     resources::{ActiveCharacter, RootNode},
 };
-
-
+use bevy::{color::Color, prelude::*, utils::HashMap};
+use poe_tree::{character::Character, type_wrappings::NodeId};
 
 pub struct CharacterPlugin;
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, (setup_character));
+
+        log::debug!("CharacterPlugin plugin enabled");
     }
 }
-
 
 pub fn setup_character(
     mut commands: Commands,

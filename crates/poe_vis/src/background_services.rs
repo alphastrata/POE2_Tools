@@ -6,7 +6,6 @@ pub struct BGServicesPlugin;
 
 impl Plugin for BGServicesPlugin {
     fn build(&self, app: &mut App) {
-
         app.insert_resource(NodeScaling {
             min_scale: 4.0,         // Nodes can shrink to 50% size
             max_scale: 8.0,         // Nodes can grow to 200% size
@@ -21,11 +20,12 @@ impl Plugin for BGServicesPlugin {
             Update,
             //TODO: rate-limiting
             (
-                process_scale_requests, 
-                process_colour_change_requests, 
-                adjust_node_sizes 
+                process_scale_requests,
+                process_colour_change_requests,
+                adjust_node_sizes,
             ),
         );
+        log::debug!("BGServices plugin enabled");
     }
 }
 
@@ -41,7 +41,6 @@ fn edge_active_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
 fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
     query.iter().count() >= 2 // Only run if at least 2 nodes are active
 }
-
 
 // BG SERVICES:
 fn process_scale_requests(

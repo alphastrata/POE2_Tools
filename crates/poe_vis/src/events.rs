@@ -2,7 +2,6 @@
 use bevy::prelude::*;
 use poe_tree::type_wrappings::*;
 
-
 #[derive(Event)]
 pub struct ScaleNode(pub Entity, pub f32);
 

@@ -6,21 +6,20 @@ use crate::{components::*, resources::*, PassiveTreeWrapper};
 
 pub struct TreeCanvasPlugin;
 
-
-impl Plugin for TreeCanvasPlugin{
+impl Plugin for TreeCanvasPlugin {
     fn build(&self, app: &mut App) {
         fn quick_tree() -> poe_tree::PassiveTree {
             let file = std::fs::File::open("data/POE2_Tree.json").unwrap();
             let reader = std::io::BufReader::new(file);
             let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
             let mut tree = poe_tree::PassiveTree::from_value(&tree_data).unwrap();
-        
+
             tree.remove_hidden();
             tree
         }
 
         let tree = quick_tree();
-        app.insert_resource(PassiveTreeWrapper{tree});
+        app.insert_resource(PassiveTreeWrapper { tree });
         app.add_systems(Startup, (spawn_nodes, spawn_edges));
     }
 }
@@ -65,9 +64,13 @@ pub fn spawn_edges(
             tree.tree.groups.get(&end_node.parent).unwrap(),
         );
 
-        let start_pos =
-        calculate_world_position_with_negative_y(start_group, start_node.radius, start_node.position);
-        let end_pos = calculate_world_position_with_negative_y(end_group, end_node.radius, end_node.position);
+        let start_pos = calculate_world_position_with_negative_y(
+            start_group,
+            start_node.radius,
+            start_node.position,
+        );
+        let end_pos =
+            calculate_world_position_with_negative_y(end_group, end_node.radius, end_node.position);
         let start = Vec2::new(start_pos.0, start_pos.1);
         let end = Vec2::new(end_pos.0, end_pos.1);
 

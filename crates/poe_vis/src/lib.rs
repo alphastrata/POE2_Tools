@@ -1,10 +1,10 @@
 use bevy::prelude::{Plugin, Resource};
 
-use materials::PoeVisMaterials;
 use crate::characters::CharacterPlugin;
 use background_services::BGServicesPlugin;
 use camera::PoeVisCameraPlugin;
 use init_tree::TreeCanvasPlugin;
+use materials::PoeVisMaterials;
 
 pub mod background_services;
 pub mod camera;
@@ -29,9 +29,9 @@ impl Plugin for PoeVis {
         app.add_plugins((
             BGServicesPlugin,
             PoeVisCameraPlugin,
-            TreeCanvasPlugin,
+            // TreeCanvasPlugin,
             CharacterPlugin,
-            PoeVisMaterials,
+            // PoeVisMaterials,
             //  NodeInteractionPlugin,
 
             //  HotkeysPlugin,
