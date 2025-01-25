@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{input::common_conditions, prelude::*};
 
 pub mod background_services;
 pub mod camera;
@@ -39,10 +39,14 @@ impl Plugin for PoeVis {
             (
                 // nodes::adjust_node_sizes,
                 crate::controls::handle_node_clicks,
-                crate::background_services::bg_edge_updater,
-                nodes::update_nodes.after(                crate::controls::handle_node_clicks,
-                ),
-                nodes::update_edges.after( nodes::update_nodes),
+                nodes::update_nodes.after(crate::controls::handle_node_clicks),
+                crate::background_services::bg_edge_updater
+                    .after(nodes::update_nodes)
+                    // .run_if(common_conditions::input_just_released(MouseButton::Left))
+                    
+                    
+                    //
+                    ,
                 nodes::highlight_starting_node,
             ),
         );

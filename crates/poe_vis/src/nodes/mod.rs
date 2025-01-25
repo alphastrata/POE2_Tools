@@ -158,32 +158,34 @@ pub fn update_nodes(
         };
     }
 }
-pub fn update_edges(
-    mut commands: Commands,
-    edge_query: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
-    node_query: Query<(&NodeMarker, Option<&NodeActive>)>,
-) {
-    let active_nodes: HashSet<poe_tree::type_wrappings::NodeId> =
-        node_query.into_iter().map(|(n, _)| n.0).collect();
+// pub fn update_edges(
+//     mut commands: Commands,
+//     edge_query: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
+//     node_query: Query<(&NodeMarker, Option<&NodeActive>)>,
+// ) {
+//     let active_nodes: HashSet<poe_tree::type_wrappings::NodeId> =
+//         node_query.iter().filter_map(|(n, active)| active.map(|_| n.0)).collect();
 
-    for (entity, marker) in edge_query.iter() {
-        let start_active = active_nodes.contains(&marker.0.0);
-        let end_active = active_nodes.contains(&marker.0.1);
+//     edge_query.iter().for_each(|(entity, marker)| {
+//         let start_active = active_nodes.contains(&marker.0.0);
+//         let end_active = active_nodes.contains(&marker.0.1);
 
-        match (start_active, end_active) {
-            (true, true) => {
-                commands
-                    .entity(entity)
-                    .remove::<EdgeInactive>()
-                    .insert(EdgeActive);
-            }
-
-            _ => {
-                commands
-                    .entity(entity)
-                    .remove::<EdgeActive>()
-                    .insert(EdgeInactive);
-            }
-        }
-    }
-}
+        
+//         match (start_active, end_active) {
+//             (true, true) => {
+//                 commands
+//                     .entity(entity)
+//                     .remove::<EdgeInactive>()
+//                     .insert(EdgeActive);
+//                 log::debug!("Edge {:?} activated.", marker.0);
+//             }
+//             _ => {
+//                 commands
+//                     .entity(entity)
+//                     .remove::<EdgeActive>()
+//                     .insert(EdgeInactive);
+//                 log::debug!("Edge {:?} deactivated.", marker.0);
+//             }
+//         }
+//     });
+// }

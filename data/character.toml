@@ -1,7 +1,7 @@
 #$ data/character.toml
 character_class = "Monk"
 name = "jengablox"
-activated_node_ids = [30555, 49046, 53960, 10364, 55342, 17248]
+activated_node_ids = [30555, 53960, 10364, 55342, 17248]
 date_created = "1970-01-01T00:00:00Z"
 level = 6
 quest_passive_skills = 0

@@ -17,40 +17,83 @@ pub fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> b
     query.iter().count() >= 2 // Only run if at least 2 nodes are active
 }
 
-// Updated edge updater
+// // Updated edge updater
+// pub fn bg_edge_updater(
+//     node_query: Query<&NodeMarker, With<NodeActive>>,
+//     mut commands: Commands,
+//     edge_query: Query<(Entity, &EdgeMarker)>,
+// ) {
+//     // Get active nodes first
+//     let active_nodes: HashSet<NodeId> = node_query.iter().map(|m| m.0).collect();
+
+//     // Update edges in a single pass
+//     for (edge_entity, edge_marker) in &edge_query {
+//         let (start, end) = edge_marker.0;
+//         let should_be_active = active_nodes.contains(&start) && active_nodes.contains(&end);
+
+//         // Update edge state
+//         if should_be_active {
+//             commands
+//                 .entity(edge_entity)
+//                 .remove::<EdgeInactive>()
+//                 .insert(EdgeActive);
+//         } else {
+//             commands
+//                 .entity(edge_entity)
+//                 .remove::<EdgeActive>()
+//                 .insert(EdgeInactive);
+//         }
+
+//         // Debug logging
+//         #[cfg(debug_assertions)]
+//         if should_be_active {
+//             log::debug!("Edge activated between {} and {}", start, end);
+//         }
+//     }
+// }
 pub fn bg_edge_updater(
     node_query: Query<&NodeMarker, With<NodeActive>>,
     mut commands: Commands,
-    edge_query: Query<(Entity, &EdgeMarker)>,
+    edge_query: Query<(Entity, &EdgeMarker, Option<&EdgeActive>, Option<&EdgeInactive>)>,
 ) {
-    // Get active nodes first
+    // Get all active nodes
     let active_nodes: HashSet<NodeId> = node_query.iter().map(|m| m.0).collect();
 
-    // Update edges in a single pass
-    for (edge_entity, edge_marker) in &edge_query {
+    // Update edges
+    for (edge_entity, edge_marker, is_active, is_inactive) in edge_query.iter() {
         let (start, end) = edge_marker.0;
         let should_be_active = active_nodes.contains(&start) && active_nodes.contains(&end);
 
-        // Update edge state
-        if should_be_active {
-            commands
-                .entity(edge_entity)
-                .remove::<EdgeInactive>()
-                .insert(EdgeActive);
-        } else {
-            commands
-                .entity(edge_entity)
-                .remove::<EdgeActive>()
-                .insert(EdgeInactive);
+        match (should_be_active, is_active.is_some(), is_inactive.is_some()) {
+            (true, false, true) => {
+                // Activate the edge
+                commands
+                    .entity(edge_entity)
+                    .remove::<EdgeInactive>()
+                    .insert(EdgeActive);
+            }
+            (false, true, false) => {
+                // Deactivate the edge
+                commands
+                    .entity(edge_entity)
+                    .remove::<EdgeActive>()
+                    .insert(EdgeInactive);
+            }
+            _ => {
+                // No state change needed
+            }
         }
 
         // Debug logging
         #[cfg(debug_assertions)]
         if should_be_active {
             log::debug!("Edge activated between {} and {}", start, end);
+        } else {
+            log::debug!("Edge deactivated between {} and {}", start, end);
         }
     }
 }
+
 
 pub fn pathfinding_system(
     tree: Res<PassiveTreeWrapper>,
