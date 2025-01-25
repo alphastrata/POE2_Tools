@@ -85,3 +85,6 @@ fn adjust_node_sizes(
         }
     }
 }
+
+
+fn validate_path(){todo!()}

@@ -19,19 +19,6 @@ impl Plugin for UserConfigPlugin {
     }
 }
 
-// Update color parsing to use non-deprecated methods
-pub fn parse_hex_color(col_str: &str) -> Color {
-    if col_str.starts_with('#') && col_str.len() == 7 {
-        let hex = u32::from_str_radix(&col_str[1..7], 16).unwrap_or(0x808080);
-        Color::srgb_u8(
-            ((hex >> 16) & 0xFF) as u8,
-            ((hex >> 8) & 0xFF) as u8,
-            (hex & 0xFF) as u8,
-        )
-    } else {
-        Color::srgb(0.48, 0.48, 0.48) // Fallback color (gray)
-    }
-}
 
 impl crate::resources::UserConfig {
     pub fn load_from_file(path: &str) -> Self {

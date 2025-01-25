@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{config::parse_hex_color, resources::UserConfig};
+use crate::resources::UserConfig;
 
 pub struct PoeVisMaterials;
 
@@ -68,4 +68,19 @@ fn init_materials(
         purple: materials.add(parse_hex_color(&config.colors["purple"])),
         cyan: materials.add(parse_hex_color(&config.colors["cyan"])),
     });
+}
+
+
+
+ fn parse_hex_color(col_str: &str) -> Color {
+    if col_str.starts_with('#') && col_str.len() == 7 {
+        let hex = u32::from_str_radix(&col_str[1..7], 16).unwrap_or(0x808080);
+        Color::srgb_u8(
+            ((hex >> 16) & 0xFF) as u8,
+            ((hex >> 8) & 0xFF) as u8,
+            (hex & 0xFF) as u8,
+        )
+    } else {
+        Color::srgb(0.48, 0.48, 0.48) // Fallback color (gray)
+    }
 }

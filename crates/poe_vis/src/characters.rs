@@ -46,3 +46,5 @@ pub fn setup_character(
     // Store character as resource
     commands.insert_resource(ActiveCharacter { character });
 }
+
+

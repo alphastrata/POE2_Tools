@@ -1,34 +1,34 @@
 #![allow(dead_code, unused_imports)]
+use bevy::prelude::*;
 
-use bevy::prelude::{Plugin, Resource};
 use hotkeys::HotkeysPlugin;
-
 use crate::characters::CharacterPlugin;
 use background_services::BGServicesPlugin;
 use camera::PoeVisCameraPlugin;
 use init_tree::TreeCanvasPlugin;
 use materials::PoeVisMaterials;
 
-pub mod background_services;
-pub mod camera;
-pub mod characters;
-pub mod components;
-pub mod config;
-pub mod events;
-pub mod hotkeys;
-pub mod materials;
-pub mod consts;
-pub mod resources;
-// pub mod shaders;
-pub mod init_tree;
-pub mod overlays_n_popups;
+mod background_services;
+mod camera;
+mod characters;
+mod components;
+mod config;
+mod consts;
+mod events;
+mod hotkeys;
+mod materials;
+mod resources;
+//  mod shaders;
+mod init_tree;
+mod overlays_n_popups;
 
-pub struct PoeVis;
+mod nodes;
+mod edges;
+
+ pub struct PoeVis;
 
 impl Plugin for PoeVis {
     fn build(&self, app: &mut bevy::prelude::App) {
-        
-
         app.add_plugins((
             BGServicesPlugin,
             PoeVisCameraPlugin,
@@ -38,15 +38,14 @@ impl Plugin for PoeVis {
             HotkeysPlugin,
             //  NodeInteractionPlugin,
 
-             
             // ShadersPlugin
         ));
     }
 }
 
 #[derive(Resource)]
-pub struct PassiveTreeWrapper {
-    pub tree: poe_tree::PassiveTree,
+ struct PassiveTreeWrapper {
+     tree: poe_tree::PassiveTree,
 }
 impl std::ops::Deref for PassiveTreeWrapper {
     type Target = poe_tree::PassiveTree;
