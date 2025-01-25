@@ -28,7 +28,7 @@ pub fn handle_node_clicks(
     >,
 ) {
     for event in click_events.read() {
-        if let Ok((entity, marker, inactive, active)) = nodes_query.get(event.target) {
+        if let Ok((entity, _marker, inactive, active)) = nodes_query.get(event.target) {
             drag_state.active = false; // so that we don't mess up ppl's camera when activating/deactivating nodes.
             match (inactive, active) {
                 (Some(_), None) => {
