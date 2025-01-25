@@ -97,7 +97,7 @@ fn spawn_edges(
         commands.spawn((
             Mesh2d(meshes.add(Rectangle::new(width, height))),
             MeshMaterial2d(materials.edge_base.clone()),
-            EdgeMarker((edge.start, edge.end)),
+            EdgeMarker(edge.start, edge.end),
             Transform::from_translation(midpoint.extend(-0.01))
                 .with_rotation(Quat::from_rotation_z(angle)),
             EdgeInactive,

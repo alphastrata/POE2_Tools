@@ -1,11 +1,17 @@
-use bevy::prelude::Component;
+use bevy::prelude::{Component, Deref, DerefMut};
 use poe_tree::type_wrappings::{GroupId, NodeId};
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct NodeMarker(pub NodeId); // Marker component for nodes
 
 #[derive(Component)]
-pub struct EdgeMarker(pub (NodeId, NodeId)); // Marker component for nodes
+pub struct EdgeMarker(pub NodeId, pub NodeId); // Marker component for nodes
+
+impl EdgeMarker {
+    pub(crate) fn as_tuple(&self) -> (NodeId, NodeId) {
+        (self.0, self.1)
+    }
+}
 
 #[derive(Component)]
 pub struct NodeActive;

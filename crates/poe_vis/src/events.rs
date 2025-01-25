@@ -1,27 +1,38 @@
-// events.rs
+//!
+//! Events are usually responded to by the background_services.rs code, so thats where they're all added.
+//!
+use bevy::prelude::Deref;
 use bevy::prelude::*;
 use poe_tree::type_wrappings::*;
 
 #[derive(Event)]
-pub struct ScaleNode(pub Entity, pub f32);
+pub struct NodeScaleReq(pub Entity, pub f32);
 
 #[derive(Event)]
-pub struct ColourNode(pub Entity, pub Handle<ColorMaterial>);
+pub struct NodeColourReq(pub Entity, pub Handle<ColorMaterial>);
+
+#[derive(Event, Deref)]
+pub struct NodeActivationReq(pub NodeId);
 
 #[derive(Event)]
-pub struct ActivateNode(NodeId);
+pub struct EdgeActivationReq(pub EdgeId, pub EdgeId);
+
+impl EdgeActivationReq {
+    pub(crate) fn as_tuple(&self) -> (EdgeId, EdgeId) {
+        (self.0, self.1)
+    }
+}
+
+#[derive(Event, Deref)]
+pub struct NodeDeactivationReq(pub NodeId);
+
+#[derive(Event, Deref)]
+pub struct EdgeDeactivationReq(pub EdgeId);
 
 #[derive(Event)]
-pub struct ActivateEdge(EdgeId);
-
+pub struct LoadCharacterReq;
 #[derive(Event)]
-pub struct DeactivateNode(NodeId);
+pub struct SaveCharacterReq;
 
-#[derive(Event)]
-pub struct DeactivateEdge(EdgeId);
-
-pub struct LoadCharacter;
-pub struct SaveCharacter;
-
-#[derive(Event)]
-pub struct MoveCameraReq(Vec3);
+#[derive(Event, Deref)]
+pub struct MoveCameraReq(pub Vec3);
