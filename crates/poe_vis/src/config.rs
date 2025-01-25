@@ -91,7 +91,7 @@ impl UserConfig {
 }
 
 // Add to your app's resources
-#[derive(Resource)]
+#[derive(Resource, Deref, DerefMut)]
 pub struct ActiveCharacter {
     pub character: Character,
 }

@@ -32,7 +32,7 @@ impl Plugin for PoeVis {
                 .run_if(crate::background_services::sufficient_active_nodes)
                 .after(crate::controls::handle_node_clicks),
         )
-        .add_systems(PreStartup, nodes::init_materials)
+        .add_systems(PreStartup, crate::nodes::materials::init_materials)
         .add_systems(Startup, (nodes::spawn_nodes, nodes::spawn_edges))
         .add_systems(
             Update,
@@ -40,7 +40,9 @@ impl Plugin for PoeVis {
                 // nodes::adjust_node_sizes,
                 crate::controls::handle_node_clicks,
                 crate::background_services::bg_edge_updater,
-                nodes::update_materials,
+                nodes::update_nodes.after(                crate::controls::handle_node_clicks,
+                ),
+                nodes::update_edges.after( nodes::update_nodes),
                 nodes::highlight_starting_node,
             ),
         );

@@ -2,7 +2,6 @@ use super::{GameMaterials, NodeScaling};
 use crate::components::{NodeActive, NodeMarker};
 use crate::nodes::PassiveTreeWrapper;
 use bevy::prelude::*;
-use bevy::winit::cursor;
 
 // -------------------------------------------------------------------
 // Components
@@ -172,13 +171,11 @@ pub fn show_node_info(
 
     // Update the text content if we found information
     if let Some(info) = found_info {
-        log::debug!("Setting text to: {}", info);
         text.0 = info;
     }
 
     // Update the node's position in screen space
     if let Some(cursor_pos) = windows.single().cursor_position() {
-        log::debug!("Cursor Position: {:?}", cursor_pos);
 
         node.left = Val::Px(cursor_pos.x);
         node.top = Val::Px(cursor_pos.y);

@@ -136,6 +136,11 @@ fn spawn_debug_text(mut commands: Commands) {
     ));
 }
 
+// TODO: make JumpCameraTo Event
+fn jump_camera_to(){
+    todo!()
+}
+
 fn debug_camera_info(
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform, &OrthographicProjection)>,

@@ -1,16 +1,13 @@
-use bevy::prelude::*;
-use poe_tree::calculate_world_position;
-use poe_tree::PassiveTree;
+use bevy::{prelude::*, utils::HashSet};
+use materials::GameMaterials;
+use poe_tree::{calculate_world_position, PassiveTree};
 
-use crate::components::EdgeActive;
-use crate::components::EdgeInactive;
-use crate::components::EdgeMarker;
-use crate::components::NodeActive;
-use crate::components::NodeInactive;
-use crate::components::NodeMarker;
-use crate::config::parse_hex_color;
-use crate::config::UserConfig;
+use crate::components::{
+    EdgeActive, EdgeInactive, EdgeMarker, NodeActive, NodeInactive, NodeMarker,
+};
+
 pub mod hover;
+pub mod materials;
 
 // Add Resource derive for PassiveTree
 #[derive(Resource, Debug, Clone)]
@@ -52,7 +49,7 @@ pub fn adjust_node_sizes(
 pub fn spawn_nodes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    materials: Res<GameMaterials>,
+    materials: Res<materials::GameMaterials>,
     tree: Res<PassiveTreeWrapper>,
     scaling: Res<NodeScaling>,
 ) {
@@ -117,19 +114,25 @@ pub fn highlight_starting_node(
     mut commands: Commands,
     node_query: Query<(Entity, &NodeMarker), With<NodeInactive>>,
 ) {
-    // Find and activate the starting node
+
+    let to_add = &character.character.activated_node_ids;
+
+    // Find and activate the starting node, and any additional nodes from the character.
     for (entity, marker) in node_query.iter() {
-        if marker.0 == character.character.starting_node {
+// If we found a starting_node, chances are there's more.
+
+        if marker.0 == character.character.starting_node || to_add.contains(&marker.0){
             commands
                 .entity(entity)
                 .remove::<NodeInactive>()
                 .insert(NodeActive);
+
         }
     }
 }
-// Update materials system
-pub fn update_materials(
-    materials: Res<GameMaterials>,
+/// Updates inactive/active nodes' materials and size etc.
+pub fn update_nodes(
+    materials: Res<materials::GameMaterials>,
     mut materials_query: ParamSet<(
         Query<(&mut MeshMaterial2d<ColorMaterial>, Option<&NodeActive>), Changed<NodeActive>>,
         Query<(&mut MeshMaterial2d<ColorMaterial>, Option<&EdgeActive>), Changed<EdgeActive>>,
@@ -155,61 +158,32 @@ pub fn update_materials(
         };
     }
 }
-
-#[derive(Resource)]
-pub struct GameMaterials {
-    // Node colors
-    pub node_base: Handle<ColorMaterial>,
-    pub node_attack: Handle<ColorMaterial>,
-    pub node_mana: Handle<ColorMaterial>,
-    pub node_dexterity: Handle<ColorMaterial>,
-    pub node_intelligence: Handle<ColorMaterial>,
-    pub node_strength: Handle<ColorMaterial>,
-    pub node_activated: Handle<ColorMaterial>,
-
-    // Edge colors
-    pub edge_base: Handle<ColorMaterial>,
-    pub edge_activated: Handle<ColorMaterial>,
-
-    // UI colors
-    pub background: Handle<ColorMaterial>,
-    pub foreground: Handle<ColorMaterial>,
-    pub red: Handle<ColorMaterial>,
-    pub orange: Handle<ColorMaterial>,
-    pub yellow: Handle<ColorMaterial>,
-    pub green: Handle<ColorMaterial>,
-    pub blue: Handle<ColorMaterial>,
-    pub purple: Handle<ColorMaterial>,
-    pub cyan: Handle<ColorMaterial>,
-}
-pub fn init_materials(
+pub fn update_edges(
     mut commands: Commands,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    config: Res<UserConfig>,
+    edge_query: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
+    node_query: Query<(&NodeMarker, Option<&NodeActive>)>,
 ) {
-    commands.insert_resource(GameMaterials {
-        // Node materials
-        node_base: materials.add(parse_hex_color(&config.colors["all_nodes"])),
-        node_attack: materials.add(parse_hex_color(&config.colors["attack"])),
-        node_mana: materials.add(parse_hex_color(&config.colors["mana"])),
-        node_dexterity: materials.add(parse_hex_color(&config.colors["dexterity"])),
-        node_intelligence: materials.add(parse_hex_color(&config.colors["intelligence"])),
-        node_strength: materials.add(parse_hex_color(&config.colors["strength"])),
-        node_activated: materials.add(parse_hex_color(&config.colors["activated_nodes"])),
+    let active_nodes: HashSet<poe_tree::type_wrappings::NodeId> =
+        node_query.into_iter().map(|(n, _)| n.0).collect();
 
-        // Edge materials
-        edge_base: materials.add(parse_hex_color(&config.colors["all_nodes"])),
-        edge_activated: materials.add(parse_hex_color(&config.colors["activated_edges"])),
+    for (entity, marker) in edge_query.iter() {
+        let start_active = active_nodes.contains(&marker.0.0);
+        let end_active = active_nodes.contains(&marker.0.1);
 
-        // UI materials
-        background: materials.add(parse_hex_color(&config.colors["background"])),
-        foreground: materials.add(parse_hex_color(&config.colors["foreground"])),
-        red: materials.add(parse_hex_color(&config.colors["red"])),
-        orange: materials.add(parse_hex_color(&config.colors["orange"])),
-        yellow: materials.add(parse_hex_color(&config.colors["yellow"])),
-        green: materials.add(parse_hex_color(&config.colors["green"])),
-        blue: materials.add(parse_hex_color(&config.colors["blue"])),
-        purple: materials.add(parse_hex_color(&config.colors["purple"])),
-        cyan: materials.add(parse_hex_color(&config.colors["cyan"])),
-    });
+        match (start_active, end_active) {
+            (true, true) => {
+                commands
+                    .entity(entity)
+                    .remove::<EdgeInactive>()
+                    .insert(EdgeActive);
+            }
+
+            _ => {
+                commands
+                    .entity(entity)
+                    .remove::<EdgeActive>()
+                    .insert(EdgeInactive);
+            }
+        }
+    }
 }
