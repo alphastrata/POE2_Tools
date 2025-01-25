@@ -27,6 +27,8 @@ impl Plugin for BGServicesPlugin {
             .add_event::<NodeActivationReq>()
             .add_event::<NodeColourReq>()
             .add_event::<NodeScaleReq>()
+            .add_event::<NodeDeactivationReq>()
+            .add_event::<EdgeDeactivationReq>()
             //spacing..
             ;
 

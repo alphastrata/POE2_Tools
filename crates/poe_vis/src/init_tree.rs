@@ -19,9 +19,9 @@ impl Plugin for TreeCanvasPlugin {
         }
 
         app.insert_resource(NodeScaling {
-            min_scale: 1.0,         // Nodes can shrink to 50% size
-            max_scale: 8.0,         // Nodes can grow to 200% size
-            base_radius: 8.5,       //
+            min_scale: 1.0,         // Nodes can shrink
+            max_scale: 8.0,         // Nodes can grow
+            base_radius: 7.6,       //
             hover_multiplier: 1.06, // Nodes that are hovered are increased by %3 of their size
             hover_fade_time: 0.120,
         });

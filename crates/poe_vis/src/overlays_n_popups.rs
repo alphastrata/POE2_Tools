@@ -2,7 +2,15 @@ use bevy::prelude::*;
 
 use crate::{components::*, PassiveTreeWrapper};
 
-pub fn show_node_info(
+pub struct OverlaysAndPopupsPlugin;
+impl Plugin for OverlaysAndPopupsPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, show_node_info)
+            .add_systems(Startup, spawn_hover_text);
+    }
+}
+
+fn show_node_info(
     windows: Query<&Window>,
     hovered: Query<(&Hovered, &NodeMarker, Option<&NodeActive>)>,
     mut hover_text_query: Query<(&mut Node, &mut Text), With<NodeHoverText>>,
@@ -38,7 +46,7 @@ pub fn show_node_info(
     }
 }
 
-pub fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         // The text component
         Text::new(""),
