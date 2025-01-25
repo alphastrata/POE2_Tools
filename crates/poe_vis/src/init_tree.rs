@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use poe_tree::calculate_world_position_with_negative_y;
 
+use crate::consts::{EDGE_PLACEMENT_Z_IDX, NODE_PLACEMENT_Z_IDX};
 use crate::materials::GameMaterials;
 use crate::{components::*, resources::*, PassiveTreeWrapper};
 
@@ -54,7 +55,7 @@ fn spawn_nodes(
         commands.spawn((
             Mesh2d(meshes.add(Circle::new(node_radius))),
             MeshMaterial2d(materials.node_base.clone()),
-            Transform::from_translation(Vec3::new(x, y, 0.0)),
+            Transform::from_translation(Vec3::new(x, y, NODE_PLACEMENT_Z_IDX)),
             NodeMarker(node.node_id),
             NodeInactive,
         ));
@@ -98,7 +99,7 @@ fn spawn_edges(
             Mesh2d(meshes.add(Rectangle::new(width, height))),
             MeshMaterial2d(materials.edge_base.clone()),
             EdgeMarker(edge.start, edge.end),
-            Transform::from_translation(midpoint.extend(-0.01))
+            Transform::from_translation(midpoint.extend(EDGE_PLACEMENT_Z_IDX))
                 .with_rotation(Quat::from_rotation_z(angle)),
             EdgeInactive,
         ));

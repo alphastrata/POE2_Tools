@@ -294,14 +294,14 @@ fn validate_paths_between_active_nodes(
 ) {
     let active_nodes: Vec<_> = query.iter().map(|m| m.0).collect();
     let active_and_validly_pathed =
-        find_all_paths(tree, &active_nodes, &root_node, path_needs_repair);
+        validate_path_to_root(tree, &active_nodes, &root_node, path_needs_repair);
 
     active_and_validly_pathed.into_iter().for_each(|an| {
         activate_req.send(NodeActivationReq(an));
     });
 }
 
-fn find_all_paths(
+fn validate_path_to_root(
     tree: Res<PassiveTreeWrapper>,
     active_nodes: &[NodeId],
     root_node: &RootNode,
