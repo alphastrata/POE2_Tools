@@ -8,9 +8,7 @@ pub struct PoeVisCameraPlugin;
 
 impl Plugin for PoeVisCameraPlugin {
     fn build(&self, app: &mut App) {
-        app
-            // Configuration resource
-            .init_resource::<CameraSettings>()
+        app.init_resource::<CameraSettings>()
             .init_resource::<DragState>()
             .add_systems(Startup, (setup_camera, spawn_debug_text))
             .add_systems(

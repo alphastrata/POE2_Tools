@@ -4,8 +4,20 @@ use std::collections::HashMap;
 
 use crate::{
     components::{NodeActive, NodeInactive},
-    resources::{ActiveCharacter, RootNode},
+    resources::{ActiveCharacter, RootNode, UserConfig},
 };
+
+pub struct UserConfigPlugin;
+
+impl Plugin for UserConfigPlugin {
+    fn build(&self, app: &mut App) {
+        let uc = UserConfig::load_from_file("data/user_config.toml");
+
+        app.insert_resource(uc);
+
+        log::debug!("UserConfig plugin enabled")
+    }
+}
 
 // Update color parsing to use non-deprecated methods
 pub fn parse_hex_color(col_str: &str) -> Color {
@@ -27,7 +39,6 @@ impl crate::resources::UserConfig {
         log::trace!("{}", &config_str);
         toml::from_str(&config_str).unwrap()
     }
-
     pub fn key_from_string(key_str: &str) -> Option<KeyCode> {
         match key_str.to_lowercase().as_str() {
             // Alphabet keys

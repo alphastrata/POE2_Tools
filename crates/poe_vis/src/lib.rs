@@ -31,7 +31,7 @@ impl Plugin for PoeVis {
             PoeVisCameraPlugin,
             // TreeCanvasPlugin,
             CharacterPlugin,
-            // PoeVisMaterials,
+            PoeVisMaterials,
             //  NodeInteractionPlugin,
 
             //  HotkeysPlugin,

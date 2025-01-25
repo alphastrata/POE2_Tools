@@ -13,14 +13,10 @@ fn quick_tree() -> poe_tree::PassiveTree {
 }
 // Main function
 fn main() {
-    let passive_tree = quick_tree();
     let crate_name = env!("CARGO_PKG_NAME").replace('-', "_");
     let log_filter = format!("{}=trace", crate_name);
 
-    let uc = UserConfig::load_from_file("data/user_config.toml");
     App::new()
-        .insert_resource(uc)
-        .insert_resource(poe_vis::PassiveTreeWrapper { tree: passive_tree })
         .add_plugins((
             DefaultPlugins.set(bevy::log::LogPlugin {
                 filter: log_filter,

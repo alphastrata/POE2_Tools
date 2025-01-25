@@ -7,6 +7,8 @@ pub struct PoeVisMaterials;
 impl Plugin for PoeVisMaterials {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, init_materials);
+
+        log::debug!("PoeVisMaterials plugin enabled");
     }
 }
 
