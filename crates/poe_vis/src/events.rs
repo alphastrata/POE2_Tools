@@ -11,6 +11,9 @@ pub struct NodeScaleReq(pub Entity, pub f32);
 #[derive(Event)]
 pub struct NodeColourReq(pub Entity, pub Handle<ColorMaterial>);
 
+#[derive(Event)]
+pub struct EdgeColourReq(pub Entity, pub Handle<ColorMaterial>);
+
 #[derive(Event, Deref)]
 pub struct NodeActivationReq(pub NodeId);
 

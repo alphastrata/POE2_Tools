@@ -22,15 +22,16 @@ impl Plugin for BGServicesPlugin {
 
         app.add_systems(
             Update,
-            //TODO: rate-limiting
+            // TODO: rate-limiting
             (
                 /* Users need to see paths magically illuminate */
                 process_node_activations,
-                // process_edge_activations,
+                process_edge_activations,
                 /* happening all the time with camera moves. */
                 adjust_node_sizes,
                 /* Pretty lightweight, can be spammed.*/
-                process_colour_change_requests.run_if(node_active_changed),
+                process_node_colour_changes.run_if(active_nodes_changed),
+                process_edge_colour_changes.run_if(active_edges_changed),
                 /* Runs a BFS so, try not to spam it.*/
                 validate_paths_between_active_nodes
                     .after(handle_node_clicks)
@@ -41,12 +42,12 @@ impl Plugin for BGServicesPlugin {
     }
 }
 
-// Conditional Helpers:
-fn node_active_changed(query: Query<(), Changed<NodeActive>>) -> bool {
+// Conditional Helpers to rate-limit systems:
+fn active_nodes_changed(query: Query<(), Changed<NodeActive>>) -> bool {
     !query.is_empty()
 }
 
-fn edge_active_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
+fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
     !query.is_empty()
 }
 
@@ -67,18 +68,6 @@ fn process_scale_requests(
             }
         });
 }
-
-fn process_colour_change_requests(
-    mut colour_events: EventReader<NodeColourReq>,
-    mut materials_q: Query<&mut MeshMaterial2d<ColorMaterial>>,
-) {
-    colour_events.read().for_each(|NodeColourReq(entity, mat)| {
-        if let Ok(mut m) = materials_q.get_mut(*entity) {
-            m.0 = mat.clone_weak();
-        }
-    });
-}
-
 fn process_node_activations(
     mut activation_events: EventReader<NodeActivationReq>,
     mut colour_events: EventWriter<NodeColourReq>,
@@ -93,16 +82,18 @@ fn process_node_activations(
         if events.contains(nid) {
             commands.entity(ent).remove::<NodeInactive>();
             commands.entity(ent).insert(NodeActive);
-            colour_events.send(NodeColourReq(ent, mat.clone()));
+            colour_events.send(NodeColourReq(ent, mat.clone_weak()));
         }
     })
 }
 
 fn process_edge_activations(
     mut activation_events: EventReader<EdgeActivationReq>,
+    mut colour_events: EventWriter<EdgeColourReq>,
     query: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
     mut commands: Commands,
+    game_materials: Res<GameMaterials>,
 ) {
     //NOTE: the maximum size of an active_nodes set is (123 * 4 bytes)
     let active_nodes: HashSet<NodeId> = active_nodes.into_iter().map(|nid| nid.0).collect();
@@ -113,6 +104,8 @@ fn process_edge_activations(
         .map(move |ear| ear.as_tuple())
         .collect();
 
+    let mat = &game_materials.edge_activated;
+
     query
         .into_iter()
         .map(|(ent, edge_marker)| (ent, edge_marker.as_tuple()))
@@ -121,7 +114,30 @@ fn process_edge_activations(
         .for_each(|(ent, _)| {
             commands.entity(ent).remove::<EdgeInactive>();
             commands.entity(ent).insert(EdgeActive);
+            colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
         });
+}
+
+// Colours & Aesthetics.
+fn process_node_colour_changes(
+    mut colour_events: EventReader<NodeColourReq>,
+    mut materials_q: Query<&mut MeshMaterial2d<ColorMaterial>>,
+) {
+    colour_events.read().for_each(|NodeColourReq(entity, mat)| {
+        if let Ok(mut m) = materials_q.get_mut(*entity) {
+            m.0 = mat.clone_weak();
+        }
+    });
+}
+fn process_edge_colour_changes(
+    mut colour_events: EventReader<EdgeColourReq>,
+    mut materials_q: Query<&mut MeshMaterial2d<ColorMaterial>>,
+) {
+    colour_events.read().for_each(|EdgeColourReq(entity, mat)| {
+        if let Ok(mut m) = materials_q.get_mut(*entity) {
+            m.0 = mat.clone_weak();
+        }
+    });
 }
 
 /// Adjust each node’s Transform.scale so it doesn’t get too big or too small on screen.
