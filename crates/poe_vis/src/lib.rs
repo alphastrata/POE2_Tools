@@ -31,10 +31,10 @@ pub struct PoeVis;
 impl Plugin for PoeVis {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugins((
-            BGServicesPlugin,
+            // BGServicesPlugin,
             PoeVisCameraPlugin,
             TreeCanvasPlugin,
-            CharacterPlugin,
+            // CharacterPlugin,
             PoeVisMaterials,
             UserConfigPlugin,
             HotkeysPlugin,

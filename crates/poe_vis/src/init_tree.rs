@@ -18,6 +18,14 @@ impl Plugin for TreeCanvasPlugin {
             tree
         }
 
+        app.insert_resource(NodeScaling {
+            min_scale: 4.0,         // Nodes can shrink to 50% size
+            max_scale: 8.0,         // Nodes can grow to 200% size
+            base_radius: 60.0,      // Should match your node radius
+            hover_multiplier: 1.06, // Nodes that are hovered are increased by %3 of their size
+            hover_fade_time: 0.120,
+        });
+
         let tree = quick_tree();
         log::debug!("Tree parsing complete.");
 

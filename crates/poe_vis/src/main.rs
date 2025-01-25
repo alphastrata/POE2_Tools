@@ -3,7 +3,7 @@ use bevy::prelude::*;
 fn main() {
     let crate_name = env!("CARGO_PKG_NAME").replace('-', "_");
     // let log_filter = format!("{}=trace", crate_name);
-    let log_filter = format!("trace");
+    let log_filter = format!("error,{}=trace", crate_name);
 
     App::new()
         .add_plugins((
