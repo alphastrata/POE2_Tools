@@ -17,20 +17,8 @@ pub struct EdgeColourReq(pub Entity, pub Handle<ColorMaterial>);
 #[derive(Event, Deref)]
 pub struct NodeActivationReq(pub NodeId);
 
-#[derive(Event)]
-pub struct EdgeActivationReq(pub EdgeId, pub EdgeId);
-
-impl EdgeActivationReq {
-    pub(crate) fn as_tuple(&self) -> (EdgeId, EdgeId) {
-        (self.0, self.1)
-    }
-}
-
 #[derive(Event, Deref)]
 pub struct NodeDeactivationReq(pub NodeId);
-
-#[derive(Event, Deref)]
-pub struct EdgeDeactivationReq(pub EdgeId);
 
 #[derive(Event)]
 pub struct LoadCharacterReq;
@@ -39,3 +27,19 @@ pub struct SaveCharacterReq;
 
 #[derive(Event, Deref)]
 pub struct MoveCameraReq(pub Vec3);
+
+#[derive(Event)]
+pub struct EdgeActivationReq(pub EdgeId, pub EdgeId);
+impl EdgeActivationReq {
+    pub(crate) fn as_tuple(&self) -> (EdgeId, EdgeId) {
+        (self.0, self.1)
+    }
+}
+
+#[derive(Event)]
+pub struct EdgeDeactivationReq(pub EdgeId, pub EdgeId);
+impl EdgeDeactivationReq {
+    pub(crate) fn as_tuple(&self) -> (EdgeId, EdgeId) {
+        (self.0, self.1)
+    }
+}

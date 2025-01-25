@@ -37,10 +37,15 @@ impl Plugin for BGServicesPlugin {
             // TODO: rate-limiting
             (
                 /* Users need to see paths magically illuminate */
+                //activations:
                 process_node_activations,
                 process_edge_activations,
                 /* Only scan for edges when we KNOW the path is valid */
-                scan_edges_for_updates.run_if(resource_equals(PathRepairRequired(false))),
+                scan_edges_for_active_updates.run_if(resource_equals(PathRepairRequired(false))),
+                //deactivations:
+                process_node_deactivations,
+                process_edge_deactivations,
+                scan_edges_for_inactive_updates,
                 /* happening all the time with camera moves. */
                 adjust_node_sizes,
                 /* Pretty lightweight, can be spammed.*/
@@ -70,6 +75,7 @@ fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool 
 }
 
 // BG SERVICES INBOUND:
+
 fn process_scale_requests(
     mut scale_events: EventReader<NodeScaleReq>,
     mut transforms: Query<&mut Transform>,
@@ -82,6 +88,8 @@ fn process_scale_requests(
             }
         });
 }
+
+//Activations
 fn process_node_activations(
     mut activation_events: EventReader<NodeActivationReq>,
     mut colour_events: EventWriter<NodeColourReq>,
@@ -136,7 +144,7 @@ fn process_edge_activations(
         });
 }
 
-fn scan_edges_for_updates(
+fn scan_edges_for_active_updates(
     mut edge_activator: EventWriter<EdgeActivationReq>,
     haystack: Query<&EdgeMarker, With<EdgeInactive>>,
     needles: Query<&NodeMarker, With<NodeActive>>,
@@ -159,6 +167,75 @@ fn scan_edges_for_updates(
                     log::error!("Unable to gain lock on the EventWriter to send an activation request for Edge {:?}", edg);
                 },
             }
+        }
+    });
+}
+
+// Deactivations
+fn process_node_deactivations(
+    mut deactivation_events: EventReader<NodeDeactivationReq>,
+    mut colour_events: EventWriter<NodeColourReq>,
+    query: Query<(Entity, &NodeMarker), With<NodeActive>>,
+    mut commands: Commands,
+    game_materials: Res<GameMaterials>,
+) {
+    let events: Vec<NodeId> = deactivation_events.read().map(|ndr| ndr.0).collect();
+
+    let mat = &game_materials.node_base;
+    query.iter().for_each(|(ent, nid)| {
+        if events.contains(nid) {
+            commands.entity(ent).remove::<NodeActive>();
+            log::trace!("Deactivating Node {}", **nid);
+            commands.entity(ent).insert(NodeInactive);
+            colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+            log::trace!("Colour reset requested for Node {}", **nid);
+        }
+    })
+}
+
+fn process_edge_deactivations(
+    mut deactivation_events: EventReader<EdgeDeactivationReq>,
+    mut colour_events: EventWriter<EdgeColourReq>,
+    query: Query<(Entity, &EdgeMarker), With<EdgeActive>>,
+    active_nodes: Query<&NodeMarker, With<NodeActive>>,
+    mut commands: Commands,
+    game_materials: Res<GameMaterials>,
+) {
+    let active_nodes: HashSet<NodeId> = active_nodes.into_iter().map(|nid| **nid).collect();
+
+    let requested: HashSet<(EdgeId, EdgeId)> = deactivation_events
+        .read()
+        .map(|edr| edr.as_tuple())
+        .collect();
+
+    let mat = &game_materials.edge_base;
+
+    query
+        .into_iter()
+        .map(|(ent, edge_marker)| (ent, edge_marker.as_tuple()))
+        .filter(|(_ent, edge)| requested.contains(edge))
+        .filter(|(_ent, (start, end))| !active_nodes.contains(start) || !active_nodes.contains(end))
+        .for_each(|(ent, (start, end))| {
+            log::trace!("Deactivating Edge {start}..{end}");
+            commands.entity(ent).remove::<EdgeActive>();
+            commands.entity(ent).insert(EdgeInactive);
+            colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
+            log::trace!("Colour reset requested for Edge {start}..{end}");
+        });
+}
+
+fn scan_edges_for_inactive_updates(
+    mut edge_deactivator: EventWriter<EdgeDeactivationReq>,
+    haystack: Query<&EdgeMarker, With<EdgeActive>>,
+    needles: Query<&NodeMarker, With<NodeActive>>,
+) {
+    let active_nodes: HashSet<NodeId> = needles.into_iter().map(|marker| **marker).collect();
+
+    // < 300 active edges are possible at any given time.
+    haystack.iter().for_each(|edg| {
+        let (start, end) = edg.as_tuple();
+        if !active_nodes.contains(&start) || !active_nodes.contains(&end) {
+            edge_deactivator.send(EdgeDeactivationReq(start, end));
         }
     });
 }
