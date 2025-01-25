@@ -7,6 +7,10 @@ use crate::{
     resources::{ActiveCharacter, RootNode},
 };
 
+
+
+
+
 // Update color parsing to use non-deprecated methods
 pub fn parse_hex_color(col_str: &str) -> Color {
     if col_str.starts_with('#') && col_str.len() == 7 {
@@ -83,38 +87,6 @@ impl crate::resources::UserConfig {
     }
 }
 
-pub fn setup_character(
-    mut commands: Commands,
-    all_node_entities: Query<(Entity, &crate::components::NodeMarker)>,
-) {
-    let character =
-        Character::load_from_toml("data/character.toml").expect("Failed to load character data");
-
-    log::debug!(
-        "Character {} loaded with active nodes {:#?}",
-        character.name,
-        character.activated_node_ids
-    );
-
-    // Set root node from character data
-    commands.insert_resource(RootNode(Some(character.starting_node)));
-
-    // Activate pre-defined nodes
-    let node_entity_map: HashMap<NodeId, Entity> =
-        all_node_entities.iter().map(|(e, m)| (m.0, e)).collect();
-
-    for node_id in character.activated_node_ids.iter() {
-        if let Some(&entity) = node_entity_map.get(node_id) {
-            commands
-                .entity(entity)
-                .remove::<NodeInactive>()
-                .insert(NodeActive);
-        }
-    }
-
-    // Store character as resource
-    commands.insert_resource(ActiveCharacter { character });
-}
 
 mod tests {
     use crate::resources::UserConfig;
