@@ -4,7 +4,7 @@ use poe_tree::type_wrappings::{GroupId, NodeId};
 #[derive(Component, Deref, DerefMut)]
 pub struct NodeMarker(pub NodeId); // Marker component for nodes
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct EdgeMarker(pub NodeId, pub NodeId); // Marker component for nodes
 
 impl EdgeMarker {

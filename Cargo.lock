@@ -3780,6 +3780,7 @@ dependencies = [
  "serde",
  "serde_json",
  "toml",
+ "tracing-subscriber",
 ]
 
 [[package]]

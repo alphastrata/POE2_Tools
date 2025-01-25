@@ -1,6 +1,10 @@
 use std::ops::ControlFlow;
 
-use bevy::{prelude::*, render::mesh::ConvexPolygonMeshBuilder, utils::hashbrown::HashSet};
+use bevy::{
+    prelude::*,
+    render::{mesh::ConvexPolygonMeshBuilder, render_graph::Edge},
+    utils::hashbrown::HashSet,
+};
 use poe_tree::type_wrappings::{EdgeId, NodeId};
 
 use crate::{
@@ -38,8 +42,8 @@ impl Plugin for BGServicesPlugin {
                 /* happening all the time with camera moves. */
                 adjust_node_sizes,
                 /* Pretty lightweight, can be spammed.*/
-                process_node_colour_changes.run_if(active_nodes_changed),
-                process_edge_colour_changes.run_if(active_edges_changed),
+                process_node_colour_changes,
+                process_edge_colour_changes,
                 /* Runs a BFS so, try not to spam it.*/
                 validate_paths_between_active_nodes
                     .run_if(sufficient_active_nodes)
@@ -89,8 +93,10 @@ fn process_node_activations(
     query.iter().for_each(|(ent, nid)| {
         if events.contains(nid) {
             commands.entity(ent).remove::<NodeInactive>();
+            log::trace!("Activating Node {}", **nid);
             commands.entity(ent).insert(NodeActive);
             colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+            log::trace!("Colour change requested for  Node {}", **nid);
         }
     })
 }
@@ -119,13 +125,43 @@ fn process_edge_activations(
         .map(|(ent, edge_marker)| (ent, edge_marker.as_tuple()))
         .filter(|(_ent, edge)| requested.contains(edge))
         .filter(|(_ent, (start, end))| active_nodes.contains(start) && active_nodes.contains(end))
-        .for_each(|(ent, _)| {
+        .for_each(|(ent, (start, end))| {
+            log::trace!("Activating Edge {start}..{end}");
             commands.entity(ent).remove::<EdgeInactive>();
             commands.entity(ent).insert(EdgeActive);
             colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
+            log::trace!("Colour change requested for Edge {start}..{end}");
         });
 }
 
+fn scan_edges_for_updates(
+    mut edge_activator: EventWriter<EdgeActivationReq>,
+
+    haystack: Query<&EdgeMarker, With<EdgeInactive>>,
+
+    needles: Query<&NodeMarker, With<NodeActive>>,
+) {
+    let active_nodes: HashSet<NodeId> = needles.into_iter().map(|marker| **marker).collect();
+
+    let mtx_edge_activator = std::sync::Arc::new(std::sync::Mutex::new(&mut edge_activator));
+    // There are ~3200 edges (4bytes ), so even if we've activated half of them this usually shows performance benefits.
+    // as we never really expect to be activating more than a handful of the nodes we do find, lock contention has been observed to be low,
+    // relative to the searchspace.
+    haystack.par_iter().for_each(|edg| {
+        let (start, end) = edg.as_tuple();
+
+        if active_nodes.contains(&start) && active_nodes.contains(&end) {
+            match mtx_edge_activator.lock() {
+                Ok(mut l_edge_activator) => {
+                    l_edge_activator.send(EdgeActivationReq(start, end));
+                }
+                _ => {
+                    log::error!("Unable to gain lock on the EventWriter to send an activation request for Edge {:?}", edg);
+                },
+            }
+        }
+    });
+}
 // Colours & Aesthetics.
 fn process_node_colour_changes(
     mut colour_events: EventReader<NodeColourReq>,
