@@ -77,7 +77,6 @@ fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool 
 }
 
 // BG SERVICES INBOUND:
-
 fn process_scale_requests(
     mut scale_events: EventReader<NodeScaleReq>,
     mut transforms: Query<&mut Transform>,
@@ -154,7 +153,7 @@ fn scan_edges_for_active_updates(
     let active_nodes: HashSet<NodeId> = needles.into_iter().map(|marker| **marker).collect();
 
     let mtx_edge_activator = std::sync::Arc::new(std::sync::Mutex::new(&mut edge_activator));
-    // There are ~3200 edges (4bytes ), so even if we've activated half of them this usually shows performance benefits.
+    // There are ~3200 edges (8bytes each), so even if we've activated half of them this usually shows performance benefits.
     // as we never really expect to be activating more than a handful of the nodes we do find, lock contention has been observed to be low,
     // relative to the searchspace.
     haystack.par_iter().for_each(|edg| {

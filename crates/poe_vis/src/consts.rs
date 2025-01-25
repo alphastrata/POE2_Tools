@@ -6,4 +6,4 @@ pub const MAXIMUM_ACTIVATEABLE_NODES: u8 = 123;
 
 pub const NODE_PLACEMENT_Z_IDX: f32 = 0.0;
 
-pub const EDGE_PLACEMENT_Z_IDX: f32 = -0.25;
+pub const EDGE_PLACEMENT_Z_IDX: f32 = -10.0;
