@@ -15,7 +15,7 @@ pub struct ActiveCharacter {
     pub character: poe_tree::character::Character,
 }
 
-#[derive(Resource)]
+#[derive(Resource, DerefMut, Deref)]
 pub struct RootNode(pub Option<NodeId>);
 
 #[derive(Debug, serde::Deserialize, Default, Resource)]

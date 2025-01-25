@@ -21,11 +21,7 @@ pub fn setup_character(
     let character =
         Character::load_from_toml("data/character.toml").expect("Failed to load character data");
 
-    log::debug!(
-        "Character {} loaded with active nodes {:#?}",
-        character.name,
-        character.activated_node_ids
-    );
+    log::debug!("Loaded Character {}", character.name,);
 
     // Set root node from character data
     commands.insert_resource(RootNode(Some(character.starting_node)));
@@ -40,6 +36,8 @@ pub fn setup_character(
                 .entity(entity)
                 .remove::<NodeInactive>()
                 .insert(NodeActive);
+
+            log::debug!("Node: {} activated.", node_id);
         }
     }
 
