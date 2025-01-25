@@ -2,6 +2,7 @@ use super::{GameMaterials, NodeScaling};
 use crate::components::{NodeActive, NodeMarker};
 use crate::nodes::PassiveTreeWrapper;
 use bevy::prelude::*;
+use bevy::winit::cursor;
 
 // -------------------------------------------------------------------
 // Components
@@ -23,16 +24,25 @@ const DEFAULT_HOVER_FADE_TIME: f32 = 0.760;
 // -------------------------------------------------------------------
 pub fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
-        // A text with no content initially:
+        // The text component
         Text::new(""),
+        // Font configuration
         TextFont {
             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-            font_size: 42.0,
+            font_size: 22.0,
             ..default()
         },
-        NodeHoverText,
+        // Layout configuration for UI
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(0.0), // Default starting position, whenever this is actually populated with content it'll be overridden.
+            top: Val::Px(0.0),  // Default starting position
+            ..default()
+        },
+        NodeHoverText, // Your custom marker
     ));
 }
+
 pub fn hover_started(
     mut commands: Commands,
     mut over_events: EventReader<Pointer<Over>>,
@@ -138,48 +148,39 @@ pub fn revert_hovered_nodes(
 
 pub fn show_node_info(
     windows: Query<&Window>,
-    camera_query: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
-
     hovered: Query<(&Hovered, &NodeMarker, Option<&NodeActive>)>,
-
-    mut hover_text_query: Query<(&mut Text, &mut Transform), With<NodeHoverText>>,
+    mut hover_text_query: Query<(&mut Node, &mut Text), With<NodeHoverText>>,
     tree: Res<PassiveTreeWrapper>,
 ) {
-    let Ok((mut text, mut text_tf)) = hover_text_query.get_single_mut() else {
-        log::warn!("Found no text to mutate...");
+    // Attempt to get the hover text's Node and Text components
+    let Ok((mut node, mut text)) = hover_text_query.get_single_mut() else {
+        log::warn!("Found no UI node to update...");
         return;
     };
+
+    // Clear the text initially
     text.0.clear();
 
-    // We track if we found a hovered node in either query
+    // Check if there's hovered node information
     let mut found_info: Option<String> = None;
-
-    // 2) If we didn't find anything yet, check Active
-    if found_info.is_none() {
-        for (hovered_comp, marker, _maybe_active) in hovered.iter() {
-            //FIXME: there is something very skux about our timers we're inserting...
-            // if hovered_comp.timer.elapsed_secs() >= 0.250 {
-            if let Some(node) = tree.tree.nodes.get(&marker.0) {
-                let info = format!("Node {}:\n{}", node.node_id, node.name);
-                found_info = Some(info);
-                break;
-            }
-            // }
+    for (_hovered, marker, _maybe_active) in hovered.iter() {
+        if let Some(node_info) = tree.tree.nodes.get(&marker.0) {
+            found_info = Some(format!("Node {}:\n{}", node_info.node_id, node_info.name));
+            break;
         }
     }
 
-    // 3) If we found any hovered node info, set text (and maybe panic for debug)
-    if let Some(info_str) = &found_info {
-        log::debug!("Setting text to: {}", info_str);
-        text.0 = info_str.clone();
+    // Update the text content if we found information
+    if let Some(info) = found_info {
+        log::debug!("Setting text to: {}", info);
+        text.0 = info;
     }
 
-    // 4) Move text near the cursor
-    let window = windows.single();
-    let (camera, cam_tf) = camera_query.single();
-    if let Some(cursor_pos) = window.cursor_position() {
-        if let Ok(world_pos) = camera.viewport_to_world_2d(cam_tf, cursor_pos) {
-            text_tf.translation = Vec3::new(0.0, 0.0, 100.0);
-        }
+    // Update the node's position in screen space
+    if let Some(cursor_pos) = windows.single().cursor_position() {
+        log::debug!("Cursor Position: {:?}", cursor_pos);
+
+        node.left = Val::Px(cursor_pos.x);
+        node.top = Val::Px(cursor_pos.y);
     }
 }

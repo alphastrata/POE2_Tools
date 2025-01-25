@@ -65,7 +65,7 @@ pub fn spawn_nodes(
         commands.spawn((
             Mesh2d(meshes.add(Circle::new(node_radius))),
             MeshMaterial2d(materials.node_base.clone()),
-            Transform::from_translation(Vec3::new(x, y, 0.0)),
+            Transform::from_translation(Vec3::new(x, -y, 0.0)),
             NodeMarker(node.node_id),
             NodeInactive,
         ));
@@ -92,8 +92,8 @@ pub fn spawn_edges(
         let start_pos =
             calculate_world_position(start_group, start_node.radius, start_node.position);
         let end_pos = calculate_world_position(end_group, end_node.radius, end_node.position);
-        let start = Vec2::new(start_pos.0, start_pos.1);
-        let end = Vec2::new(end_pos.0, end_pos.1);
+        let start = Vec2::new(start_pos.0, -start_pos.1);
+        let end = Vec2::new(end_pos.0, -end_pos.1);
 
         let delta = end - start;
         let width = delta.length();
