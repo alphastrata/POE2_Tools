@@ -1,9 +1,8 @@
 use bevy::prelude::*;
-use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::{Layer, Registry};
 
-// Define a function matching the required signature
-fn create_custom_layer(_app: &mut App) -> Option<Box<dyn Layer<Registry> + Send + Sync>> {
+#[allow(unused_imports)]
+use tracing_subscriber::{fmt::format::FmtSpan, Layer, Registry};
+fn custom_log_formatting(_app: &mut App) -> Option<Box<dyn Layer<Registry> + Send + Sync>> {
     Some(
         tracing_subscriber::fmt::Layer::default()
             // .with_file(true)
@@ -14,15 +13,25 @@ fn create_custom_layer(_app: &mut App) -> Option<Box<dyn Layer<Registry> + Send 
 }
 
 fn main() {
-    let crate_name = env!("CARGO_PKG_NAME").replace('-', "_");
-    // let log_filter = format!("{}=trace", crate_name);
-    let log_filter = format!("error,{}=trace", crate_name);
+    let log_filter = {
+        #[cfg(debug_assertions)]
+        let crate_name = env!("CARGO_PKG_NAME").replace('-', "_");
+
+        //NOTE: some may prefer this to the verbosely typing out what you want from the logs
+        //in a terminal...
+        #[cfg(debug_assertions)]
+        let log_filter = format!("error,{}=trace", crate_name);
+
+        #[cfg(not(debug_assertions))]
+        let log_filter = format!("error");
+        log_filter
+    };
 
     App::new()
         .add_plugins((
             DefaultPlugins.set(bevy::log::LogPlugin {
                 filter: log_filter,
-                custom_layer: create_custom_layer,
+                custom_layer: custom_log_formatting,
                 ..default()
             }),
             MeshPickingPlugin,

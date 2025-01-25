@@ -1,5 +1,3 @@
-
-
 [target.x86_64-unknown-linux-gnu]
 rustflags = [
     # LLD linker
@@ -69,7 +67,7 @@ rustflags = [
 
 [target.x86_64-pc-windows-msvc]
 rustflags = [
-    # "-Zshare-generics=n", # This needs to be off if you use dynamic linking on Windows.
+    "-Zshare-generics=n", # This needs to be off if you use dynamic linking on Windows.
     "-Zthreads=0",
 ]
 # LLD linker
