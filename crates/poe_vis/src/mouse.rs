@@ -26,6 +26,7 @@ pub fn handle_node_clicks(
         ),
         Or<(With<NodeInactive>, With<NodeActive>)>,
     >,
+    mut path_repair: ResMut<PathRepairRequired>,
 ) {
     for event in click_events.read() {
         if let Ok((entity, _marker, inactive, active)) = nodes_query.get(event.target) {
@@ -39,6 +40,8 @@ pub fn handle_node_clicks(
                             .remove::<NodeInactive>()
                             .insert(NodeActive);
                     }
+
+                    path_repair.request_path_repair();
                 }
                 (None, Some(_)) => {
                     // Deactivate regardless of root
@@ -46,6 +49,8 @@ pub fn handle_node_clicks(
                         .entity(entity)
                         .remove::<NodeActive>()
                         .insert(NodeInactive);
+
+                    path_repair.request_path_repair();
                 }
                 _ => unreachable!(),
             }

@@ -27,3 +27,18 @@ pub struct UserConfig {
     #[serde(default)]
     pub character: Character,
 }
+
+#[derive(Deref, DerefMut, Default, Resource, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PathRepairRequired(pub bool);
+
+impl PathRepairRequired {
+    pub(crate) fn request_path_repair(&mut self) {
+        log::debug!("Path Repair requested");
+        **self = true;
+    }
+    pub(crate) fn set_unrequired(&mut self) {
+        log::debug!("Path Repair marked as unrequired");
+
+        **self = false;
+    }
+}

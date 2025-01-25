@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use bevy::{prelude::*, render::mesh::ConvexPolygonMeshBuilder, utils::hashbrown::HashSet};
 use poe_tree::type_wrappings::{EdgeId, NodeId};
 
@@ -24,6 +26,8 @@ impl Plugin for BGServicesPlugin {
             //spacing..
             ;
 
+        app.insert_resource(PathRepairRequired(false));
+
         app.add_systems(
             Update,
             // TODO: rate-limiting
@@ -38,9 +42,8 @@ impl Plugin for BGServicesPlugin {
                 process_edge_colour_changes.run_if(active_edges_changed),
                 /* Runs a BFS so, try not to spam it.*/
                 validate_paths_between_active_nodes
-                    .after(handle_node_clicks)
                     .run_if(sufficient_active_nodes)
-                    .run_if(resource_exists::<RootNode>),
+                    .run_if(resource_equals(PathRepairRequired(true))),
             ),
         );
         log::debug!("BGServices plugin enabled");
@@ -172,51 +175,65 @@ fn validate_paths_between_active_nodes(
     query: Query<&NodeMarker, With<NodeActive>>,
     mut activate_req: EventWriter<NodeActivationReq>,
     root_node: Res<RootNode>,
+    path_needs_repair: ResMut<PathRepairRequired>,
 ) {
     let active_nodes: Vec<_> = query.iter().map(|m| m.0).collect();
-    let active_and_validly_pathed = find_all_paths(tree, &active_nodes, root_node);
+    let active_and_validly_pathed =
+        find_all_paths(tree, &active_nodes, &root_node, path_needs_repair);
+
     active_and_validly_pathed.into_iter().for_each(|an| {
         activate_req.send(NodeActivationReq(an));
     });
 }
 
 fn find_all_paths(
-    tree: Res<'_, PassiveTreeWrapper>,
+    tree: Res<PassiveTreeWrapper>,
     active_nodes: &[NodeId],
-    root_node: Res<RootNode>,
+    root_node: &RootNode,
+    mut path_needs_repair: ResMut<PathRepairRequired>,
 ) -> HashSet<NodeId> {
-    if root_node.is_none() {
+    if root_node.0.is_none() {
         log::warn!("Unable to begin pathfinding, we have no root node set.");
         return HashSet::new();
     }
 
     let mut seen: HashSet<NodeId> = HashSet::new();
-    let start = root_node.unwrap();
-    (0..active_nodes.len()).for_each(|j| {
-        let end: NodeId = active_nodes[j];
+    let start = root_node.0.unwrap();
+
+    for &end in active_nodes.iter() {
         if seen.contains(&start) && seen.contains(&end) {
-            // O(1) * 2
             log::debug!(
                 "Skipping search for path [{}..{}] as it has already been checked.",
                 start,
                 end
             );
+            continue;
         }
-        // WARNING: Expensive BFS search here.
-        let insertions = tree
-            .bfs(start, end)
-            .into_iter()
-            .filter(|v| seen.insert(*v))
-            .count();
 
-        log::debug!(
-            "Valid path found for [{}..{}], with {} steps",
-            start,
-            end,
-            insertions
-        );
-    });
+        let path = tree.bfs(start, end);
 
-    //TODO: if seen.is_empty(), we've got a problem, it's likely the user has broken the path
+        // Insert all nodes from the path into seen
+        for node in path.iter() {
+            seen.insert(*node);
+        }
+
+        if path.len() > 1 {
+            log::debug!(
+                "Valid path found for [{}..{}], with {} steps",
+                start,
+                end,
+                path.len()
+            );
+            break;
+        }
+    }
+
+    if seen.is_empty() {
+        // path_needs_repair.request_path_repair();
+        //TODO: carry out path repair here!
+    } else {
+        path_needs_repair.set_unrequired();
+    }
+
     seen
 }
