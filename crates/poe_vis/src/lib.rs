@@ -9,6 +9,7 @@ use hotkeys::HotkeysPlugin;
 use init_tree::TreeCanvasPlugin;
 use materials::PoeVisMaterials;
 use mouse::MouseControlsPlugin;
+use nodes::NodeInteractionPlugin;
 use overlays_n_popups::OverlaysAndPopupsPlugin;
 
 mod background_services;
@@ -43,7 +44,7 @@ impl Plugin for PoeVis {
             UserConfigPlugin,
             HotkeysPlugin,
             OverlaysAndPopupsPlugin,
-            //  NodeInteractionPlugin,
+            NodeInteractionPlugin,
             // ShadersPlugin
         ));
     }

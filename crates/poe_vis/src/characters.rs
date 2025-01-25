@@ -1,6 +1,7 @@
 use crate::{
     components::{NodeActive, NodeInactive},
-    resources::{ActiveCharacter, RootNode},
+    events::NodeActivationReq,
+    resources::{ActiveCharacter, PathRepairRequired, RootNode},
 };
 use bevy::{color::Color, prelude::*, utils::HashMap};
 use poe_tree::{character::Character, type_wrappings::NodeId};
@@ -8,13 +9,24 @@ use poe_tree::{character::Character, type_wrappings::NodeId};
 pub struct CharacterPlugin;
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_character);
+        app.add_systems(Startup, (setup_character, activate_starting_nodes));
 
         log::debug!("CharacterPlugin plugin enabled");
     }
 }
+fn activate_starting_nodes(
+    mut node_activator: EventWriter<NodeActivationReq>,
+    mut path_repair: ResMut<PathRepairRequired>,
+    character: Res<ActiveCharacter>,
+) {
+    node_activator.send(NodeActivationReq(character.starting_node));
 
-pub fn setup_character(
+    character.activated_node_ids.iter().for_each(|nid| {
+        node_activator.send(NodeActivationReq(*nid));
+    });
+    path_repair.request_path_repair();
+}
+fn setup_character(
     mut commands: Commands,
     all_node_entities: Query<(Entity, &crate::components::NodeMarker)>,
 ) {
