@@ -263,7 +263,6 @@ fn process_edge_colour_changes(
 }
 
 /// Adjust each node’s Transform.scale so it doesn’t get too big or too small on screen.
-/// Adjust each node’s Transform.scale based on camera zoom and node scaling constraints.
 fn adjust_node_sizes(
     camera_query: Query<&OrthographicProjection, With<Camera2d>>,
     scaling: Res<NodeScaling>,
