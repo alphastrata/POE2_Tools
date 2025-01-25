@@ -7,6 +7,8 @@ pub struct HotkeysPlugin;
 impl Plugin for HotkeysPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, handle_input);
+
+        log::debug!("Hotkeys plugin enabled");
     }
 }
 

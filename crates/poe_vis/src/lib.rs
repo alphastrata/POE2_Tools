@@ -1,4 +1,7 @@
+#![allow(dead_code, unused_imports)]
+
 use bevy::prelude::{Plugin, Resource};
+use hotkeys::HotkeysPlugin;
 
 use crate::characters::CharacterPlugin;
 use background_services::BGServicesPlugin;
@@ -14,6 +17,7 @@ pub mod config;
 pub mod events;
 pub mod hotkeys;
 pub mod materials;
+pub mod consts;
 pub mod resources;
 // pub mod shaders;
 pub mod init_tree;
@@ -23,8 +27,7 @@ pub struct PoeVis;
 
 impl Plugin for PoeVis {
     fn build(&self, app: &mut bevy::prelude::App) {
-        // app.insert_resource(UserConfig)
-        // app.insert_resource(Character)
+        
 
         app.add_plugins((
             BGServicesPlugin,
@@ -32,9 +35,10 @@ impl Plugin for PoeVis {
             // TreeCanvasPlugin,
             CharacterPlugin,
             PoeVisMaterials,
+            HotkeysPlugin,
             //  NodeInteractionPlugin,
 
-            //  HotkeysPlugin,
+             
             // ShadersPlugin
         ));
     }
