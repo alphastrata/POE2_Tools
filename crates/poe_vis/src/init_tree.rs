@@ -19,8 +19,15 @@ impl Plugin for TreeCanvasPlugin {
         }
 
         let tree = quick_tree();
+        log::debug!("Tree parsing complete.");
+
+
         app.insert_resource(PassiveTreeWrapper { tree });
+
+        log::debug!("Tree in ECS");
         app.add_systems(Startup, (spawn_nodes, spawn_edges));
+    
+        log::debug!("TreeCanvas plugin enabled");
     }
 }
 

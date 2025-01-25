@@ -33,7 +33,7 @@ impl Plugin for PoeVis {
         app.add_plugins((
             BGServicesPlugin,
             PoeVisCameraPlugin,
-            // TreeCanvasPlugin,
+            TreeCanvasPlugin,
             CharacterPlugin,
             PoeVisMaterials,
             UserConfigPlugin,
