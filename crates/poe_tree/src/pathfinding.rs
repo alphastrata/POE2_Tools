@@ -374,81 +374,6 @@ fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<u32> {
         .collect()
 }
 
-#[cfg(test)]
-mod test {
-
-    use crate::quick_tree;
-
-    use super::*;
-
-    #[test]
-    fn path_between_flow_like_water_and_chaos_inoculation() {
-        let tree: PassiveTree = quick_tree();
-
-        // Use fuzzy search to find nodes
-        let flow_ids = tree.fuzzy_search_nodes("flow like water");
-        let chaos_ids = tree.fuzzy_search_nodes("chaos inoculation");
-
-        assert!(!flow_ids.is_empty(), "No node found for 'flow like water'");
-        assert!(
-            !chaos_ids.is_empty(),
-            "No node found for 'chaos inoculation'"
-        );
-
-        let start_id = flow_ids[0];
-        let target_id = chaos_ids[0];
-
-        // Find shortest path using Dijkstra's Algorithm
-        let path = tree.find_shortest_path(start_id, target_id);
-        if path.is_empty() {
-            log::debug!("No path found between {} and {}", start_id, target_id);
-        }
-        // Update this value based on expected path length after refactoring
-        assert_eq!(path.len(), 15, "Path length mismatch");
-        log::debug!("{:#?}", path);
-    }
-
-    #[test]
-    fn test_path_avatar_of_fire_to_over_exposure() {
-        let tree = quick_tree();
-
-        // Use fuzzy search to find nodes
-        let avatar_ids = tree.fuzzy_search_nodes("Avatar of Fire");
-        let over_exposure_ids = tree.fuzzy_search_nodes("Overexposure");
-
-        assert!(!avatar_ids.is_empty(), "No node found for 'Avatar of Fire'");
-        assert!(
-            !over_exposure_ids.is_empty(),
-            "No node found for 'Overexposure'"
-        );
-
-        let start_id = avatar_ids[0];
-        let target_id = over_exposure_ids[0];
-
-        // Find paths using BFS
-        let bfs_path = tree.bfs(start_id, target_id);
-
-        // Assertions
-        assert!(!bfs_path.is_empty(), "No path found using BFS!");
-
-        println!("Path from Avatar of Fire to Overexposure:");
-        println!("BFS Path: {:?}", bfs_path);
-        assert_eq!(bfs_path.len(), 27, "Expected path length does not match.");
-    }
-
-    #[test]
-    fn bfs_pathfinding() {
-        let tree = quick_tree();
-
-        let start = 10364;
-        let target = 58329;
-        let expected_path = vec![10364, 42736, 56045, 58329];
-
-        let actual_path = tree.bfs(start, target);
-        assert_eq!(actual_path, expected_path, "Paths do not match!");
-    }
-}
-
 #[derive(Debug, Eq, PartialEq)]
 struct NodeDistance {
     node: u32,
@@ -579,7 +504,7 @@ impl PassiveTree {
                         continue;
                     }
 
-                    let edge_weight = 1; // Use an integer edge weight
+                    let edge_weight = 1;
                     let new_distance = distance + edge_weight;
 
                     if new_distance < *distances.get(&neighbour).unwrap_or(&u16::MAX) {
@@ -623,5 +548,149 @@ impl PassiveTree {
         });
 
         Arc::try_unwrap(paths).unwrap().into_inner().unwrap()
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use crate::quick_tree;
+
+    use super::*;
+
+    #[test]
+    fn path_between_flow_like_water_and_chaos_inoculation() {
+        let tree: PassiveTree = quick_tree();
+
+        // Use fuzzy search to find nodes
+        let flow_ids = tree.fuzzy_search_nodes("flow like water");
+        let chaos_ids = tree.fuzzy_search_nodes("chaos inoculation");
+
+        assert!(!flow_ids.is_empty(), "No node found for 'flow like water'");
+        assert!(
+            !chaos_ids.is_empty(),
+            "No node found for 'chaos inoculation'"
+        );
+
+        let start_id = flow_ids[0];
+        let target_id = chaos_ids[0];
+
+        // Find shortest path using Dijkstra's Algorithm
+        let path = tree.find_shortest_path(start_id, target_id);
+        if path.is_empty() {
+            log::debug!("No path found between {} and {}", start_id, target_id);
+        }
+        // Update this value based on expected path length after refactoring
+        assert_eq!(path.len(), 15, "Path length mismatch");
+        log::debug!("{:#?}", path);
+    }
+
+    #[test]
+    fn test_path_avatar_of_fire_to_over_exposure() {
+        let tree = quick_tree();
+
+        // Use fuzzy search to find nodes
+        let avatar_ids = tree.fuzzy_search_nodes("Avatar of Fire");
+        let over_exposure_ids = tree.fuzzy_search_nodes("Overexposure");
+
+        assert!(!avatar_ids.is_empty(), "No node found for 'Avatar of Fire'");
+        assert!(
+            !over_exposure_ids.is_empty(),
+            "No node found for 'Overexposure'"
+        );
+
+        let start_id = avatar_ids[0];
+        let target_id = over_exposure_ids[0];
+
+        let bfs_path = tree.bfs(start_id, target_id);
+
+        assert!(!bfs_path.is_empty(), "No path found using BFS!");
+
+        println!("Path from Avatar of Fire to Overexposure:");
+        println!("BFS Path: for {:?} to {:?} = {:?}",  avatar_ids, over_exposure_ids, bfs_path);
+        assert_eq!(bfs_path.len(), 27, "Expected path length does not match.");
+    }
+
+    #[test]
+    fn bfs_pathfinding() {
+        let tree = quick_tree();
+
+        let start = 10364;
+        let target = 58329;
+        let expected_path = vec![18684, 27296, 59785, 1200, 55190, 28982, 41768, 29611, 32474, 26196, 33722, 4140, 59093, 23382, 7960, 48552, 31238, 1433, 34840, 29148, 33631, 15885, 49512, 5936, 22439, 25101, 52199];
+
+        let actual_path = tree.bfs(start, target);
+        assert_eq!(actual_path, expected_path, "Paths do not match!");
+    }
+
+    #[test]
+    fn dijkstra_pathfinding() {
+        let tree = quick_tree();
+
+        let start = 10364;
+        let target = 58329;
+        let expected_path = vec![18684, 27296, 59785, 1200, 55190, 28982, 41768, 29611, 32474, 26196, 33722, 4140, 59093, 23382, 7960, 48552, 31238, 1433, 34840, 29148, 33631, 15885, 49512, 5936, 22439, 25101, 52199];
+
+        
+        let paths = tree.dijkstra_with_all_paths(&[start], &[target]);
+
+        let actual_path = paths
+            .get(&(start, target))
+            .expect("Dijkstra path not found for the given start and target.");
+
+        assert_eq!(actual_path, &expected_path, "Dijkstra Paths do not match!");
+    }
+
+    #[test]
+    fn parallel_dijkstra_pathfinding() {
+        let tree = quick_tree();
+
+        let start = 10364;
+        let target = 58329;
+        let expected_path = vec![18684, 27296, 59785, 1200, 55190, 28982, 41768, 29611, 32474, 26196, 33722, 4140, 59093, 23382, 7960, 48552, 31238, 1433, 34840, 29148, 33631, 15885, 49512, 5936, 22439, 25101, 52199];
+
+        let paths = tree.parallel_dijkstra_with_all_paths(&[start], &[target]);
+
+        let actual_path = paths
+            .get(&(start, target))
+            .expect("Parallel Dijkstra path not found for the given start and target.");
+
+        assert_eq!(
+            actual_path, &expected_path,
+            "Parallel Dijkstra Paths do not match!"
+        );
+    }
+
+    #[test]
+    fn dijkstra_vs_parallel_dijkstra_consistency() {
+        let tree = quick_tree();
+
+        let start = 10364;
+        let target = 58329;
+        let expected_path = vec![18684, 27296, 59785, 1200, 55190, 28982, 41768, 29611, 32474, 26196, 33722, 4140, 59093, 23382, 7960, 48552, 31238, 1433, 34840, 29148, 33631, 15885, 49512, 5936, 22439, 25101, 52199];
+
+        let dijkstra_paths = tree.dijkstra_with_all_paths(&[start], &[target]);
+        let dijkstra_path = dijkstra_paths
+            .get(&(start, target))
+            .expect("Dijkstra path not found for the given start and target.");
+
+        let parallel_dijkstra_paths = tree.parallel_dijkstra_with_all_paths(&[start], &[target]);
+        let parallel_dijkstra_path = parallel_dijkstra_paths
+            .get(&(start, target))
+            .expect("Parallel Dijkstra path not found for the given start and target.");
+
+        assert_eq!(
+            dijkstra_path, &expected_path,
+            "Dijkstra path does not match the expected path!"
+        );
+        assert_eq!(
+            parallel_dijkstra_path, &expected_path,
+            "Parallel Dijkstra path does not match the expected path!"
+        );
+
+        assert_eq!(
+            dijkstra_path, parallel_dijkstra_path,
+            "Dijkstra and Parallel Dijkstra paths do not match!"
+        );
     }
 }

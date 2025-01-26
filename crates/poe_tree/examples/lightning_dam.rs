@@ -32,6 +32,7 @@ fn quick_tree() -> PassiveTree {
 }
 
 fn main() {
+    pretty_env_logger::init();
     let tree = quick_tree();
 
     // Mapping of start node IDs to class names
@@ -71,10 +72,10 @@ fn main() {
                     .filter(|s| {
                         s.name.contains(keyword)
                             && s.value > min_value
-                            && matches!(s.operand, Operand::Percentage | Operand::Add)
+                            && matches!(s.operand, Operand::Percentage)
                     })
                     .map(|s| {
-                       log::trace!("{:?}",s);
+                        println!("total+={:?}", s.value);
                         s.value
                     })
                     .sum();
@@ -90,7 +91,6 @@ fn main() {
         });
 
         // Debugging: Inspect stats on nodes with non-zero contributions
-        /*
         for &node_id in path {
             if let Some(poe_node) = tree.nodes.get(&node_id) {
                 let skill = poe_node.as_passive_skill(&tree);
@@ -101,7 +101,7 @@ fn main() {
                 }
             }
         }
-        */
+        
 
         if sum > 0.0 {
             println!(
