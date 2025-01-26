@@ -611,6 +611,8 @@ mod test {
         assert_eq!(bfs_path.len(), 27, "Expected path length does not match.");
     }
 
+
+    const LONG_TEST_PATH: [u32;11] = [10364, 42857, 20024, 44223, 49220, 36778, 36479, 12925, 61196, 58329];
     #[test]
     fn bfs_pathfinding() {
         let tree = quick_tree();
