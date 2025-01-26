@@ -25,6 +25,6 @@ bevy = { version = "0.15.1", features = [
 tracing-subscriber = "0.3.19"
 bitset = "0.1.2"
 rayon = "1.10.0"
-
-[dependencies]
-bitset.workspace = true
+jsonrpc-core = "18.0.0"
+jsonrpc-http-server = "18.0.0"
+crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }

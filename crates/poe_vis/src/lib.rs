@@ -30,11 +30,16 @@ mod overlays_n_popups;
 mod edges;
 mod nodes;
 
+pub mod remote;
+
 pub struct PoeVis;
 
 impl Plugin for PoeVis {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugins((
+            //TODO: CFG FLAG
+            RPCPlugin,
+            // ALWAYS
             BGServicesPlugin,
             PoeVisCameraPlugin,
             TreeCanvasPlugin,
