@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use bevy::prelude::*;
 
 use crate::{
@@ -12,13 +14,16 @@ pub struct MouseControlsPlugin;
 
 impl Plugin for MouseControlsPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(MouseSelecetedNodeHistory {
+            inner: VecDeque::new(),
+        });
         app.add_systems(Update, (handle_node_clicks, hover_started, hover_ended));
     }
 }
 
 pub fn handle_node_clicks(
-    mut drag_state: ResMut<crate::camera::DragState>,
     root: Res<crate::resources::RootNode>,
+    mut last_ten: ResMut<MouseSelecetedNodeHistory>,
     mut click_events: EventReader<Pointer<Down>>,
     nodes_query: Query<
         (
@@ -35,8 +40,6 @@ pub fn handle_node_clicks(
 ) {
     for event in click_events.read() {
         if let Ok((_entity, marker, inactive, active)) = nodes_query.get(event.target) {
-            drag_state.active = false;
-
             match (inactive, active) {
                 (Some(_), None) => {
                     if root.0.is_some() {
@@ -50,6 +53,7 @@ pub fn handle_node_clicks(
                 }
                 _ => unreachable!(),
             }
+            last_ten.push_back(marker.0);
         }
     }
 }

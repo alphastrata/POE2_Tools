@@ -294,6 +294,16 @@ fn validate_paths_between_active_nodes(
     let active_and_validly_pathed =
         validate_path_to_root(tree, &active_nodes, &root_node, path_needs_repair);
 
+    // let active_and_validly_pathed = tree.bfs_any(root_node.0.unwrap(), &active_nodes);
+
+    // // When this panics we need to find the problematic nodes...
+    // if !active_nodes
+    //     .into_iter()
+    //     .all(|v| active_and_validly_pathed.contains(&v))
+    // {
+    //     log::error!("Not all paths in the current active nodes can reach the root...");
+    // }
+
     active_and_validly_pathed.into_iter().for_each(|an| {
         activate_req.send(NodeActivationReq(an));
     });

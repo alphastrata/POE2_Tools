@@ -1429,6 +1429,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitset"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd450435a044ff3a192c9b0063e9f612ee3e2b2e23388332bc3aada13e3f7f6b"
+
+[[package]]
 name = "blake3"
 version = "1.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3753,11 +3759,15 @@ dependencies = [
 [[package]]
 name = "poe_tools"
 version = "0.1.0"
+dependencies = [
+ "bitset",
+]
 
 [[package]]
 name = "poe_tree"
 version = "0.1.0"
 dependencies = [
+ "bitset",
  "chrono",
  "log",
  "pretty_env_logger",

@@ -34,7 +34,15 @@ pub struct PassiveTree {
     pub edges: HashSet<Edge>,
     pub passive_skills: HashMap<String, skills::PassiveSkill>,
 }
+pub fn quick_tree() -> PassiveTree {
+    let file = std::fs::File::open("../../data/POE2_Tree.json").unwrap();
+    let reader = std::io::BufReader::new(file);
+    let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
+    let mut tree = PassiveTree::from_value(&tree_data).unwrap();
 
+    tree.remove_hidden();
+    tree
+}
 impl PassiveTree {
     const CULL_NODES_AFTER_THIS: f32 = 12_400.0;
 
@@ -416,7 +424,7 @@ pub fn calculate_world_position_with_negative_y(
 #[cfg(test)]
 mod tests {
 
-    use crate::{edges::Edge, pathfinding::quick_tree};
+    use crate::{edges::Edge, quick_tree};
 
     #[test]
     fn bidirectional_edges() {

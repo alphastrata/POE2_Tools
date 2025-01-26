@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use bevy::{prelude::*, utils::HashMap};
 use poe_tree::{character::Character, type_wrappings::*};
 
@@ -42,3 +44,6 @@ impl PathRepairRequired {
         **self = false;
     }
 }
+
+#[derive(Resource, Deref, DerefMut)]
+pub struct MouseSelecetedNodeHistory(pub VecDeque<NodeId>);

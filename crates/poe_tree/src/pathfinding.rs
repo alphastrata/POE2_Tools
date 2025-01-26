@@ -1,21 +1,27 @@
-//!$ crates/poe_tree/src/pathfinding.rs
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    sync::{
+        mpsc::{channel, Receiver, Sender},
+        Arc, Mutex,
+    },
+    thread,
+    time::Instant,
+};
+
 use super::edges::Edge;
 use super::stats::Stat;
 use super::type_wrappings::NodeId;
 use super::PassiveTree;
 
-use std::collections::{HashMap, HashSet, VecDeque};
-
-// Pathfinding algos..
 impl PassiveTree {
     /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
     const STEP_LIMIT: i32 = 123;
+    const MAX_NODE_ID: u32 = u16::MAX as u32;
 
     pub fn is_node_within_distance(&self, start: NodeId, target: NodeId, max_steps: usize) -> bool {
         let path = self.find_path(start, target);
         !path.is_empty() && path.len() <= max_steps + 1
     }
-
     pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<u32> {
         log::debug!("Performing search for query: {}", query);
         self.nodes
@@ -128,22 +134,7 @@ impl PassiveTree {
         self.bfs(a, b)
     }
 }
-fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<u32> {
-    let mut prev_node = 0;
-    data.nodes
-        .iter()
-        .map(|(nid, node)| {
-            println!(
-                "Inspecting {nid}\t{:?} named:{} FROM {prev_node} ",
-                node.skill_id, node.name
-            );
-            prev_node = *nid;
-            (nid, node)
-        })
-        .filter(|(_, node)| node.name.to_lowercase().contains(&query.to_lowercase()))
-        .map(|(id, _)| *id)
-        .collect()
-}
+
 impl PassiveTree {
     pub fn bfs(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
         let mut visited = HashSet::new();
@@ -196,20 +187,197 @@ impl PassiveTree {
         log::warn!("No path found from {} to {}", start, target);
         vec![] // No path found
     }
+    pub fn bfs_any(&self, start: NodeId, targets: &[NodeId]) -> Vec<NodeId> {
+        // Convert targets slice to a HashSet for efficient lookup
+        let target_set: HashSet<NodeId> = targets.iter().cloned().collect();
+
+        // Initialize visited set, queue for BFS, and predecessors map for path reconstruction
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
+
+        // Start BFS from the `start` node
+        queue.push_back((start.clone(), 0));
+        visited.insert(start.clone());
+
+        while let Some((current, depth)) = queue.pop_front() {
+            // Check if current node is one of the targets
+            if target_set.contains(&current) {
+                // Reconstruct the path from start to current
+                let mut path = Vec::new();
+                let mut step = current.clone();
+                path.push(step.clone());
+
+                while let Some(prev) = predecessors.get(&step) {
+                    step = prev.clone();
+                    path.push(step.clone());
+                }
+
+                path.reverse(); // Reverse to get path from start to target
+                return path;
+            }
+
+            if depth >= Self::STEP_LIMIT {
+                log::warn!(
+                    "Step limit ({}) reached without finding any target from node {:?}",
+                    Self::STEP_LIMIT,
+                    current
+                );
+                break;
+            }
+
+            // Explore all neighboring nodes
+            for neighbor in self.neighbors(&current) {
+                if visited.insert(neighbor.clone()) {
+                    queue.push_back((neighbor.clone(), depth + 1));
+                    predecessors.insert(neighbor, current.clone());
+                }
+            }
+        }
+
+        // If no path is found to any target
+        log::warn!(
+            "No path found from {:?} to any of the targets: {:?}",
+            start,
+            targets
+        );
+        Vec::new()
+    }
+    pub fn neighbors<'t>(&'t self, node: &'t NodeId) -> impl Iterator<Item = NodeId> + 't {
+        self.edges.iter().filter_map(|edge| {
+            if edge.start == *node {
+                Some(edge.end)
+            } else if edge.end == *node {
+                Some(edge.start)
+            } else {
+                None
+            }
+        })
+    }
+    pub fn multi_bfs(&self, starts: &[NodeId], targets: &[NodeId]) -> Vec<NodeId> {
+        let start_time = std::time::Instant::now();
+        log::trace!(
+            "Starting Multi-Source BFS from {:?} to targets {:?}",
+            starts,
+            targets
+        );
+
+        if starts.is_empty() {
+            log::warn!("No start nodes provided.");
+            return Vec::new();
+        }
+
+        // Initialize a shared channel to receive paths from threads
+        let (path_sender, path_receiver): (Sender<Vec<NodeId>>, Receiver<Vec<NodeId>>) = channel();
+
+        // Shared flag to indicate if a path has been found
+        let found = Arc::new(Mutex::new(false));
+
+        // Number of threads to spawn
+        let num_threads = starts.len().min(8); // Limit to 8 threads or number of starts
+
+        // Divide the start nodes among the threads
+        let starts_per_thread = (starts.len() + num_threads - 1) / num_threads;
+        let arc_tree = Arc::new(self.clone());
+
+        // Spawn threads
+        let mut handles = Vec::new();
+        for i in 0..num_threads {
+            let tree_clone = Arc::clone(&arc_tree);
+            let path_sender_clone = path_sender.clone();
+            let found_clone = Arc::clone(&found);
+
+            let thread_starts = starts
+                .iter()
+                .skip(i * starts_per_thread)
+                .take(starts_per_thread)
+                .cloned()
+                .collect::<Vec<_>>();
+
+            let thread_targets = targets.to_vec();
+
+            let handle = thread::spawn(move || {
+                for start in thread_starts {
+                    // Check if another thread has found a path
+                    {
+                        let found_lock = found_clone.lock().unwrap();
+                        if *found_lock {
+                            log::trace!(
+                                "Thread for start {:?} exiting early as a path has been found.",
+                                start
+                            );
+                            return;
+                        }
+                    }
+
+                    let path = tree_clone.bfs_any(start, &thread_targets);
+
+                    if !path.is_empty() {
+                        // Attempt to set the found flag
+                        {
+                            let mut found_lock = found_clone.lock().unwrap();
+                            if !*found_lock {
+                                *found_lock = true;
+                                log::trace!(
+                                    "Thread for start {:?} found a path: {:?}",
+                                    start,
+                                    path
+                                );
+                                // Send the found path
+                                path_sender_clone.send(path).unwrap();
+                            }
+                        }
+                        return;
+                    }
+                }
+            });
+            handles.push(handle);
+        }
+
+        drop(path_sender); // Close the sender to avoid blocking
+
+        // Wait for the first path to be received
+        let result = path_receiver.recv().unwrap_or_else(|_| Vec::new());
+
+        // Wait for all threads to finish
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        if result.is_empty() {
+            log::warn!(
+                "No path found from any of the start nodes to the targets after {} ms.",
+                start_time.elapsed().as_millis()
+            );
+        } else {
+            log::info!("Path found in {} ms.", start_time.elapsed().as_millis());
+        }
+
+        result
+    }
 }
 
-pub fn quick_tree() -> PassiveTree {
-    let file = std::fs::File::open("../../data/POE2_Tree.json").unwrap();
-    let reader = std::io::BufReader::new(file);
-    let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
-    let mut tree = PassiveTree::from_value(&tree_data).unwrap();
-
-    tree.remove_hidden();
-    tree
+fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<u32> {
+    let mut prev_node = 0;
+    data.nodes
+        .iter()
+        .map(|(nid, node)| {
+            println!(
+                "Inspecting {nid}\t{:?} named:{} FROM {prev_node} ",
+                node.skill_id, node.name
+            );
+            prev_node = *nid;
+            (nid, node)
+        })
+        .filter(|(_, node)| node.name.to_lowercase().contains(&query.to_lowercase()))
+        .map(|(id, _)| *id)
+        .collect()
 }
 
 #[cfg(test)]
 mod test {
+
+    use crate::quick_tree;
 
     use super::*;
 
