@@ -36,17 +36,17 @@ fn main() {
 
     // Mapping of start node IDs to class names
     let char_start_nodes: HashMap<u32, &str> = HashMap::from([
-        // (50459, "Ranger"),
-        // (47175, "Warrior"),
-        // (50986, "Mercenary"),
+        (50459, "Ranger"),
+        (47175, "Warrior"),
+        (50986, "Mercenary"),
         // (61525, "???"),
         (54447, "Witch or Sorceress"),
         (44683, "Monk"),
     ]);
 
-    let levels = vec![40, 80];
-    let keyword = "lightning_damage";
-    let min_value = 10.0f32;
+    let levels = vec![50, 99, 123];
+    let keyword = "lightning";
+    let min_value = 1.0f32;
 
     // Extract start node IDs
     let start_node_ids: Vec<u32> = char_start_nodes.keys().cloned().collect();
@@ -62,18 +62,21 @@ fn main() {
         let truncated_path = truncate_path(path);
 
         // Calculate sum and count of stats using iterators
-        let (num_nodes, sum) = path.iter().fold((0, 0.0f32), |(count, acc), &node_id| {
+        let (_num_nodes, sum) = path.iter().fold((0, 0.0f32), |(count, acc), &node_id| {
             if let Some(poe_node) = tree.nodes.get(&node_id) {
                 let skill = poe_node.as_passive_skill(&tree);
                 let node_sum: f32 = skill
                     .stats
                     .iter()
                     .filter(|s| {
-                        s.name == keyword
+                        s.name.contains(keyword)
                             && s.value > min_value
-                            && matches!(s.operand, Operand::Percentage)
+                            && matches!(s.operand, Operand::Percentage | Operand::Add)
                     })
-                    .map(|s| s.value)
+                    .map(|s| {
+                       log::trace!("{:?}",s);
+                        s.value
+                    })
                     .sum();
 
                 if node_sum > 0.0 {
@@ -86,7 +89,7 @@ fn main() {
             }
         });
 
-        // Optional Debugging: Inspect stats on nodes with non-zero contributions
+        // Debugging: Inspect stats on nodes with non-zero contributions
         /*
         for &node_id in path {
             if let Some(poe_node) = tree.nodes.get(&node_id) {
