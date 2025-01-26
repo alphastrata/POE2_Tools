@@ -1,5 +1,7 @@
 /target
 PathOfBuilding
 .DS_Store
-.vscode/*
 .vscode
+.cargo
+__pycache__
+
