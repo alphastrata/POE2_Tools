@@ -14,9 +14,8 @@ pub struct MouseControlsPlugin;
 
 impl Plugin for MouseControlsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(MouseSelecetedNodeHistory {
-            inner: VecDeque::new(),
-        });
+        app.insert_resource(MouseSelecetedNodeHistory(VecDeque::new()));
+
         app.add_systems(Update, (handle_node_clicks, hover_started, hover_ended));
     }
 }
