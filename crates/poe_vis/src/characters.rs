@@ -9,7 +9,8 @@ use poe_tree::{character::Character, type_wrappings::NodeId};
 pub struct CharacterPlugin;
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (setup_character, activate_starting_nodes));
+        app.add_systems(Startup, setup_character);
+        app.add_systems(PostStartup, activate_starting_nodes);
 
         log::debug!("CharacterPlugin plugin enabled");
     }
