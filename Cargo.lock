@@ -3761,7 +3761,6 @@ name = "poe_tools"
 version = "0.1.0"
 dependencies = [
  "bitset",
- "rayon",
 ]
 
 [[package]]
@@ -3772,6 +3771,7 @@ dependencies = [
  "chrono",
  "log",
  "pretty_env_logger",
+ "rayon",
  "rfd",
  "serde",
  "serde_json",

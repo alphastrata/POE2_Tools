@@ -1,56 +1,110 @@
-use poe_tree::consts::CHAR_START_NODES;
+use std::collections::HashMap;
+
+use poe_tree::{consts::CHAR_START_NODES, stats::Operand, PassiveTree};
+
+/// Helper function to truncate the path to the first 3 and last 3 NodeIds
+fn truncate_path(path: &[u32]) -> String {
+    if path.len() <= 6 {
+        format!("{:?}", path)
+    } else {
+        let first = &path[..3];
+        let last = &path[path.len() - 3..];
+        let first_str = first
+            .iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let last_str = last
+            .iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("[{}, ..., {}]", first_str, last_str)
+    }
+}
 
 fn quick_tree() -> PassiveTree {
-    let file = std::fs::File::open("data/POE2_Tree.json").unwrap();
+    let file = std::fs::File::open("data/POE2_Tree.json").expect("Failed to open POE2_Tree.json");
     let reader = std::io::BufReader::new(file);
-    let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
-    PassiveTree::from_value(&tree_data).unwrap()
+    let tree_data: serde_json::Value =
+        serde_json::from_reader(reader).expect("Failed to parse JSON");
+    PassiveTree::from_value(&tree_data).expect("Failed to create PassiveTree")
 }
 
 fn main() {
     let tree = quick_tree();
 
-    
-    let keyword = "evasion_rating_+%";
-    let min_value = 15.0f32;
+    // Mapping of start node IDs to class names
+    let char_start_nodes: HashMap<u32, &str> = HashMap::from([
+        // (50459, "Ranger"),
+        // (47175, "Warrior"),
+        // (50986, "Mercenary"),
+        // (61525, "???"),
+        (54447, "Witch or Sorceress"),
+        (44683, "Monk"),
+    ]);
 
-    let mut num_nodes = 0;
+    let levels = vec![40, 80];
+    let keyword = "lightning_damage";
+    let min_value = 10.0f32;
 
-    let sum: f32 = tree
-        .nodes
-        .iter()
-        .filter_map(|(_node_id, poe_node)| {
-            let skill = poe_node.as_passive_skill(&tree);
-            let stat_sum: f32 = skill
-                .stats
-                .iter()
-                .filter(|s| {
-                    s.name == keyword
-                        && s.value == min_value
-                        && matches!(s.operand, Operand::Percentage)
-                })
-                .map(|s| s.value)
-                .sum();
+    // Extract start node IDs
+    let start_node_ids: Vec<u32> = char_start_nodes.keys().cloned().collect();
 
-            if stat_sum > 0.0 {
-                num_nodes += 1;
-                Some(stat_sum)
+    // Use the library's parallel Dijkstra function to get paths
+    let paths = tree.parallel_dijkstra_with_all_paths(&start_node_ids, &levels);
+
+    for ((start, level), path) in &paths {
+        // Get the class name from the start node ID
+        let class_name = char_start_nodes.get(start).unwrap_or(&"Unknown");
+
+        // Truncate the path
+        let truncated_path = truncate_path(path);
+
+        // Calculate sum and count of stats using iterators
+        let (num_nodes, sum) = path.iter().fold((0, 0.0f32), |(count, acc), &node_id| {
+            if let Some(poe_node) = tree.nodes.get(&node_id) {
+                let skill = poe_node.as_passive_skill(&tree);
+                let node_sum: f32 = skill
+                    .stats
+                    .iter()
+                    .filter(|s| {
+                        s.name == keyword
+                            && s.value > min_value
+                            && matches!(s.operand, Operand::Percentage)
+                    })
+                    .map(|s| s.value)
+                    .sum();
+
+                if node_sum > 0.0 {
+                    (count + 1, acc + node_sum)
+                } else {
+                    (count, acc)
+                }
             } else {
-                None
+                (count, acc)
             }
-        })
-        .sum();
+        });
 
-    // Specify the levels up to which we'll evaluate paths
-    let levels = vec![20, 40];
+        // Optional Debugging: Inspect stats on nodes with non-zero contributions
+        /*
+        for &node_id in path {
+            if let Some(poe_node) = tree.nodes.get(&node_id) {
+                let skill = poe_node.as_passive_skill(&tree);
+                for stat in &skill.stats {
+                    if stat.name == keyword {
+                        println!("Node {}: {} = {} {:?}", node_id, stat.name, stat.value, stat.operand);
+                    }
+                }
+            }
+        }
+        */
 
-    // Get paths using Dijkstra
-    let paths = tree.dijkstra_paths(&CHAR_START_NODES, &levels);
-
-    for ((start, level), path) in paths {
-        println!(
-            "Path from start node {start} to level {level}: {:?}",
-            path
-        );
+        if sum > 0.0 {
+            println!(
+                "{} @{} can obtain {:.1} to {} with path: {}",
+                class_name, level, sum, keyword, truncated_path
+            );
+        }
     }
 }

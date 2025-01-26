@@ -1,5 +1,7 @@
+use rayon::prelude::*;
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    cmp::Ordering,
+    collections::{BinaryHeap, HashMap, HashSet, VecDeque},
     sync::{
         mpsc::{channel, Receiver, Sender},
         Arc, Mutex,
@@ -7,12 +9,8 @@ use std::{
     thread,
     time::Instant,
 };
-use rayon::prelude::*;
 
-use super::edges::Edge;
-use super::stats::Stat;
-use super::type_wrappings::NodeId;
-use super::PassiveTree;
+use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
 
 impl PassiveTree {
     /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
@@ -358,184 +356,15 @@ impl PassiveTree {
     }
 }
 
-
-
-
-use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::cmp::Ordering;
-
-#[derive(Debug, Eq, PartialEq)]
-struct NodeDistance {
-    node: u32,
-    distance: f32,
-}
-
-// For BinaryHeap, we need to reverse the order for min-heap behaviour
-impl Ord for NodeDistance {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.distance.partial_cmp(&self.distance).unwrap()
-    }
-}
-
-impl PartialOrd for NodeDistance {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PassiveTree {
-    /// returns ALL paths traversed.
-    pub fn dijkstra_with_all_paths(
-        &self,
-        starts: &[u32],
-        levels: &[u32],
-    ) -> HashMap<(u32, u32), Vec<u32>> {
-        let mut paths = HashMap::new();
-
-        for &start in starts {
-            let mut distances = HashMap::new();
-            let mut predecessors = HashMap::new();
-            let mut visited = HashSet::new();
-            let mut heap = BinaryHeap::new();
-
-            // Start node has a distance of 0
-            distances.insert(start, 0.0);
-            heap.push(NodeDistance { node: start, distance: 0.0 });
-
-            while let Some(NodeDistance { node, distance }) = heap.pop() {
-                if visited.contains(&node) {
-                    continue;
-                }
-                visited.insert(node);
-
-                for neighbour in self.neighbors(&node) {
-                    if visited.contains(&neighbour) {
-                        continue;
-                    }
-
-                    let edge_weight = 1.0; // Or use actual edge weights if applicable
-                    let new_distance = distance + edge_weight;
-
-                    if new_distance < *distances.get(&neighbour).unwrap_or(&f32::INFINITY) {
-                        distances.insert(neighbour, new_distance);
-                        predecessors.insert(neighbour, node);
-                        heap.push(NodeDistance {
-                            node: neighbour,
-                            distance: new_distance,
-                        });
-                    }
-                }
-            }
-
-            // Reconstruct paths for each level
-            for &level in levels {
-                let mut path = Vec::new();
-                let mut current = level;
-
-                while let Some(&prev) = predecessors.get(&current) {
-                    path.push(current);
-                    current = prev;
-                }
-
-                path.push(start); // Add the start node
-                path.reverse();
-
-                // Save path to the map
-                paths.insert((start, level), path);
-            }
-        }
-
-        paths
-    }
-
-    /// Parallelised Dijkstra's algorithm with all paths and logging
-    pub fn parallel_dijkstra_with_all_paths(
-        &self,
-        starts: &[u32],
-        levels: &[u32],
-    ) -> HashMap<(u32, u32), Vec<u32>> {
-        let paths = Arc::new(Mutex::new(HashMap::new()));
-
-        starts.par_iter().for_each(|&start| {
-            let start_time = Instant::now();
-            println!("Starting Dijkstra for start node: {}", start);
-
-            let mut distances = HashMap::new();
-            let mut predecessors = HashMap::new();
-            let mut visited = HashSet::new();
-            let mut heap = BinaryHeap::new();
-
-            // Start node has a distance of 0
-            distances.insert(start, 0.0);
-            heap.push(NodeDistance { node: start, distance: 0.0 });
-
-            while let Some(NodeDistance { node, distance }) = heap.pop() {
-                if visited.contains(&node) {
-                    continue;
-                }
-                visited.insert(node);
-
-                for neighbour in self.neighbors(&node) {
-                    if visited.contains(&neighbour) {
-                        continue;
-                    }
-
-                    let edge_weight = 1.0; // Or use actual edge weights if applicable
-                    let new_distance = distance + edge_weight;
-
-                    if new_distance < *distances.get(&neighbour).unwrap_or(&f32::INFINITY) {
-                        distances.insert(neighbour, new_distance);
-                        predecessors.insert(neighbour, node);
-                        heap.push(NodeDistance {
-                            node: neighbour,
-                            distance: new_distance,
-                        });
-                    }
-                }
-            }
-
-            // Reconstruct paths for each level
-            let mut local_paths = HashMap::new();
-            for &level in levels {
-                let mut path = Vec::new();
-                let mut current = level;
-
-                while let Some(&prev) = predecessors.get(&current) {
-                    path.push(current);
-                    current = prev;
-                }
-
-                path.push(start); // Add the start node
-                path.reverse();
-
-                // Save path to the local map
-                local_paths.insert((start, level), path);
-            }
-
-            // Merge local paths into the global map
-            let mut global_paths = paths.lock().unwrap();
-            global_paths.extend(local_paths);
-
-            println!(
-                "Dijkstra for start node {} completed in {:?} ms",
-                start,
-                start_time.elapsed().as_millis()
-            );
-        });
-
-        Arc::try_unwrap(paths).unwrap().into_inner().unwrap()
-    }
-}
-
-
 fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<u32> {
     let mut prev_node = 0;
     data.nodes
         .iter()
         .map(|(nid, node)| {
-            println!(
+            log::debug!(
                 "Inspecting {nid}\t{:?} named:{} FROM {prev_node} ",
-                node.skill_id, node.name
+                node.skill_id,
+                node.name
             );
             prev_node = *nid;
             (nid, node)
@@ -572,11 +401,11 @@ mod test {
         // Find shortest path using Dijkstra's Algorithm
         let path = tree.find_shortest_path(start_id, target_id);
         if path.is_empty() {
-            println!("No path found between {} and {}", start_id, target_id);
+            log::debug!("No path found between {} and {}", start_id, target_id);
         }
         // Update this value based on expected path length after refactoring
         assert_eq!(path.len(), 15, "Path length mismatch");
-        println!("{:#?}", path);
+        log::debug!("{:#?}", path);
     }
 
     #[test]
@@ -617,5 +446,182 @@ mod test {
 
         let actual_path = tree.bfs(start, target);
         assert_eq!(actual_path, expected_path, "Paths do not match!");
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+struct NodeDistance {
+    node: u32,
+    distance: u16,
+}
+
+impl Ord for NodeDistance {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.distance.cmp(&self.distance).reverse() // Reverse for min-heap
+    }
+}
+
+impl PartialOrd for NodeDistance {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PassiveTree {
+    /// Dijkstra's algorithm returning all paths traversed with verbose logs
+    pub fn dijkstra_with_all_paths(
+        &self,
+        starts: &[u32],
+        levels: &[u32],
+    ) -> HashMap<(u32, u32), Vec<u32>> {
+        let mut paths = HashMap::new();
+
+        for &start in starts {
+            let start_time = Instant::now();
+            log::debug!("Starting Dijkstra for start node: {}", start);
+
+            let mut distances = HashMap::new();
+            let mut predecessors = HashMap::new();
+            let mut visited = HashSet::new();
+            let mut heap = BinaryHeap::new();
+
+            // Start node has a distance of 0
+            distances.insert(start, 0);
+            heap.push(NodeDistance {
+                node: start,
+                distance: 0,
+            });
+
+            while let Some(NodeDistance { node, distance }) = heap.pop() {
+                if visited.contains(&node) {
+                    continue;
+                }
+                visited.insert(node);
+
+                for neighbour in self.neighbors(&node) {
+                    if visited.contains(&neighbour) {
+                        continue;
+                    }
+
+                    let edge_weight = 1; // Use an integer edge weight
+                    let new_distance = distance + edge_weight;
+
+                    if new_distance < *distances.get(&neighbour).unwrap_or(&u16::MAX) {
+                        distances.insert(neighbour, new_distance);
+                        predecessors.insert(neighbour, node);
+                        heap.push(NodeDistance {
+                            node: neighbour,
+                            distance: new_distance,
+                        });
+                    }
+                }
+            }
+
+            // Reconstruct paths for each level
+            for &level in levels {
+                let mut path = Vec::new();
+                let mut current = level;
+
+                while let Some(&prev) = predecessors.get(&current) {
+                    path.push(current);
+                    current = prev;
+                }
+
+                path.push(start); // Add the start node
+                path.reverse();
+
+                // Save path to the map
+                paths.insert((start, level), path);
+            }
+
+            log::debug!(
+                "Dijkstra for start node {} completed in {:?} ms",
+                start,
+                start_time.elapsed().as_millis()
+            );
+        }
+
+        paths
+    }
+
+    /// Parallelised Dijkstra's algorithm with all paths and logging
+    pub fn parallel_dijkstra_with_all_paths(
+        &self,
+        starts: &[u32],
+        levels: &[u32],
+    ) -> HashMap<(u32, u32), Vec<u32>> {
+        let paths = Arc::new(Mutex::new(HashMap::new()));
+
+        starts.par_iter().for_each(|&start| {
+            let start_time = Instant::now();
+            log::debug!("Starting Dijkstra for start node: {}", start);
+
+            let mut distances = HashMap::new();
+            let mut predecessors = HashMap::new();
+            let mut visited = HashSet::new();
+            let mut heap = BinaryHeap::new();
+
+            // Start node has a distance of 0
+            distances.insert(start, 0);
+            heap.push(NodeDistance {
+                node: start,
+                distance: 0,
+            });
+
+            while let Some(NodeDistance { node, distance }) = heap.pop() {
+                if visited.contains(&node) {
+                    continue;
+                }
+                visited.insert(node);
+
+                for neighbour in self.neighbors(&node) {
+                    if visited.contains(&neighbour) {
+                        continue;
+                    }
+
+                    let edge_weight = 1; // Use an integer edge weight
+                    let new_distance = distance + edge_weight;
+
+                    if new_distance < *distances.get(&neighbour).unwrap_or(&u16::MAX) {
+                        distances.insert(neighbour, new_distance);
+                        predecessors.insert(neighbour, node);
+                        heap.push(NodeDistance {
+                            node: neighbour,
+                            distance: new_distance,
+                        });
+                    }
+                }
+            }
+
+            // Reconstruct paths for each level
+            let mut local_paths = HashMap::new();
+            for &level in levels {
+                let mut path = Vec::new();
+                let mut current = level;
+
+                while let Some(&prev) = predecessors.get(&current) {
+                    path.push(current);
+                    current = prev;
+                }
+
+                path.push(start); // Add the start node
+                path.reverse();
+
+                // Save path to the local map
+                local_paths.insert((start, level), path);
+            }
+
+            // Merge local paths into the global map
+            let mut global_paths = paths.lock().unwrap();
+            global_paths.extend(local_paths);
+
+            log::debug!(
+                "Dijkstra for start node {} completed in {:?} ms",
+                start,
+                start_time.elapsed().as_millis()
+            );
+        });
+
+        Arc::try_unwrap(paths).unwrap().into_inner().unwrap()
     }
 }

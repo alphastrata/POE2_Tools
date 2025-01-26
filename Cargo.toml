@@ -23,7 +23,8 @@ bevy = { version = "0.15.1", features = [
     "file_watcher",
 ] } #, "bevy_dev_tools"] }
 tracing-subscriber = "0.3.19"
-
-[dependencies]
 bitset = "0.1.2"
 rayon = "1.10.0"
+
+[dependencies]
+bitset.workspace = true

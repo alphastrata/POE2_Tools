@@ -9,6 +9,9 @@ edition = "2021"
 name = "node_count"
 path = "examples/node_count.rs"
 
+[[example]]
+name = "lightning_dam"
+path = "examples/lightning_dam.rs"
 
 [[examples]]
 name = "evasion"
