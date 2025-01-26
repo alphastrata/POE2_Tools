@@ -4,6 +4,17 @@ name = "poe_tree"
 version = "0.1.0"
 edition = "2021"
 
+
+[[examples]]
+name = "node_count"
+path = "examples/node_count.rs"
+
+
+[[examples]]
+name = "evasion"
+path = "examples/evasion.rs"
+
+
 [dependencies]
 log = { workspace = true }
 pretty_env_logger = { workspace = true }

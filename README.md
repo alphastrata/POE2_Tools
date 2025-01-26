@@ -7,6 +7,7 @@ I created this because I couldn't quite achieve what I wanted on maxroll.gg or w
 
 - [Visualizations](#visualisations)
 - [API](#api)
+- [Examples](#examples)
 
 # Scope
 
@@ -123,3 +124,12 @@ $env:RUST_LOG = "off,poe_tools=error,poe_vis=debug"; cargo run -p poe_vis --bin 
 
 ```sh
 ```
+
+## Examples
+
+1. How many nodes are there? what about just passives?
+```sh
+cargo run --example -p poe_tree --example node_count
+```
+
+2. How many `+%15 to Evasion Rating` nodes are there?
