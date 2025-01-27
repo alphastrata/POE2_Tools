@@ -4049,6 +4049,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "crossbeam",
+ "crossbeam-channel",
  "jsonrpc-core",
  "jsonrpc-http-server",
  "log",

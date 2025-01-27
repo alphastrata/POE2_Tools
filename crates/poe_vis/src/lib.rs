@@ -11,6 +11,7 @@ use materials::PoeVisMaterials;
 use mouse::MouseControlsPlugin;
 use nodes::NodeInteractionPlugin;
 use overlays_n_popups::OverlaysAndPopupsPlugin;
+use remote::RPCPlugin;
 
 mod background_services;
 mod camera;

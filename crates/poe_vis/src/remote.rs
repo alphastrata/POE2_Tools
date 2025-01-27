@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use jsonrpc_core::{IoHandler, Params, Value};
 use jsonrpc_http_server::{Server as RpcServer, ServerBuilder};
 use poe_tree::type_wrappings::NodeId;
-use crossbeam::{unvounded, Receiver, Sender};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 
 use crate::{events::*, materials::{self, GameMaterials}, resources::*};
 
@@ -32,58 +32,62 @@ impl Plugin for RPCPlugin {
 }
 
 fn setup_server(mut commands: Commands) {
-    // create channel
     let (tx, rx): (Sender<Command>, Receiver<Command>) = unbounded();
 
-    // build rpc handler
     let mut io = IoHandler::new();
 
-    // Add more methods here:
-    io.add_method("activate_node", move |params: Params| {
-        // parse node id
-        let node_id: NodeId = parse_node_id(&params); 
-        tx.send(Command::ActivateNode(node_id)).ok();
-        Ok(Value::String("ok".into()))
+    // Use add_sync_method to avoid "not a future" error
+    io.add_sync_method("activate_node", {
+        let tx = tx.clone();
+        move |params: Params| {
+            let node_id: NodeId = parse(&params);
+            tx.send(Command::ActivateNode(node_id)).ok();
+            Ok(Value::String("ok".into()))
+        }
     });
-    // add other methods similarly...
 
-    // start server
+    io.add_sync_method("deactivate_node", {
+        let tx = tx.clone();
+        move |params: Params| {
+            let node_id: NodeId = parse(&params);
+            tx.send(Command::DeactivateNode(node_id)).ok();
+            Ok(Value::String("ok".into()))
+        }
+    });
+
+    // Add more methods like highlight_node, etc...
+
     let server = ServerBuilder::new(io)
-        .start_http(&"0.0.0.0:90210".parse().unwrap())
+        .start_http(&"0.0.0.0:6004".parse().unwrap())
         .unwrap();
 
-    // store resource
     commands.insert_resource(Server { handle: server, rx });
 }
 
 fn rx_rpx(
-    server: Res<Server>, 
+    server: Res<Server>,
     mut activate: EventWriter<NodeActivationReq>,
     mut deactivate: EventWriter<NodeDeactivationReq>,
-    // etc for highlight, remove highlight...
+    // etc...
 ) {
-    // pump commands into events
     while let Ok(cmd) = server.rx.try_recv() {
         match cmd {
-            Command::ActivateNode(id) => activate.send(NodeActivationReq(id)),
-            Command::DeactivateNode(id) => deactivate.send(NodeDeactivationReq(id)),
-            _=>{}
+            Command::ActivateNode(id) => {
+                activate.send(NodeActivationReq(id));
+            }
+            Command::DeactivateNode(id) => {
+                deactivate.send(NodeDeactivationReq(id));
+            }
+            _ => {}
         }
     }
 }
 
-// Example parser
-fn parse_node_id(params: &Params) -> NodeId {
+fn parse(params: &Params) -> NodeId {
     match params {
         Params::Array(arr) if !arr.is_empty() => {
-            let val = arr[0].as_u64().unwrap_or(0) as usize;
-            NodeId(val)
-        },
-        _ => NodeId(0),
+            arr[0].as_u64().unwrap() as NodeId
+        }
+        _ => unimplemented!()
     }
 }
-
-// Example curl test (activate_node):
-// curl -X POST -H "Content-Type: application/json" \
-//   --data '{"jsonrpc":"2.0","method":"activate_node","params":[123],"id":1}' \
-//   http://0.0.0.0:90210

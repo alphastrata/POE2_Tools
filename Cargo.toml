@@ -28,3 +28,4 @@ rayon = "1.10.0"
 jsonrpc-core = "18.0.0"
 jsonrpc-http-server = "18.0.0"
 crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }
+crossbeam-channel = "0.5.14"
