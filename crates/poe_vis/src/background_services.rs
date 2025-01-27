@@ -1,5 +1,6 @@
 use std::ops::ControlFlow;
 
+use bevy::prelude::Visibility;
 use bevy::{
     prelude::*,
     render::{mesh::ConvexPolygonMeshBuilder, render_graph::Edge},
@@ -23,12 +24,17 @@ impl Plugin for BGServicesPlugin {
         app
             // Spacing..
             .add_event::<EdgeActivationReq>()
+            .add_event::<EdgeDeactivationReq>()
             .add_event::<EdgeColourReq>()
             .add_event::<NodeActivationReq>()
             .add_event::<NodeColourReq>()
             .add_event::<NodeScaleReq>()
             .add_event::<NodeDeactivationReq>()
-            .add_event::<EdgeDeactivationReq>()
+            .add_event::<NodeDeactivationReq>()
+            .add_event::<LoadCharacterReq>()
+            .add_event::<SaveCharacterReq>()
+            .add_event::<MoveCameraReq>()
+
             //spacing..
             ;
 
@@ -57,6 +63,7 @@ impl Plugin for BGServicesPlugin {
                 validate_paths_between_active_nodes
                     .run_if(sufficient_active_nodes)
                     .run_if(resource_equals(PathRepairRequired(true))),
+                process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
             ),
         );
         log::debug!("BGServices plugin enabled");
@@ -88,6 +95,30 @@ fn process_scale_requests(
                 t.scale = Vec3::splat(*new_scale);
             }
         });
+}
+
+fn process_searchbox_visibility_toggle(
+    mut commands: Commands,
+    mut searchbox_query: Query<Entity, With<SearchMarker>>,
+    // mut toggle_event: EventReader<ShowSearch>, // protected by run conditions.
+    mut searchbox_state: ResMut<SearchState>,
+) {
+    let Ok(sb) = searchbox_query.get_single_mut() else {
+        log::warn!("Unable to get searchbox...");
+        return;
+    };
+
+    searchbox_state.open = !searchbox_state.open;
+    match searchbox_state.open {
+        true => {
+            commands.entity(sb).remove::<Visibility>();
+            commands.entity(sb).insert(Visibility::Visible);
+        }
+        false => {
+            commands.entity(sb).remove::<Visibility>();
+            commands.entity(sb).insert(Visibility::Hidden);
+        }
+    }
 }
 
 //Activations

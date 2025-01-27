@@ -14,7 +14,3 @@ impl Plugin for NodeInteractionPlugin {
         log::debug!("NodeInteraction plugin enabled");
     }
 }
-
-fn handle_searched_node() {
-    todo!()
-}

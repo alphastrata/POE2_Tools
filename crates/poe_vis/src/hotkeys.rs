@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use crate::resources::UserConfig;
+use crate::{
+    components::SearchMarker,
+    events::ShowSearch,
+    resources::{SearchState, UserConfig},
+};
 
 pub struct HotkeysPlugin;
 
@@ -16,12 +20,15 @@ fn handle_input(
     config: Res<UserConfig>,
     keys: Res<ButtonInput<KeyCode>>,
     mut camera_query: Query<&mut Transform, With<Camera2d>>,
+    mut searchbox_toggle: EventWriter<ShowSearch>,
 ) {
-    // Handle other actions
     if check_action_just_pressed(&config, "camera_reset_home", &keys) {
         if let Ok(mut transform) = camera_query.get_single_mut() {
             transform.translation = Vec3::ZERO;
         }
+    }
+    if check_action_just_pressed(&config, "search_for_node_by_name", &keys) {
+        searchbox_toggle.send(ShowSearch);
     }
 
     if check_action_just_pressed(&config, "exit", &keys) {

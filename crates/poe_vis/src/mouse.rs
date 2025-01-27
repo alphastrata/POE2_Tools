@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-
 use bevy::prelude::*;
 
 use crate::{

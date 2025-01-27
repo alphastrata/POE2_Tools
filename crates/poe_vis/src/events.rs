@@ -43,3 +43,6 @@ impl EdgeDeactivationReq {
         (self.0, self.1)
     }
 }
+
+#[derive(Event)]
+pub struct ShowSearch;

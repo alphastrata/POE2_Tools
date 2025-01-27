@@ -58,6 +58,7 @@ fn spawn_nodes(
             Transform::from_translation(Vec3::new(x, y, NODE_PLACEMENT_Z_IDX)),
             NodeMarker(node.node_id),
             NodeInactive,
+           Skill( node.as_passive_skill(&tree).clone())
         ));
     }
 }

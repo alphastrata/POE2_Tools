@@ -27,6 +27,6 @@ tracing-subscriber.workspace = true
 jsonrpc-core.workspace = true
 jsonrpc-http-server.workspace = true
 crossbeam-channel.workspace = true
-
+bevy_cosmic_edit.workspace = true
 
 poe_tree = { workspace = true }

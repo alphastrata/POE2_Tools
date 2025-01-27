@@ -51,7 +51,7 @@ fn setup_server(mut commands: Commands) {
     let io = add_rpc_io_methods(tx);
 
     let server = ServerBuilder::new(io)
-        .start_http(&"0.0.0.0:90210".parse().unwrap())
+        .start_http(&"0.0.0.0:6004".parse().unwrap())
         .unwrap();
 
     commands.insert_resource(Server { handle: server, rx });

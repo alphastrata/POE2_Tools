@@ -12,28 +12,29 @@ use mouse::MouseControlsPlugin;
 use nodes::NodeInteractionPlugin;
 use overlays_n_popups::OverlaysAndPopupsPlugin;
 use remote::RPCPlugin;
+use search::SearchToolsPlugin;
 
+//  mod shaders;
 mod background_services;
 mod camera;
 mod characters;
 mod components;
 mod config;
 mod consts;
+mod edges;
 mod events;
 mod hotkeys;
+mod init_tree;
 mod materials;
 mod mouse;
-mod resources;
-//  mod shaders;
-mod init_tree;
-mod overlays_n_popups;
-
-mod edges;
 mod nodes;
-
-pub mod remote;
+mod overlays_n_popups;
+mod remote;
+mod resources;
+mod search;
 
 pub struct PoeVis;
+
 
 impl Plugin for PoeVis {
     fn build(&self, app: &mut bevy::prelude::App) {
@@ -48,6 +49,7 @@ impl Plugin for PoeVis {
             PoeVisMaterials,
             MouseControlsPlugin,
             UserConfigPlugin,
+            SearchToolsPlugin,
             HotkeysPlugin,
             OverlaysAndPopupsPlugin,
             NodeInteractionPlugin,

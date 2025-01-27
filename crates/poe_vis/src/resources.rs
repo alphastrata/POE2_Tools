@@ -47,3 +47,10 @@ impl PathRepairRequired {
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct MouseSelecetedNodeHistory(pub VecDeque<NodeId>);
+
+#[derive(Resource, Default, Debug)]
+pub struct SearchState {
+    pub search_query: Option<String>,
+    pub search_results: Vec<NodeId>,
+    pub open: bool,
+}

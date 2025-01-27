@@ -1,5 +1,8 @@
 use bevy::prelude::{Component, Deref, DerefMut};
-use poe_tree::type_wrappings::{GroupId, NodeId};
+use poe_tree::{
+    skills::PassiveSkill,
+    type_wrappings::{GroupId, NodeId},
+};
 
 #[derive(Component, Deref, DerefMut)]
 pub struct NodeMarker(pub NodeId); // Marker component for nodes
@@ -36,3 +39,10 @@ pub struct Hovered {
     pub timer: bevy::time::Timer,
     pub base_scale: f32,
 }
+
+#[derive(Component, Deref)]
+
+pub struct Skill(pub PassiveSkill);
+
+#[derive(Component)]
+pub struct SearchMarker;

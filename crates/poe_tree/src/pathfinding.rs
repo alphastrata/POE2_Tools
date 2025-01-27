@@ -15,7 +15,6 @@ use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
 impl PassiveTree {
     /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
     const STEP_LIMIT: i32 = 123;
-    const MAX_NODE_ID: u32 = u16::MAX as u32;
 
     pub fn is_node_within_distance(&self, start: NodeId, target: NodeId, max_steps: usize) -> bool {
         let path = self.find_path(start, target);
