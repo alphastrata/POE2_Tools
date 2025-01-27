@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use poe_tree::{consts::CHAR_START_NODES, stats::Operand, PassiveTree};
+use poe_tree::{stats::Operand, PassiveTree};
 
 /// Helper function to truncate the path to the first 3 and last 3 NodeIds
 fn truncate_path(path: &[u32]) -> String {
@@ -96,12 +96,14 @@ fn main() {
                 let skill = poe_node.as_passive_skill(&tree);
                 for stat in &skill.stats {
                     if stat.name == keyword {
-                        println!("Node {}: {} = {} {:?}", node_id, stat.name, stat.value, stat.operand);
+                        println!(
+                            "Node {}: {} = {} {:?}",
+                            node_id, stat.name, stat.value, stat.operand
+                        );
                     }
                 }
             }
         }
-        
 
         if sum > 0.0 {
             println!(

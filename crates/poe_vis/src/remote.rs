@@ -11,7 +11,6 @@ use crate::{
 
 pub struct RPCPlugin;
 
-// expanded Command for all your events
 pub enum Command {
     ActivateNode(NodeId),
     DeactivateNode(NodeId),
@@ -176,7 +175,7 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
     // io.add_sync_method("get_node_pos", {
     //     move |p: Params| {
     //         let node_id = parse_node_id(&p);
-            
+
     //         tx.send(Command::GetCameraPos).ok();
     //         Ok(Value::String("ok".into()))
 
@@ -202,18 +201,17 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
     io
 }
 
-
 fn rx_rpx(
     server: Res<Server>,
     mut activation: EventWriter<NodeActivationReq>,
     mut deactivation: EventWriter<NodeDeactivationReq>,
     mut scale: EventWriter<NodeScaleReq>,
-    mut node_col: EventWriter<NodeColourReq>,
-    mut edge_col: EventWriter<EdgeColourReq>,
+    node_col: EventWriter<NodeColourReq>,
+    edge_col: EventWriter<EdgeColourReq>,
     mut edge_act: EventWriter<EdgeActivationReq>,
     mut edge_deact: EventWriter<EdgeDeactivationReq>,
-    mut load: EventWriter<LoadCharacterReq>,
-    mut save: EventWriter<SaveCharacterReq>,
+    load: EventWriter<LoadCharacterReq>,
+    save: EventWriter<SaveCharacterReq>,
     mut cam: EventWriter<MoveCameraReq>,
     // TODO: additional resources?
 ) {
@@ -264,7 +262,6 @@ fn rx_rpx(
         }
     }
 }
-
 
 // small parse fns for our Params...
 fn parse_node_id(params: &Params) -> NodeId {

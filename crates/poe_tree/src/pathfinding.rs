@@ -196,20 +196,20 @@ impl PassiveTree {
         let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
 
         // Start BFS from the `start` node
-        queue.push_back((start.clone(), 0));
-        visited.insert(start.clone());
+        queue.push_back((start, 0));
+        visited.insert(start);
 
         while let Some((current, depth)) = queue.pop_front() {
             // Check if current node is one of the targets
             if target_set.contains(&current) {
                 // Reconstruct the path from start to current
                 let mut path = Vec::new();
-                let mut step = current.clone();
-                path.push(step.clone());
+                let mut step = current;
+                path.push(step);
 
                 while let Some(prev) = predecessors.get(&step) {
-                    step = prev.clone();
-                    path.push(step.clone());
+                    step = *prev;
+                    path.push(step);
                 }
 
                 path.reverse(); // Reverse to get path from start to target
@@ -227,9 +227,9 @@ impl PassiveTree {
 
             // Explore all neighboring nodes
             for neighbor in self.neighbors(&current) {
-                if visited.insert(neighbor.clone()) {
-                    queue.push_back((neighbor.clone(), depth + 1));
-                    predecessors.insert(neighbor, current.clone());
+                if visited.insert(neighbor) {
+                    queue.push_back((neighbor, depth + 1));
+                    predecessors.insert(neighbor, current);
                 }
             }
         }
@@ -558,15 +558,14 @@ mod test {
 
     use super::*;
 
-    const LONG_TEST_PATHS: ([u32; 10], [u32; 10], [u32;7]) = (
+    const LONG_TEST_PATHS: ([u32; 10], [u32; 10], [u32; 7]) = (
         [
             10364, 42857, 20024, 44223, 49220, 36778, 36479, 12925, 61196, 58329,
         ],
         [
             10364, 42857, 20024, 44223, 49220, 14725, 34233, 32545, 61196, 58329,
         ],
-
-        [10364, 55342, 17248, 53960, 8975, 61196, 58329]
+        [10364, 55342, 17248, 53960, 8975, 61196, 58329],
     );
 
     #[test]
@@ -636,7 +635,9 @@ mod test {
             description
         );
 
-        let is_valid = actual_path == &expected_paths.0[..] || actual_path == &expected_paths.1[..] || actual_path == &expected_paths.2[..];
+        let is_valid = actual_path == &expected_paths.0[..]
+            || actual_path == &expected_paths.1[..]
+            || actual_path == &expected_paths.2[..];
 
         assert!(
                 is_valid,
