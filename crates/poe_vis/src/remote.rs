@@ -198,9 +198,10 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
     //         )))
     //     }
     // });
-    
+
     io
 }
+
 
 fn rx_rpx(
     server: Res<Server>,
@@ -214,39 +215,58 @@ fn rx_rpx(
     mut load: EventWriter<LoadCharacterReq>,
     mut save: EventWriter<SaveCharacterReq>,
     mut cam: EventWriter<MoveCameraReq>,
-    //TODO: camera pos
-    //TODO: game materials
+    // TODO: additional resources?
 ) {
     while let Ok(cmd) = server.rx.try_recv() {
         match cmd {
-            Command::ActivateNode(id) => activation.send(NodeActivationReq(id)),
-            Command::DeactivateNode(id) => deactivation.send(NodeDeactivationReq(id)),
-
-            Command::ScaleNode(ent, s) => scale.send(NodeScaleReq(Entity::from_raw(ent), s)),
-            Command::ColourNode(ent, _col) => {
-                // you'd map `_col` to a Handle<ColorMaterial> somehow
-                node_col.send(NodeColourReq(Entity::from_raw(ent), Handle::default()))
+            Command::ActivateNode(id) => {
+                activation.send(NodeActivationReq(id));
             }
-            Command::ColourEdge(ent, _col) => {
-                edge_col.send(EdgeColourReq(Entity::from_raw(ent), Handle::default()))
+            Command::DeactivateNode(id) => {
+                deactivation.send(NodeDeactivationReq(id));
             }
-
-            Command::ActivateEdge(e1, e2) => edge_act.send(EdgeActivationReq(e1, e2)),
-            Command::DeactivateEdge(e1, e2) => edge_deact.send(EdgeDeactivationReq(e1, e2)),
-
-            Command::LoadCharacter => load.send(LoadCharacterReq),
-            Command::SaveCharacter => save.send(SaveCharacterReq),
-
-            Command::MoveCamera(x, y, z) => cam.send(MoveCameraReq(Vec3::new(x, y, z))),
-            _ => {
-                log::warn!("Unimplemented RPC request");
-                unimplemented!()
+            Command::ScaleNode(ent, s) => {
+                scale.send(NodeScaleReq(Entity::from_raw(ent), s));
+            }
+            Command::ActivateEdge(e1, e2) => {
+                edge_act.send(EdgeActivationReq(e1, e2));
+            }
+            Command::DeactivateEdge(e1, e2) => {
+                edge_deact.send(EdgeDeactivationReq(e1, e2));
+            }
+            Command::MoveCamera(x, y, z) => {
+                cam.send(MoveCameraReq(Vec3::new(x, y, z)));
+            }
+            Command::GetNodePos(_) => {
+                todo!();
+            }
+            Command::GetNodeColour(_) => {
+                todo!();
+            }
+            Command::LoadCharacter => {
+                todo!();
+            }
+            Command::SaveCharacter => {
+                todo!();
+            }
+            Command::GetCameraPos => {
+                todo!();
+            }
+            Command::GetMaterials => {
+                todo!();
+            }
+            Command::ColourNode(_, _) => {
+                todo!();
+            }
+            Command::ColourEdge(_, _) => {
+                todo!();
             }
         }
     }
 }
 
-// small parse fns for your param patterns
+
+// small parse fns for our Params...
 fn parse_node_id(params: &Params) -> NodeId {
     match params {
         Params::Array(arr) if !arr.is_empty() => arr[0].as_u64().unwrap() as NodeId,
