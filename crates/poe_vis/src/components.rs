@@ -46,3 +46,6 @@ pub struct Skill(pub PassiveSkill);
 
 #[derive(Component)]
 pub struct SearchMarker;
+
+#[derive(Component)]
+pub struct SearchResult;

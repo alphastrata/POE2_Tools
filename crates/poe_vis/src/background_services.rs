@@ -1,13 +1,17 @@
 use std::ops::ControlFlow;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use bevy::prelude::Visibility;
+use bevy::text::CosmicBuffer;
+use bevy::time::common_conditions::on_timer;
 use bevy::{
     prelude::*,
     render::{mesh::ConvexPolygonMeshBuilder, render_graph::Edge},
     utils::hashbrown::HashSet,
 };
-use bevy_cosmic_edit::{CosmicEditBuffer, CosmicTextChanged};
+use bevy_cosmic_edit::cosmic_text::{Buffer, BufferRef, Edit};
+use bevy_cosmic_edit::{CosmicEditBuffer, CosmicEditor, CosmicTextChanged};
 use poe_tree::type_wrappings::{EdgeId, NodeId};
 
 use crate::consts::SEARCH_THRESHOLD;
@@ -68,11 +72,16 @@ impl Plugin for BGServicesPlugin {
                     .run_if(resource_equals(PathRepairRequired(true))),
                 /* Search */
                 process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
-                (
-                    read_searchtext,
-                    search_nodes_for,
-                    process_search_results.run_if(resource_changed::<SearchState>),
-                )
+                scan_for_search_results,
+            ),
+        );
+
+        app.add_systems(
+            Update,
+            (
+                read_searchtext.run_if(on_timer(Duration::from_millis(32))),
+                (mark_matches, cleanup_search_results)
+                    .after(read_searchtext)
                     .chain(),
             ),
         );
@@ -107,6 +116,7 @@ fn process_scale_requests(
         });
 }
 
+// Search:
 fn process_searchbox_visibility_toggle(
     mut commands: Commands,
     mut searchbox_query: Query<Entity, With<SearchMarker>>,
@@ -129,49 +139,80 @@ fn process_searchbox_visibility_toggle(
         }
     }
 }
+
 fn read_searchtext(
-    mut txt: EventReader<CosmicTextChanged>,
     mut searchbox_state: ResMut<SearchState>,
+    query: Query<&CosmicEditor, With<SearchMarker>>,
 ) {
-    txt.read().for_each(|ctx| {
-        let val = &ctx.0 .1;
+    query.iter().for_each(|buffer| {
+        if let BufferRef::Owned(buffer) = buffer.editor.buffer_ref() {
+            buffer.lines.iter().into_iter().for_each(|l| {
+                let mut txt = l.clone().into_text();
 
-        log::debug!("Search query is below the SEARCH_THRESHOLD");
-        log::debug!("{}", val.len());
-        log::debug!("{}", val);
-        searchbox_state.search_query.push_str(val);
-        return;
-    });
-}
-fn search_nodes_for(tree: Res<PassiveTreeWrapper>, mut searchbox_state: ResMut<SearchState>) {
-    tree.fuzzy_search_nodes(&searchbox_state.search_query)
-        .into_iter()
-        .for_each(|n| {
-            log::debug!("{:#?}", &n);
-            searchbox_state.search_results.insert(n);
-        })
-}
-
-fn process_search_results(
-    searchbox_state: Res<SearchState>,
-    mut colour_events: EventWriter<NodeColourReq>,
-    query: Query<(Entity, &NodeMarker)>,
-    materials: Res<GameMaterials>,
-) {
-    let tx = Arc::new(Mutex::new(&mut colour_events));
-    query.par_iter().for_each(|(ent, nm)| {
-        if searchbox_state.search_results.contains(&(**nm)) {
-            match tx.lock() {
-                Ok(mut tx) => {
-                    tx.send(NodeColourReq(ent, materials.purple.clone()));
+                if searchbox_state.search_query != txt {
+                    txt = txt.trim_start_matches("/").to_string();
+                    std::mem::swap(&mut searchbox_state.search_query, &mut txt);
                 }
-                Err(e) => {
-                    log::error!("{}", e);
-                }
-            }
+            });
         }
     });
-    dbg!(&searchbox_state.search_query);
+}
+
+fn mark_matches(
+    tree: Res<PassiveTreeWrapper>,
+    searchbox_state: Res<SearchState>,
+    commands: Commands,
+    query: Query<(Entity, &NodeMarker)>,
+) {
+    if searchbox_state.search_query.len() >= SEARCH_THRESHOLD {
+        let add_me: HashSet<NodeId> = tree
+            .fuzzy_search_nodes(&searchbox_state.search_query)
+            .into_iter()
+            .collect();
+
+        let l_cmd = Arc::new(Mutex::new(commands));
+        query.par_iter().for_each(|(ent, nm)| {
+            if add_me.contains(&(**nm)) {
+                match l_cmd.lock() {
+                    Ok(mut cmd) => {
+                        cmd.entity(ent).insert(SearchResult);
+                        log::debug!("SearchResult {}", **nm);
+                    }
+                    Err(e) => {
+                        log::error!("{}", e);
+                    }
+                }
+            }
+        });
+    }
+}
+
+fn scan_for_search_results(
+    mut colour_events: EventWriter<NodeColourReq>,
+    search_results: Query<(Entity, &NodeMarker), With<SearchResult>>,
+
+    game_materials: Res<GameMaterials>,
+) {
+    search_results.into_iter().for_each(|(ent, _nm)| {
+        colour_events.send(NodeColourReq(ent, game_materials.purple.clone()));
+    });
+}
+
+fn cleanup_search_results(
+    mut commands: Commands,
+    mut searchbox_state: ResMut<SearchState>,
+    query: Query<(Entity, &NodeMarker), With<SearchResult>>,
+) {
+    // Cleanup if closed OR if the searchbox is cleared (i.e ctrl+a + delete)
+    if !searchbox_state.open || searchbox_state.search_query.is_empty() {
+        log::debug!("SearchResult cleanup begins...");
+        searchbox_state.search_query.clear();
+
+        query.iter().for_each(|(ent, nm)| {
+            commands.entity(ent).remove::<SearchResult>();
+            log::trace!("Removing highlight from {}", nm.0);
+        });
+    }
 }
 
 //Activations

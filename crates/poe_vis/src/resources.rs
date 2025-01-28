@@ -1,10 +1,14 @@
 use std::collections::VecDeque;
 
 use bevy::{
+    ecs::event::EventId,
     prelude::*,
     utils::{HashMap, HashSet},
 };
+use bevy_cosmic_edit::CosmicTextChanged;
 use poe_tree::{character::Character, type_wrappings::*};
+
+use crate::consts::SEARCH_THRESHOLD;
 
 #[derive(Resource)]
 pub struct NodeScaling {
@@ -51,9 +55,14 @@ impl PathRepairRequired {
 #[derive(Resource, Deref, DerefMut)]
 pub struct MouseSelecetedNodeHistory(pub VecDeque<NodeId>);
 
-#[derive(Resource, Default, Debug)]
+#[derive(Resource, Debug)]
 pub struct SearchState {
     pub search_query: String,
-    pub search_results: HashSet<NodeId>,
     pub open: bool,
+}
+
+impl SearchState {
+    pub(crate) fn should_search(state: Res<SearchState>) -> bool {
+        state.search_query.len() >= SEARCH_THRESHOLD
+    }
 }

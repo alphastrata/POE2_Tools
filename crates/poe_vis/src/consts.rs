@@ -9,4 +9,4 @@ pub const NODE_PLACEMENT_Z_IDX: f32 = 0.0;
 pub const EDGE_PLACEMENT_Z_IDX: f32 = -10.0;
 
 /// The length a query MUST be in the searchbox before we allow the searching to begin...
-pub const SEARCH_THRESHOLD: usize = 3;
+pub const SEARCH_THRESHOLD: usize = 5;

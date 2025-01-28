@@ -1,11 +1,12 @@
 #![allow(dead_code, unused_imports, unused_assignments, unused_variables)]
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
 use bevy_cosmic_edit::{
     cosmic_text::{Attrs, Family, Metrics},
     // placeholder::Placeholder,
     prelude::*,
     MaxLines,
+    Placeholder,
 };
 
 use crate::{
@@ -20,7 +21,10 @@ pub struct SearchToolsPlugin;
 
 impl Plugin for SearchToolsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(SearchState::default());
+        app.insert_resource(SearchState {
+            search_query: String::new(),
+            open: false,
+        });
 
         let font_bytes: &[u8] = include_bytes!("../assets/fonts/VictorMono-Regular.ttf");
         let font_config = CosmicFontConfig {
@@ -57,6 +61,10 @@ fn spawn_search_textbox(mut commands: Commands, mut font_system: ResMut<CosmicFo
             },
             SearchMarker,
             MaxLines(1),
+            Placeholder::new(
+                "Start searching...",
+                Attrs::new().color(Color::from(bevy::color::palettes::css::GRAY).to_cosmic()),
+            ),
             Visibility::Hidden,
         ))
         .id();
