@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables)]
 use bevy::prelude::*;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use jsonrpc_core::{IoHandler, Params, Value};

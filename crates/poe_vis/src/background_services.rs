@@ -6,6 +6,7 @@ use bevy::{
     render::{mesh::ConvexPolygonMeshBuilder, render_graph::Edge},
     utils::hashbrown::HashSet,
 };
+use bevy_cosmic_edit::CosmicEditBuffer;
 use poe_tree::type_wrappings::{EdgeId, NodeId};
 
 use crate::{
@@ -34,6 +35,7 @@ impl Plugin for BGServicesPlugin {
             .add_event::<LoadCharacterReq>()
             .add_event::<SaveCharacterReq>()
             .add_event::<MoveCameraReq>()
+            .add_event::<ShowSearch>()
 
             //spacing..
             ;
@@ -64,6 +66,7 @@ impl Plugin for BGServicesPlugin {
                     .run_if(sufficient_active_nodes)
                     .run_if(resource_equals(PathRepairRequired(true))),
                 process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
+                search_nodes_for,
             ),
         );
         log::debug!("BGServices plugin enabled");
@@ -119,6 +122,25 @@ fn process_searchbox_visibility_toggle(
             commands.entity(sb).insert(Visibility::Hidden);
         }
     }
+}
+fn search_nodes_for(
+    mut searchbox_state: Res<SearchState>,
+    nodes: Query<&NodeMarker, With<Skill>>,
+    tree: Res<PassiveTreeWrapper>,
+    search_text: Query<&CosmicEditBuffer, With<SearchMarker>>,
+) {
+    let needle = search_text.get_single().unwrap();
+    needle
+        .0
+        .lines
+        .iter()
+        .map(|l| l.text())
+        .filter(|l| !l.is_empty())
+        .for_each(|txt| println!("{}", txt));
+}
+
+fn process_search_results() {
+    todo!()
 }
 
 //Activations

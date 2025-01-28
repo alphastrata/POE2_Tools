@@ -5,6 +5,7 @@ use bevy_cosmic_edit::{
     cosmic_text::{Attrs, Family, Metrics},
     // placeholder::Placeholder,
     prelude::*,
+    MaxLines,
 };
 
 use crate::{
@@ -55,6 +56,7 @@ fn spawn_search_textbox(mut commands: Commands, mut font_system: ResMut<CosmicFo
                 ..default()
             },
             SearchMarker,
+            MaxLines(1),
             Visibility::Hidden,
         ))
         .id();

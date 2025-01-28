@@ -29,7 +29,7 @@ move_up = ["e", "up_arrow"]
 move_down = ["n", "down_arrow"]
 camera_reset_home = ["esc"]
 
-search_for_node_by_name = ["f"]
+search_for_node_by_name = ["/"]
 exit = ["q", "esc"]
 load_character_nodes = ["l"]
 

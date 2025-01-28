@@ -74,6 +74,9 @@ impl crate::resources::UserConfig {
             "insert" => Some(KeyCode::Insert),
             "delete" => Some(KeyCode::Delete),
 
+            // "/" => Some(KeyCode::Backslash),
+            "/" => Some(KeyCode::Slash),
+
             // Fallback for unknown keys
             _ => None,
         }

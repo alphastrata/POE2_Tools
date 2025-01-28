@@ -21,6 +21,7 @@ fn handle_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut camera_query: Query<&mut Transform, With<Camera2d>>,
     mut searchbox_toggle: EventWriter<ShowSearch>,
+    searchstate: Res<SearchState>,
 ) {
     if check_action_just_pressed(&config, "camera_reset_home", &keys) {
         if let Ok(mut transform) = camera_query.get_single_mut() {
@@ -32,7 +33,13 @@ fn handle_input(
     }
 
     if check_action_just_pressed(&config, "exit", &keys) {
-        std::process::exit(0)
+        match !searchstate.open {
+            true => std::process::exit(0),
+            false => {
+                // close the searchbox
+                searchbox_toggle.send(ShowSearch);
+            }
+        }
     }
 }
 
