@@ -70,21 +70,9 @@ impl Plugin for BGServicesPlugin {
                 validate_paths_between_active_nodes
                     .run_if(sufficient_active_nodes)
                     .run_if(resource_equals(PathRepairRequired(true))),
-                /* Search */
-                process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
-                scan_for_search_results,
             ),
         );
 
-        app.add_systems(
-            Update,
-            (
-                read_searchtext.run_if(on_timer(Duration::from_millis(32))),
-                (mark_matches, cleanup_search_results)
-                    .after(read_searchtext)
-                    .chain(),
-            ),
-        );
         log::debug!("BGServices plugin enabled");
     }
 }
@@ -114,105 +102,6 @@ fn process_scale_requests(
                 t.scale = Vec3::splat(*new_scale);
             }
         });
-}
-
-// Search:
-fn process_searchbox_visibility_toggle(
-    mut commands: Commands,
-    mut searchbox_query: Query<Entity, With<SearchMarker>>,
-    mut searchbox_state: ResMut<SearchState>,
-) {
-    let Ok(sb) = searchbox_query.get_single_mut() else {
-        log::warn!("Unable to get searchbox...");
-        return;
-    };
-
-    searchbox_state.open = !searchbox_state.open;
-    match searchbox_state.open {
-        true => {
-            commands.entity(sb).remove::<Visibility>();
-            commands.entity(sb).insert(Visibility::Visible);
-        }
-        false => {
-            commands.entity(sb).remove::<Visibility>();
-            commands.entity(sb).insert(Visibility::Hidden);
-        }
-    }
-}
-
-fn read_searchtext(
-    mut searchbox_state: ResMut<SearchState>,
-    query: Query<&CosmicEditor, With<SearchMarker>>,
-) {
-    query.iter().for_each(|buffer| {
-        if let BufferRef::Owned(buffer) = buffer.editor.buffer_ref() {
-            buffer.lines.iter().into_iter().for_each(|l| {
-                let mut txt = l.clone().into_text();
-
-                if searchbox_state.search_query != txt {
-                    txt = txt.trim_start_matches("/").to_string();
-                    std::mem::swap(&mut searchbox_state.search_query, &mut txt);
-                }
-            });
-        }
-    });
-}
-
-fn mark_matches(
-    tree: Res<PassiveTreeWrapper>,
-    searchbox_state: Res<SearchState>,
-    commands: Commands,
-    query: Query<(Entity, &NodeMarker)>,
-) {
-    if searchbox_state.search_query.len() >= SEARCH_THRESHOLD {
-        let add_me: HashSet<NodeId> = tree
-            .fuzzy_search_nodes(&searchbox_state.search_query)
-            .into_iter()
-            .collect();
-
-        let l_cmd = Arc::new(Mutex::new(commands));
-        query.par_iter().for_each(|(ent, nm)| {
-            if add_me.contains(&(**nm)) {
-                match l_cmd.lock() {
-                    Ok(mut cmd) => {
-                        cmd.entity(ent).insert(SearchResult);
-                        log::debug!("SearchResult {}", **nm);
-                    }
-                    Err(e) => {
-                        log::error!("{}", e);
-                    }
-                }
-            }
-        });
-    }
-}
-
-fn scan_for_search_results(
-    mut colour_events: EventWriter<NodeColourReq>,
-    search_results: Query<(Entity, &NodeMarker), With<SearchResult>>,
-
-    game_materials: Res<GameMaterials>,
-) {
-    search_results.into_iter().for_each(|(ent, _nm)| {
-        colour_events.send(NodeColourReq(ent, game_materials.purple.clone()));
-    });
-}
-
-fn cleanup_search_results(
-    mut commands: Commands,
-    mut searchbox_state: ResMut<SearchState>,
-    query: Query<(Entity, &NodeMarker), With<SearchResult>>,
-) {
-    // Cleanup if closed OR if the searchbox is cleared (i.e ctrl+a + delete)
-    if !searchbox_state.open || searchbox_state.search_query.is_empty() {
-        log::debug!("SearchResult cleanup begins...");
-        searchbox_state.search_query.clear();
-
-        query.iter().for_each(|(ent, nm)| {
-            commands.entity(ent).remove::<SearchResult>();
-            log::trace!("Removing highlight from {}", nm.0);
-        });
-    }
 }
 
 //Activations

@@ -275,7 +275,7 @@ impl PassiveTree {
         let num_threads = starts.len().min(8); // Limit to 8 threads or number of starts
 
         // Divide the start nodes among the threads
-        let starts_per_thread = (starts.len() + num_threads - 1) / num_threads;
+        let starts_per_thread = starts.len().div_ceil(num_threads);
         let arc_tree = Arc::new(self.clone());
 
         // Spawn threads
