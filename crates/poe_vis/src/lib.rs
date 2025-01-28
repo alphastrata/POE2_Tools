@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_imports)]
+#[allow(clippy::type_complexity)]
 use bevy::prelude::*;
 
 use background_services::BGServicesPlugin;
@@ -34,7 +35,6 @@ mod resources;
 mod search;
 
 pub struct PoeVis;
-
 
 impl Plugin for PoeVis {
     fn build(&self, app: &mut bevy::prelude::App) {

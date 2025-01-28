@@ -8,10 +8,8 @@ use std::{
 use bevy::{prelude::*, time::common_conditions::on_timer, utils::HashSet};
 use bevy_cosmic_edit::{
     cosmic_text::{Attrs, BufferRef, Edit, Family, Metrics},
-    // placeholder::Placeholder,
     prelude::*,
-    MaxLines,
-    Placeholder,
+    CosmicBackgroundColor, MaxLines, Placeholder,
 };
 use poe_tree::type_wrappings::NodeId;
 
@@ -46,7 +44,7 @@ impl Plugin for SearchToolsPlugin {
                 Update,
                 (
                     process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
-                    scan_for_search_results,
+                    scan_for_and_higlight_results,
                 ),
             );
 
@@ -66,7 +64,7 @@ impl Plugin for SearchToolsPlugin {
 fn spawn_search_textbox(mut commands: Commands, mut font_system: ResMut<CosmicFontSystem>) {
     let attrs = Attrs::new()
         .family(Family::Name("Victor Mono"))
-        .color(CosmicColor::rgb(0x94, 0x00, 0xD3));
+        .color(CosmicColor::rgb(188, 122, 199));
 
     let cosmic_edit = commands
         .spawn((
@@ -77,14 +75,22 @@ fn spawn_search_textbox(mut commands: Commands, mut font_system: ResMut<CosmicFo
                 attrs,
             ),
             Node {
-                width: Val::Percent(25.),
-                height: Val::Percent(8.),
+                // position_type: PositionType::Absolute,
+                // display: Display::Flex,
+                // justify_content: JustifyContent::Center,
+                // align_items: AlignItems::Center,
+                margin: UiRect::all(Val::Auto),
+                width: Val::Percent(25.0),
+                height: Val::Percent(8.0),
                 ..default()
             },
+            CosmicBackgroundColor(Color::rgba(0.0, 0.0, 1.0, 0.0)),
+            BorderRadius::all(Val::Px(10.)),
+            // Position of text box
             SearchMarker,
             MaxLines(1),
             Placeholder::new(
-                "Start searching...",
+                "Start typing...",
                 Attrs::new().color(Color::from(bevy::color::palettes::css::GRAY).to_cosmic()),
             ),
             Visibility::Hidden,
@@ -94,13 +100,13 @@ fn spawn_search_textbox(mut commands: Commands, mut font_system: ResMut<CosmicFo
     commands.insert_resource(FocusedWidget(Some(cosmic_edit)));
 }
 
-// Search:
 fn process_searchbox_visibility_toggle(
+    windows: Query<&Window>,
     mut commands: Commands,
-    mut searchbox_query: Query<Entity, With<SearchMarker>>,
+    mut searchbox_query: Query<(Entity, &mut Node), With<SearchMarker>>,
     mut searchbox_state: ResMut<SearchState>,
 ) {
-    let Ok(sb) = searchbox_query.get_single_mut() else {
+    let Ok((sb, mut node)) = searchbox_query.get_single_mut() else {
         log::warn!("Unable to get searchbox...");
         return;
     };
@@ -115,6 +121,13 @@ fn process_searchbox_visibility_toggle(
             commands.entity(sb).remove::<Visibility>();
             commands.entity(sb).insert(Visibility::Hidden);
         }
+    }
+
+    if let Some(cursor_pos) = windows.single().cursor_position() {
+        log::debug!("Cursor Position: {:?}", cursor_pos);
+
+        node.left = Val::Px(cursor_pos.x);
+        node.top = Val::Px(cursor_pos.y);
     }
 }
 
@@ -165,10 +178,9 @@ fn mark_matches(
     }
 }
 
-fn scan_for_search_results(
+fn scan_for_and_higlight_results(
     mut colour_events: EventWriter<NodeColourReq>,
     search_results: Query<(Entity, &NodeMarker), With<SearchResult>>,
-
     game_materials: Res<GameMaterials>,
 ) {
     search_results.into_iter().for_each(|(ent, _nm)| {
@@ -180,14 +192,18 @@ fn cleanup_search_results(
     mut commands: Commands,
     mut searchbox_state: ResMut<SearchState>,
     query: Query<(Entity, &NodeMarker), With<SearchResult>>,
+    mut colour_events: EventWriter<NodeColourReq>,
+    materials: Res<GameMaterials>,
 ) {
     // Cleanup if closed OR if the searchbox is cleared (i.e ctrl+a + delete)
-    if !searchbox_state.open || searchbox_state.search_query.is_empty() {
-        log::debug!("SearchResult cleanup begins...");
+    if !searchbox_state.open || &searchbox_state.search_query == "" {
+        log::trace!("SearchResult cleanup begins...");
         searchbox_state.search_query.clear();
 
         query.iter().for_each(|(ent, nm)| {
             commands.entity(ent).remove::<SearchResult>();
+            colour_events.send(NodeColourReq(ent, materials.node_base.clone()));
+
             log::trace!("Removing highlight from {}", nm.0);
         });
     }
