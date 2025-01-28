@@ -39,7 +39,6 @@ impl Plugin for BGServicesPlugin {
             .add_event::<SaveCharacterReq>()
             .add_event::<MoveCameraReq>()
             .add_event::<ShowSearch>()
-
             //spacing..
             ;
 
@@ -47,7 +46,6 @@ impl Plugin for BGServicesPlugin {
 
         app.add_systems(
             Update,
-            // TODO: rate-limiting
             (
                 /* Users need to see paths magically illuminate */
                 //activations:
@@ -279,7 +277,6 @@ fn process_node_deactivations(
         }
     })
 }
-
 fn process_edge_deactivations(
     mut deactivation_events: EventReader<EdgeDeactivationReq>,
     mut colour_events: EventWriter<EdgeColourReq>,
@@ -310,7 +307,6 @@ fn process_edge_deactivations(
             log::trace!("Colour reset requested for Edge {start}..{end}");
         });
 }
-
 fn scan_edges_for_inactive_updates(
     mut edge_deactivator: EventWriter<EdgeDeactivationReq>,
     haystack: Query<&EdgeMarker, With<EdgeActive>>,
@@ -326,6 +322,7 @@ fn scan_edges_for_inactive_updates(
         }
     });
 }
+
 // Colours & Aesthetics.
 fn process_node_colour_changes(
     mut colour_events: EventReader<NodeColourReq>,
