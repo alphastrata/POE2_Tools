@@ -1,4 +1,5 @@
 use std::ops::ControlFlow;
+use std::sync::{Arc, Mutex};
 
 use bevy::prelude::Visibility;
 use bevy::{
@@ -6,9 +7,10 @@ use bevy::{
     render::{mesh::ConvexPolygonMeshBuilder, render_graph::Edge},
     utils::hashbrown::HashSet,
 };
-use bevy_cosmic_edit::CosmicEditBuffer;
+use bevy_cosmic_edit::{CosmicEditBuffer, CosmicTextChanged};
 use poe_tree::type_wrappings::{EdgeId, NodeId};
 
+use crate::consts::SEARCH_THRESHOLD;
 use crate::{
     components::*,
     events::{self, NodeActivationReq, *},
@@ -17,6 +19,7 @@ use crate::{
     resources::*,
     PassiveTreeWrapper,
 };
+use crate::{materials, search};
 
 pub(crate) struct BGServicesPlugin;
 
@@ -65,8 +68,14 @@ impl Plugin for BGServicesPlugin {
                 validate_paths_between_active_nodes
                     .run_if(sufficient_active_nodes)
                     .run_if(resource_equals(PathRepairRequired(true))),
+                /* Search */
                 process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
-                search_nodes_for,
+                (
+                    read_searchtext,
+                    search_nodes_for,
+                    process_search_results.run_if(resource_changed::<SearchState>),
+                )
+                    .chain(),
             ),
         );
         log::debug!("BGServices plugin enabled");
@@ -103,7 +112,6 @@ fn process_scale_requests(
 fn process_searchbox_visibility_toggle(
     mut commands: Commands,
     mut searchbox_query: Query<Entity, With<SearchMarker>>,
-    // mut toggle_event: EventReader<ShowSearch>, // protected by run conditions.
     mut searchbox_state: ResMut<SearchState>,
 ) {
     let Ok(sb) = searchbox_query.get_single_mut() else {
@@ -123,24 +131,49 @@ fn process_searchbox_visibility_toggle(
         }
     }
 }
-fn search_nodes_for(
-    mut searchbox_state: Res<SearchState>,
-    nodes: Query<&NodeMarker, With<Skill>>,
-    tree: Res<PassiveTreeWrapper>,
-    search_text: Query<&CosmicEditBuffer, With<SearchMarker>>,
+fn read_searchtext(
+    mut txt: EventReader<CosmicTextChanged>,
+    mut searchbox_state: ResMut<SearchState>,
 ) {
-    let needle = search_text.get_single().unwrap();
-    needle
-        .0
-        .lines
-        .iter()
-        .map(|l| l.text())
-        .filter(|l| !l.is_empty())
-        .for_each(|txt| println!("{}", txt));
+    txt.read().for_each(|ctx| {
+        let val = &ctx.0 .1;
+
+        log::debug!("Search query is below the SEARCH_THRESHOLD");
+        log::debug!("{}", val.len());
+        log::debug!("{}", val);
+        searchbox_state.search_query.push_str(val);
+        return;
+    });
+}
+fn search_nodes_for(tree: Res<PassiveTreeWrapper>, mut searchbox_state: ResMut<SearchState>) {
+    tree.fuzzy_search_nodes(&searchbox_state.search_query)
+        .into_iter()
+        .for_each(|n| {
+            log::debug!("{:#?}", &n);
+            searchbox_state.search_results.insert(n);
+        })
 }
 
-fn process_search_results() {
-    todo!()
+fn process_search_results(
+    searchbox_state: Res<SearchState>,
+    mut colour_events: EventWriter<NodeColourReq>,
+    query: Query<(Entity, &NodeMarker)>,
+    materials: Res<GameMaterials>,
+) {
+    let tx = Arc::new(Mutex::new(&mut colour_events));
+    query.par_iter().for_each(|(ent, nm)| {
+        if searchbox_state.search_results.contains(&(**nm)) {
+            match tx.lock() {
+                Ok(mut tx) => {
+                    tx.send(NodeColourReq(ent, materials.purple.clone()));
+                }
+                Err(e) => {
+                    log::error!("{}", e);
+                }
+            }
+        }
+    });
+    dbg!(&searchbox_state.search_query);
 }
 
 //Activations

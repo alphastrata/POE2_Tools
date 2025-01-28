@@ -1,6 +1,9 @@
 use std::collections::VecDeque;
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{
+    prelude::*,
+    utils::{HashMap, HashSet},
+};
 use poe_tree::{character::Character, type_wrappings::*};
 
 #[derive(Resource)]
@@ -50,7 +53,7 @@ pub struct MouseSelecetedNodeHistory(pub VecDeque<NodeId>);
 
 #[derive(Resource, Default, Debug)]
 pub struct SearchState {
-    pub search_query: Option<String>,
-    pub search_results: Vec<NodeId>,
+    pub search_query: String,
+    pub search_results: HashSet<NodeId>,
     pub open: bool,
 }
