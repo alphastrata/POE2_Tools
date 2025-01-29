@@ -1,5 +1,5 @@
-use std::collections::VecDeque;
 use bevy::prelude::*;
+use std::collections::VecDeque;
 
 use crate::{
     components::*,
@@ -36,15 +36,17 @@ pub fn handle_node_clicks(
     mut activate_events: EventWriter<NodeActivationReq>,
     mut deactivate_events: EventWriter<NodeDeactivationReq>,
 ) {
-    for event in click_events.read() {
+    click_events.read().for_each(|event| {
         if let Ok((_entity, marker, inactive, active)) = nodes_query.get(event.target) {
             match (inactive, active) {
+                // node is inactive -> activate
                 (Some(_), None) => {
                     if root.0.is_some() {
                         activate_events.send(NodeActivationReq(marker.0));
                     }
                     path_repair.request_path_repair();
                 }
+                // node is active -> deactivate
                 (None, Some(_)) => {
                     deactivate_events.send(NodeDeactivationReq(marker.0));
                     path_repair.request_path_repair();
@@ -53,7 +55,7 @@ pub fn handle_node_clicks(
             }
             last_ten.push_back(marker.0);
         }
-    }
+    });
 }
 
 pub fn hover_started(

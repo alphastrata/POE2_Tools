@@ -284,25 +284,20 @@ impl PassiveTree {
             return Vec::new();
         }
 
-        // Initialize a shared channel to receive paths from threads
-        let (path_sender, path_receiver): (Sender<Vec<NodeId>>, Receiver<Vec<NodeId>>) = channel();
+        // We'll gather *all* non-empty BFS results and return the shortest among them.
+        // Remove the 'found' flag usage and don't exit early.
 
-        // Shared flag to indicate if a path has been found
-        let found = Arc::new(Mutex::new(false));
+        let (path_sender, path_receiver) = std::sync::mpsc::channel::<Vec<NodeId>>();
+        let arc_tree = std::sync::Arc::new(self.clone());
 
-        // Number of threads to spawn
-        let num_threads = starts.len().min(8); // Limit to 8 threads or number of starts
-
-        // Divide the start nodes among the threads
+        // limit to N threads
+        let num_threads = starts.len().min(8);
         let starts_per_thread = starts.len().div_ceil(num_threads);
-        let arc_tree = Arc::new(self.clone());
 
-        // Spawn threads
         let mut handles = Vec::new();
         for i in 0..num_threads {
-            let tree_clone = Arc::clone(&arc_tree);
+            let tree_clone = std::sync::Arc::clone(&arc_tree);
             let path_sender_clone = path_sender.clone();
-            let found_clone = Arc::clone(&found);
 
             let thread_starts = starts
                 .iter()
@@ -313,53 +308,40 @@ impl PassiveTree {
 
             let thread_targets = targets.to_vec();
 
-            let handle = thread::spawn(move || {
+            let handle = std::thread::spawn(move || {
+                // BFS from each of these starts
                 for start in thread_starts {
-                    // Check if another thread has found a path
-                    {
-                        let found_lock = found_clone.lock().unwrap();
-                        if *found_lock {
-                            log::trace!(
-                                "Thread for start {:?} exiting early as a path has been found.",
-                                start
-                            );
-                            return;
-                        }
-                    }
-
                     let path = tree_clone.bfs_any(start, &thread_targets);
-
+                    // If non-empty, send it. (We keep searching all starts to find the truly shortest.)
                     if !path.is_empty() {
-                        // Attempt to set the found flag
-                        {
-                            let mut found_lock = found_clone.lock().unwrap();
-                            if !*found_lock {
-                                *found_lock = true;
-                                log::trace!(
-                                    "Thread for start {:?} found a path: {:?}",
-                                    start,
-                                    path
-                                );
-                                // Send the found path
-                                path_sender_clone.send(path).unwrap();
-                            }
-                        }
-                        return;
+                        path_sender_clone.send(path).ok();
                     }
                 }
             });
+
             handles.push(handle);
         }
 
-        drop(path_sender); // Close the sender to avoid blocking
+        // close the sender in the main thread
+        drop(path_sender);
 
-        // Wait for the first path to be received
-        let result = path_receiver.recv().unwrap_or_else(|_| Vec::new());
-
-        // Wait for all threads to finish
-        for handle in handles {
-            handle.join().unwrap();
+        // Collect all results
+        let mut all_paths = Vec::new();
+        while let Ok(path) = path_receiver.recv() {
+            if !path.is_empty() {
+                all_paths.push(path);
+            }
         }
+
+        for handle in handles {
+            handle.join().ok();
+        }
+
+        // pick the shortest path from the results
+        let result = all_paths
+            .into_iter()
+            .min_by_key(|p| p.len())
+            .unwrap_or_default();
 
         if result.is_empty() {
             log::warn!(
@@ -367,13 +349,15 @@ impl PassiveTree {
                 start_time.elapsed().as_millis()
             );
         } else {
-            log::info!("Path found in {} ms.", start_time.elapsed().as_millis());
+            log::info!(
+                "Shortest path found in {} ms.",
+                start_time.elapsed().as_millis()
+            );
         }
 
         result
     }
 }
-
 fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<u32> {
     let mut prev_node = 0;
     data.nodes

@@ -1,17 +1,17 @@
-use std::ops::ControlFlow;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::{
+    ops::ControlFlow,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
-use bevy::prelude::Visibility;
-use bevy::text::CosmicBuffer;
-use bevy::time::common_conditions::on_timer;
 use bevy::{
-    prelude::*,
+    prelude::{Visibility, *},
     render::{mesh::ConvexPolygonMeshBuilder, render_graph::Edge},
+    text::CosmicBuffer,
+    time::common_conditions::on_timer,
     utils::hashbrown::HashSet,
 };
-use bevy_cosmic_edit::cosmic_text::{Buffer, BufferRef, Edit};
-use bevy_cosmic_edit::{CosmicEditBuffer, CosmicEditor, CosmicTextChanged};
+
 use poe_tree::type_wrappings::{EdgeId, NodeId};
 
 use crate::consts::SEARCH_THRESHOLD;
@@ -307,8 +307,6 @@ fn validate_paths_between_active_nodes(
     let active_and_validly_pathed =
         validate_path_to_root(tree, &active_nodes, &root_node, path_needs_repair);
 
-    // let active_and_validly_pathed = tree.bfs_any(root_node.0.unwrap(), &active_nodes);
-
     // // When this panics we need to find the problematic nodes...
     // if !active_nodes
     //     .into_iter()
@@ -329,47 +327,53 @@ fn validate_path_to_root(
     mut path_needs_repair: ResMut<PathRepairRequired>,
 ) -> HashSet<NodeId> {
     if root_node.0.is_none() {
-        log::warn!("Unable to begin pathfinding, we have no root node set.");
+        log::warn!("No root node set, can't path.");
         return HashSet::new();
     }
-
-    let mut seen: HashSet<NodeId> = HashSet::new();
     let start = root_node.0.unwrap();
-
-    for &end in active_nodes.iter() {
-        if seen.contains(&start) && seen.contains(&end) {
-            log::debug!(
-                "Skipping search for path [{}..{}] as it has already been checked.",
-                start,
-                end
-            );
-            continue;
-        }
-
-        let path = tree.bfs(start, end);
-
-        // Insert all nodes from the path into seen
-        for node in path.iter() {
-            seen.insert(*node);
-        }
-
-        if path.len() > 1 {
-            log::debug!(
-                "Valid path found for [{}..{}], with {} steps",
-                start,
-                end,
-                path.len()
-            );
-            break;
-        }
-    }
+    let mut seen: HashSet<NodeId> = HashSet::new();
+    active_nodes.iter().for_each(|nm| {
+        let path = tree.bfs(start, *nm);
+        let added = path.into_iter().filter(|nid| seen.insert(*nid)).count();
+        log::debug!("Added {} nodes to our perfectly mapped path.", added);
+    });
 
     if seen.is_empty() {
+        log::warn!(
+            "Serious problems we cannot find paths from the root to any of our active nodes.."
+        );
         path_needs_repair.request_path_repair();
-        //TODO: carry out path repair here!
     } else {
         path_needs_repair.set_unrequired();
     }
 
     seen
+}
+
+fn path_repair(
+    tree: Res<PassiveTreeWrapper>,
+    recently_selected: Res<MouseSelecetedNodeHistory>,
+    query: Query<&NodeMarker, With<NodeActive>>,
+    mut activator: EventWriter<NodeActivationReq>,
+    mut path_needs_repair: ResMut<PathRepairRequired>,
+) {
+    // the most likely reason for path repair is a mouse activity breaking a path.
+    let Some(most_recent) = recently_selected.back() else {
+        log::error!("This should be unreachable...");
+        return;
+    };
+    let active_nodes = query.into_iter().map(|n| **n).collect::<Vec<NodeId>>();
+
+    let shortest_path = tree.bfs_any(*most_recent, &active_nodes);
+
+    if !shortest_path.is_empty() {
+        log::debug!(
+            "Found a path between {most_recent}, and target {:#?}",
+            shortest_path
+        );
+        shortest_path.into_iter().for_each(|nid| {
+            activator.send(NodeActivationReq(nid));
+        });
+        path_needs_repair.set_unrequired();
+    }
 }

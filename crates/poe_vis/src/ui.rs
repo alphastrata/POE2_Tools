@@ -66,10 +66,10 @@ fn egui_ui_system(
                     if ui.small_button(format!("{}", nm.0)).clicked() {
                         move_camera_tx.send(MoveCameraReq(Vec3::new(
                             poe_node.wx,       // node x
-                            poe_node.wy,       // node y
-                            settings.max_zoom, // use max zoom
+                            -poe_node.wy,      // -1 * node wy
+                            settings.min_zoom, // we zoom them RIIIIIGHT in baby
                         )));
-                        log::debug!("Move2Node triggered...");
+                        log::trace!("Move2Node triggered...");
                     }
                 });
             });

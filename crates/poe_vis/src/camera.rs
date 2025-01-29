@@ -19,12 +19,13 @@ impl Plugin for PoeVisCameraPlugin {
                     camera_drag_system, // .after(crate::controls::handle_node_clicks)
                     camera_zoom_system,
                     debug_camera_info,
-                    move_camera_to_target_system,
+                    move_camera_to_target_system.run_if(on_event::<MoveCameraReq>),
                 ),
             );
         log::debug!("PoeVisCamera plugin enabled");
     }
 }
+
 fn move_camera_to_target_system(
     mut move_requests: EventReader<MoveCameraReq>,
     mut camera_q: Query<&mut Transform, With<Camera2d>>,
