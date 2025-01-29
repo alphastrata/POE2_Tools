@@ -3,6 +3,8 @@ use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use bevy::text::{TextFont, TextLayout};
 
+use crate::events::MoveCameraReq;
+
 // Plugin definition
 pub struct PoeVisCameraPlugin;
 
@@ -17,10 +19,29 @@ impl Plugin for PoeVisCameraPlugin {
                     camera_drag_system, // .after(crate::controls::handle_node_clicks)
                     camera_zoom_system,
                     debug_camera_info,
+                    move_camera_to_target_system,
                 ),
             );
         log::debug!("PoeVisCamera plugin enabled");
     }
+}
+fn move_camera_to_target_system(
+    mut move_requests: EventReader<MoveCameraReq>,
+    mut camera_q: Query<&mut Transform, With<Camera2d>>,
+    mut ortho_q: Query<&mut OrthographicProjection, With<Camera2d>>,
+    settings: Res<CameraSettings>,
+) {
+    move_requests
+        .read()
+        .into_iter()
+        .for_each(|MoveCameraReq(target)| {
+            let mut transform = camera_q.single_mut();
+            let mut ortho = ortho_q.single_mut();
+            transform.translation.x = target.x;
+            transform.translation.y = target.y;
+            transform.translation.z = 0.0;
+            ortho.scale = target.z.clamp(settings.min_zoom, settings.max_zoom);
+        });
 }
 
 // Add to your existing CameraSettings resource
