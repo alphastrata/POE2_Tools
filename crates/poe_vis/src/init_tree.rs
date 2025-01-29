@@ -21,8 +21,8 @@ impl Plugin for TreeCanvasPlugin {
 
         app.insert_resource(NodeScaling {
             min_scale: 1.0,         // Nodes can shrink
-            max_scale: 8.0,         // Nodes can grow
-            base_radius: 7.6,       //
+            max_scale: 6.0,         // Nodes can grow
+            base_radius: 7.2,       //
             hover_multiplier: 1.06, // Nodes that are hovered are increased by %3 of their size
             hover_fade_time: 0.120,
         });
@@ -46,9 +46,11 @@ fn spawn_nodes(
     tree: Res<PassiveTreeWrapper>,
     scaling: Res<NodeScaling>,
 ) {
+    log::debug!("Spawning nodes...");
+
     let node_radius = scaling.base_radius;
 
-    for (_, node) in tree.tree.nodes.iter() {
+    tree.tree.nodes.iter().for_each(|(_, node)| {
         let group = tree.tree.groups.get(&node.parent).unwrap();
         let (x, y) = calculate_world_position_with_negative_y(group, node.radius, node.position);
 
@@ -58,9 +60,11 @@ fn spawn_nodes(
             Transform::from_translation(Vec3::new(x, y, NODE_PLACEMENT_Z_IDX)),
             NodeMarker(node.node_id),
             NodeInactive,
-           Skill( node.as_passive_skill(&tree).clone())
+            Skill(node.as_passive_skill(&tree).clone()),
         ));
-    }
+    });
+
+    log::debug!("All nodes spawned.");
 }
 
 fn spawn_edges(

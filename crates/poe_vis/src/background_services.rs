@@ -67,9 +67,10 @@ impl Plugin for BGServicesPlugin {
                 process_node_colour_changes,
                 process_edge_colour_changes,
                 /* Runs a BFS so, try not to spam it.*/
-                validate_paths_between_active_nodes
-                    .run_if(sufficient_active_nodes)
-                    .run_if(resource_equals(PathRepairRequired(true))),
+                validate_paths_between_active_nodes.run_if(sufficient_active_nodes),
+                // .run_if(resource_equals(PathRepairRequired(true)))
+                // ,
+                path_repair.run_if(resource_equals(PathRepairRequired(true))),
             ),
         );
 
@@ -354,6 +355,7 @@ fn path_repair(
     tree: Res<PassiveTreeWrapper>,
     recently_selected: Res<MouseSelecetedNodeHistory>,
     query: Query<&NodeMarker, With<NodeActive>>,
+    root_node: Res<RootNode>,
     mut activator: EventWriter<NodeActivationReq>,
     mut path_needs_repair: ResMut<PathRepairRequired>,
 ) {
@@ -362,7 +364,19 @@ fn path_repair(
         log::error!("This should be unreachable...");
         return;
     };
-    let active_nodes = query.into_iter().map(|n| **n).collect::<Vec<NodeId>>();
+    let active_nodes = query
+        .into_iter()
+        // A user selecting a node wayyyyy off will have marked it active.
+        // So we strip out there most recent cursor selection and the root.
+        .filter(|nid| nid.0 != *most_recent && nid.0 != root_node.0.unwrap())
+        .map(|n| **n)
+        .collect::<Vec<NodeId>>();
+
+    log::debug!(
+        "Attempting path repair from {} to any of {:#?}",
+        &most_recent,
+        &active_nodes
+    );
 
     let shortest_path = tree.bfs_any(*most_recent, &active_nodes);
 

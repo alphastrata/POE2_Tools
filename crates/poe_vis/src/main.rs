@@ -20,7 +20,7 @@ fn main() {
         //NOTE: some may prefer this to the verbosely typing out what you want from the logs
         //in a terminal...
         #[cfg(debug_assertions)]
-        let log_filter = format!("error,{}=debug", crate_name);
+        let log_filter = format!("error,poe_tree::pathfinding=debug,{}=debug", crate_name);
 
         #[cfg(not(debug_assertions))]
         let log_filter = format!("error");

@@ -205,61 +205,77 @@ impl PassiveTree {
         vec![] // No path found
     }
     pub fn bfs_any(&self, start: NodeId, targets: &[NodeId]) -> Vec<NodeId> {
-        // Convert targets slice to a HashSet for efficient lookup
-        let target_set: HashSet<NodeId> = targets.iter().cloned().collect();
+        use std::collections::{HashMap, HashSet, VecDeque};
 
-        // Initialize visited set, queue for BFS, and predecessors map for path reconstruction
+        let start_time = std::time::Instant::now();
+        log::debug!(
+            "bfs_any: start={:?} targets={:?} (finding the shortest path to any target)",
+            start,
+            targets
+        );
+
+        let target_set: HashSet<NodeId> = targets.iter().copied().collect();
+        if target_set.is_empty() {
+            log::warn!("No targets provided to bfs_any()");
+            return Vec::new();
+        }
+
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
         let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
 
-        // Start BFS from the `start` node
+        // Initialize BFS
         queue.push_back((start, 0));
         visited.insert(start);
 
         while let Some((current, depth)) = queue.pop_front() {
-            // Check if current node is one of the targets
+            // If we've found a target, reconstruct path
             if target_set.contains(&current) {
-                // Reconstruct the path from start to current
-                let mut path = Vec::new();
+                let mut path = vec![current];
                 let mut step = current;
-                path.push(step);
-
                 while let Some(prev) = predecessors.get(&step) {
                     step = *prev;
                     path.push(step);
                 }
-
-                path.reverse(); // Reverse to get path from start to target
+                path.reverse();
+                log::debug!(
+                    "bfs_any: found target {:?} in {} steps (duration={:?}), path={:?}",
+                    current,
+                    depth,
+                    start_time.elapsed(),
+                    path
+                );
                 return path;
             }
 
+            // Depth check
             if depth >= Self::STEP_LIMIT {
                 log::warn!(
-                    "Step limit ({}) reached without finding any target from node {:?}",
+                    "bfs_any: step limit {} reached from node {:?} without hitting a target",
                     Self::STEP_LIMIT,
                     current
                 );
                 break;
             }
 
-            // Explore all neighboring nodes
-            for neighbor in self.neighbors(&current) {
+            // Enqueue neighbors
+            self.neighbors(&current).for_each(|neighbor| {
                 if visited.insert(neighbor) {
                     queue.push_back((neighbor, depth + 1));
                     predecessors.insert(neighbor, current);
                 }
-            }
+            });
         }
 
-        // If no path is found to any target
-        log::warn!(
-            "No path found from {:?} to any of the targets: {:?}",
+        log::debug!(
+            "bfs_any: no path found from {:?} to any of {:?} (elapsed={:?})",
             start,
-            targets
+            targets,
+            start_time.elapsed()
         );
         Vec::new()
     }
+
     pub fn neighbors<'t>(&'t self, node: &'t NodeId) -> impl Iterator<Item = NodeId> + 't {
         self.edges.iter().filter_map(|edge| {
             if edge.start == *node {
