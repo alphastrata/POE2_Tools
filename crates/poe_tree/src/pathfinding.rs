@@ -35,24 +35,18 @@ impl PassiveTree {
         log::debug!("Performing search Nodes & Skills for query: {}", query);
         let query = query.to_lowercase();
 
-        let mut results: HashSet<u32> = self
-            .nodes
+        self.nodes
             .iter()
-            .filter(|(_, node)| node.name.to_lowercase().contains(&query))
+            .filter(|(_, node)| {
+                node.name.to_lowercase().contains(&query)
+                    || self
+                        .passive_for_node(node)
+                        .stats
+                        .iter()
+                        .any(|stat| stat.name.to_lowercase().contains(&query))
+            })
             .map(|(id, _)| *id)
-            .collect();
-
-        self.passive_skills.iter().for_each(|(nid, skill)| {
-            if skill
-                .stats
-                .iter()
-                .any(|stat| stat.name.to_lowercase().contains(&query))
-            {
-                results.insert(nid.parse::<NodeId>().unwrap());
-            }
-        });
-
-        results
+            .collect()
     }
 
     pub fn create_paths(&self, nodes: Vec<&str>) -> Result<Vec<NodeId>, String> {

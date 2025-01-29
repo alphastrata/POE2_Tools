@@ -55,6 +55,6 @@ impl PoeNode {
     ];
 
     pub fn as_passive_skill<'t>(&self, tree: &'t PassiveTree) -> &'t PassiveSkill {
-        tree.stats_for_node(self)
+        tree.passive_for_node(self)
     }
 }
