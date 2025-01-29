@@ -70,7 +70,9 @@ fn process_searchbox_visibility_toggle(mut search_state: ResMut<SearchState>) {
 fn egui_searchbox_system(mut search_state: ResMut<SearchState>, mut contexts: EguiContexts) {
     if search_state.open {
         egui::Window::new("Search").show(contexts.ctx_mut(), |ui| {
-            ui.text_edit_singleline(&mut search_state.search_query);
+            let field = egui::TextEdit::singleline(&mut search_state.search_query)
+                .hint_text("start typing...");
+            ui.add(field).request_focus();
         });
     }
 }

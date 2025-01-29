@@ -83,6 +83,7 @@ pub mod ui {
     use crate::{
         components::{NodeActive, NodeMarker},
         events::NodeDeactivationReq,
+        resources::ActiveCharacter,
         PassiveTreeWrapper,
     };
     use bevy::prelude::*;
@@ -114,6 +115,7 @@ pub mod ui {
     fn egui_ui_system(
         counter: Res<ActiveNodeCounter>,
         tree: Res<PassiveTreeWrapper>,
+        character: Res<ActiveCharacter>,
         active_nodes: Query<&NodeMarker, With<NodeActive>>,
         mut contexts: EguiContexts,
         mut deactivate_tx: EventWriter<NodeDeactivationReq>,
@@ -154,7 +156,11 @@ pub mod ui {
                 });
 
                 ui.heading("Active Nodes");
-                let actives: Vec<&NodeMarker> = active_nodes.into_iter().collect();
+                let actives: Vec<&NodeMarker> = active_nodes
+                    .into_iter()
+                    .filter(|nm| &nm.0 != &character.starting_node)
+                    .collect();
+
                 actives.iter().for_each(|nid| {
                     let poe_node = tree.nodes.get(&(**nid)).unwrap();
                     _ = ui.small_button(format!("{} | {}", poe_node.name, nid.0));
