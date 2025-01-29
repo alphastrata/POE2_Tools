@@ -365,7 +365,7 @@ fn validate_path_to_root(
     }
 
     if seen.is_empty() {
-        // path_needs_repair.request_path_repair();
+        path_needs_repair.request_path_repair();
         //TODO: carry out path repair here!
     } else {
         path_needs_repair.set_unrequired();

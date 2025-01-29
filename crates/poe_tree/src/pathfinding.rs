@@ -10,8 +10,6 @@ use std::{
     time::Instant,
 };
 
-use crate::skills;
-
 use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
 
 impl PassiveTree {

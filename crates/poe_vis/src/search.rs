@@ -74,11 +74,11 @@ fn spawn_search_textbox(mut commands: Commands, mut font_system: ResMut<CosmicFo
                 attrs,
             ),
             Node {
-                position_type: PositionType::Absolute,
-                // display: Display::Flex,
-                // justify_content: JustifyContent::Center,
-                // align_items: AlignItems::Center,
-                margin: UiRect::all(Val::Auto),
+                // position_type: PositionType::Absolute,
+                // // display: Display::Flex,
+                // // justify_content: JustifyContent::Center,
+                // // align_items: AlignItems::Center,
+                // margin: UiRect::all(Val::Auto),
                 width: Val::Percent(25.0),
                 height: Val::Percent(10.0),
                 ..default()
@@ -182,36 +182,27 @@ fn mark_matches(
 }
 
 fn scan_for_and_higlight_results(
-    mut colour_events: EventWriter<NodeColourReq>,
-    search_results: Query<(Entity, &NodeMarker), With<SearchResult>>,
-    game_materials: Res<GameMaterials>,
+    mut gizmos: Gizmos,
+    search_results: Query<(&GlobalTransform, &NodeMarker), With<SearchResult>>,
 ) {
-    search_results.into_iter().for_each(|(ent, _nm)| {
-        colour_events.send(NodeColourReq(ent, game_materials.purple.clone()));
-    });
+    for (transform, _) in &search_results {
+        gizmos.circle_2d(
+            transform.translation().truncate(),
+            80.0,
+            Color::hsl(120.0, 1.0, 0.5), // any hue you like
+        );
+    }
 }
 
 fn cleanup_search_results(
     mut commands: Commands,
     mut searchbox_state: ResMut<SearchState>,
     query: Query<(Entity, &NodeMarker), With<SearchResult>>,
-    mut colour_events: EventWriter<NodeColourReq>,
-    materials: Res<GameMaterials>,
 ) {
-    // Cleanup if closed OR if the searchbox is cleared (i.e ctrl+a + delete)
     if !searchbox_state.open || &searchbox_state.search_query == "" {
-        log::trace!("SearchResult cleanup begins...");
         searchbox_state.search_query.clear();
-
-        query.iter().for_each(|(ent, nm)| {
+        for (ent, _) in &query {
             commands.entity(ent).remove::<SearchResult>();
-            colour_events.send(NodeColourReq(ent, materials.node_base.clone()));
-
-            log::trace!("Removing highlight from {}", nm.0);
-        });
+        }
     }
-}
-
-fn spawn_clear_highlighet_button() {
-    todo!()
 }

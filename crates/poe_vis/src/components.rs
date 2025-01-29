@@ -49,3 +49,6 @@ pub struct SearchMarker;
 
 #[derive(Component)]
 pub struct SearchResult;
+
+#[derive(Component)]
+pub struct ActiveNodeCount;
