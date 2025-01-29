@@ -19,3 +19,4 @@ pub struct PassiveSkill {
     #[serde(skip_deserializing)]
     _icon: String,
 }
+

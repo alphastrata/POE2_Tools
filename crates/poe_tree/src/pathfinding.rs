@@ -10,6 +10,8 @@ use std::{
     time::Instant,
 };
 
+use crate::skills;
+
 use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
 
 impl PassiveTree {
@@ -21,13 +23,38 @@ impl PassiveTree {
         !path.is_empty() && path.len() <= max_steps + 1
     }
     pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<u32> {
-        log::debug!("Performing search for query: {}", query);
+        log::debug!("Performing search Nodes for query: {}", query);
         self.nodes
             .iter()
             .filter(|(_, node)| node.name.to_lowercase().contains(&query.to_lowercase()))
             .map(|(id, _)| *id)
             .collect()
     }
+
+    pub fn fuzzy_search_nodes_and_skills(&self, query: &str) -> HashSet<NodeId> {
+        log::debug!("Performing search Nodes & Skills for query: {}", query);
+        let query = query.to_lowercase();
+
+        let mut results: HashSet<u32> = self
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.name.to_lowercase().contains(&query))
+            .map(|(id, _)| *id)
+            .collect();
+
+        self.passive_skills.iter().for_each(|(nid, skill)| {
+            if skill
+                .stats
+                .iter()
+                .any(|stat| stat.name.to_lowercase().contains(&query))
+            {
+                results.insert(nid.parse::<NodeId>().unwrap());
+            }
+        });
+
+        results
+    }
+
     pub fn create_paths(&self, nodes: Vec<&str>) -> Result<Vec<NodeId>, String> {
         let mut path = Vec::new();
         let mut last_node_id: Option<NodeId> = None;

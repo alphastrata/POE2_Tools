@@ -44,6 +44,7 @@ impl Plugin for SearchToolsPlugin {
                 Update,
                 (
                     process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
+                    cleanup_search_results,
                     scan_for_and_higlight_results,
                 ),
             );
@@ -52,9 +53,7 @@ impl Plugin for SearchToolsPlugin {
             Update,
             (
                 read_searchtext.run_if(on_timer(Duration::from_millis(32))),
-                (mark_matches, cleanup_search_results)
-                    .after(read_searchtext)
-                    .chain(),
+                (mark_matches).after(read_searchtext).chain(),
             ),
         );
         log::debug!("SearchTools plugin is enabled");
@@ -64,7 +63,7 @@ impl Plugin for SearchToolsPlugin {
 fn spawn_search_textbox(mut commands: Commands, mut font_system: ResMut<CosmicFontSystem>) {
     let attrs = Attrs::new()
         .family(Family::Name("Victor Mono"))
-        .color(CosmicColor::rgb(188, 122, 199));
+        .color(CosmicColor::rgb(255, 255, 255));
 
     let cosmic_edit = commands
         .spawn((
@@ -75,18 +74,16 @@ fn spawn_search_textbox(mut commands: Commands, mut font_system: ResMut<CosmicFo
                 attrs,
             ),
             Node {
-                // position_type: PositionType::Absolute,
+                position_type: PositionType::Absolute,
                 // display: Display::Flex,
                 // justify_content: JustifyContent::Center,
                 // align_items: AlignItems::Center,
                 margin: UiRect::all(Val::Auto),
                 width: Val::Percent(25.0),
-                height: Val::Percent(8.0),
+                height: Val::Percent(10.0),
                 ..default()
             },
             CosmicBackgroundColor(Color::rgba(0.0, 0.0, 1.0, 0.0)),
-            BorderRadius::all(Val::Px(10.)),
-            // Position of text box
             SearchMarker,
             MaxLines(1),
             Placeholder::new(
@@ -152,30 +149,36 @@ fn read_searchtext(
 fn mark_matches(
     tree: Res<PassiveTreeWrapper>,
     searchbox_state: Res<SearchState>,
-    commands: Commands,
-    query: Query<(Entity, &NodeMarker)>,
+    mut commands: Commands,
+    current_highlight: Query<(Entity, &NodeMarker), With<SearchResult>>,
+    mut colour_events: EventWriter<NodeColourReq>,
+    all_nodes: Query<(Entity, &NodeMarker)>,
+    materials: Res<GameMaterials>,
 ) {
-    if searchbox_state.search_query.len() >= SEARCH_THRESHOLD {
-        let add_me: HashSet<NodeId> = tree
-            .fuzzy_search_nodes(&searchbox_state.search_query)
-            .into_iter()
-            .collect();
-
-        let l_cmd = Arc::new(Mutex::new(commands));
-        query.par_iter().for_each(|(ent, nm)| {
-            if add_me.contains(&(**nm)) {
-                match l_cmd.lock() {
-                    Ok(mut cmd) => {
-                        cmd.entity(ent).insert(SearchResult);
-                        log::debug!("SearchResult {}", **nm);
-                    }
-                    Err(e) => {
-                        log::error!("{}", e);
-                    }
-                }
-            }
-        });
+    if searchbox_state.search_query.len() < SEARCH_THRESHOLD {
+        return;
     }
+    let new_matches: HashSet<NodeId> = tree
+        .fuzzy_search_nodes_and_skills(&searchbox_state.search_query)
+        .into_iter()
+        .collect();
+
+    current_highlight
+        .iter()
+        .filter(|(_, nm)| !new_matches.contains(&nm.0))
+        .for_each(|(ent, _)| {
+            commands.entity(ent).remove::<SearchResult>();
+            colour_events.send(NodeColourReq(ent, materials.node_base.clone()));
+        });
+
+    let cmd = Arc::new(Mutex::new(commands));
+    all_nodes.par_iter().for_each(|(ent, nm)| {
+        if new_matches.contains(&nm.0) {
+            if let Ok(mut c) = cmd.lock() {
+                c.entity(ent).insert(SearchResult);
+            }
+        }
+    });
 }
 
 fn scan_for_and_higlight_results(
@@ -207,4 +210,8 @@ fn cleanup_search_results(
             log::trace!("Removing highlight from {}", nm.0);
         });
     }
+}
+
+fn spawn_clear_highlighet_button() {
+    todo!()
 }

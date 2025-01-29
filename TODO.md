@@ -2,10 +2,6 @@
 
 ## **Rendering & Performance**
 
-* [ ] **Cull unseen from render:** We should NOT render/paint nodes outside the camera frustrum.
-    1. does this even help? be sure to benchmark it.
-
-* [ ] **Zoom Restriction:** The user should not be able to zoom to a level where parts of the tree are no longer visible. If no nodes are within the camera view, this should be flagged as an issue.
 * [ ] **Arcs not lines:** The POE2 tree actually draws beautiful arcs for its `edge`s, but we draw lines. it shouldn't be too hard to say what's the x,y of where we `start` and the x,y of where we `finish` and then work out how to make an arc that makes both nodes positioned on a circle.
     1. use them to do euc dist then use that as the r of the circle? or are do we already know this with the (`calculate_world_position` fn we have on `node`?)
 
