@@ -30,7 +30,7 @@ move_down = ["n", "down_arrow"]
 camera_reset_home = ["esc"]
 
 search_for_node_by_name = ["/"]
-exit = ["q", "esc"]
+exit = ["esc"]
 load_character_nodes = ["l"]
 
 #TODO: base_node_size

@@ -30,6 +30,7 @@ fn handle_input(
     }
     if check_action_just_pressed(&config, "search_for_node_by_name", &keys) {
         searchbox_toggle.send(ShowSearch);
+        log::trace!("Searchbox toggle sent");
     }
 
     if check_action_just_pressed(&config, "exit", &keys) {

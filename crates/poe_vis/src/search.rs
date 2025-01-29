@@ -11,6 +11,7 @@ use bevy_cosmic_edit::{
     prelude::*,
     CosmicBackgroundColor, MaxLines, Placeholder,
 };
+use bevy_egui::{egui, EguiContexts};
 use poe_tree::type_wrappings::NodeId;
 
 use crate::{
@@ -39,13 +40,13 @@ impl Plugin for SearchToolsPlugin {
         };
 
         app.add_plugins(CosmicEditPlugin { font_config })
-            .add_systems(Startup, spawn_search_textbox)
             .add_systems(
                 Update,
                 (
                     process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
                     cleanup_search_results,
                     scan_for_and_higlight_results,
+                    egui_searchbox_system, //egui is immediate must be called every frame.
                 ),
             );
 
@@ -60,71 +61,17 @@ impl Plugin for SearchToolsPlugin {
     }
 }
 
-fn spawn_search_textbox(mut commands: Commands, mut font_system: ResMut<CosmicFontSystem>) {
-    let attrs = Attrs::new()
-        .family(Family::Name("Victor Mono"))
-        .color(CosmicColor::rgb(255, 255, 255));
-
-    let cosmic_edit = commands
-        .spawn((
-            TextEdit,
-            CosmicEditBuffer::new(&mut font_system, Metrics::new(16., 20.)).with_rich_text(
-                &mut font_system,
-                vec![("", attrs)],
-                attrs,
-            ),
-            Node {
-                // position_type: PositionType::Absolute,
-                // // display: Display::Flex,
-                // // justify_content: JustifyContent::Center,
-                // // align_items: AlignItems::Center,
-                // margin: UiRect::all(Val::Auto),
-                width: Val::Percent(25.0),
-                height: Val::Percent(10.0),
-                ..default()
-            },
-            CosmicBackgroundColor(Color::rgba(0.0, 0.0, 1.0, 0.0)),
-            SearchMarker,
-            MaxLines(1),
-            Placeholder::new(
-                "Start typing...",
-                Attrs::new().color(Color::from(bevy::color::palettes::css::GRAY).to_cosmic()),
-            ),
-            Visibility::Hidden,
-        ))
-        .id();
-
-    commands.insert_resource(FocusedWidget(Some(cosmic_edit)));
+fn process_searchbox_visibility_toggle(mut search_state: ResMut<SearchState>) {
+    search_state.open = !search_state.open;
+    log::trace!("Searchbox open = {}", &search_state.open);
 }
 
-fn process_searchbox_visibility_toggle(
-    windows: Query<&Window>,
-    mut commands: Commands,
-    mut searchbox_query: Query<(Entity, &mut Node), With<SearchMarker>>,
-    mut searchbox_state: ResMut<SearchState>,
-) {
-    let Ok((sb, mut node)) = searchbox_query.get_single_mut() else {
-        log::warn!("Unable to get searchbox...");
-        return;
-    };
-
-    searchbox_state.open = !searchbox_state.open;
-    match searchbox_state.open {
-        true => {
-            commands.entity(sb).remove::<Visibility>();
-            commands.entity(sb).insert(Visibility::Visible);
-        }
-        false => {
-            commands.entity(sb).remove::<Visibility>();
-            commands.entity(sb).insert(Visibility::Hidden);
-        }
-    }
-
-    if let Some(cursor_pos) = windows.single().cursor_position() {
-        log::debug!("Cursor Position: {:?}", cursor_pos);
-
-        node.left = Val::Px(cursor_pos.x);
-        node.top = Val::Px(cursor_pos.y);
+// simple egui window with a text field
+fn egui_searchbox_system(mut search_state: ResMut<SearchState>, mut contexts: EguiContexts) {
+    if search_state.open {
+        egui::Window::new("Search").show(contexts.ctx_mut(), |ui| {
+            ui.text_edit_singleline(&mut search_state.search_query);
+        });
     }
 }
 
