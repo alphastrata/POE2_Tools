@@ -83,6 +83,7 @@ pub mod ui {
     use crate::{
         components::{NodeActive, NodeMarker},
         events::NodeDeactivationReq,
+        PassiveTreeWrapper,
     };
     use bevy::prelude::*;
     use bevy_egui::{egui, EguiContexts, EguiPlugin}; // same components
@@ -112,25 +113,26 @@ pub mod ui {
     // show a small EGUI panel
     fn egui_ui_system(
         counter: Res<ActiveNodeCounter>,
+        tree: Res<PassiveTreeWrapper>,
         active_nodes: Query<&NodeMarker, With<NodeActive>>,
         mut contexts: EguiContexts,
         mut deactivate_tx: EventWriter<NodeDeactivationReq>,
     ) {
         let ctx = contexts.ctx_mut();
 
-        // top menu bar
-        egui::TopBottomPanel::top("top_menu").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Quit").clicked() {
-                        std::process::exit(0);
-                    }
-                });
-                ui.menu_button("Edit", |_| {});
-                ui.menu_button("View", |_| {});
-                ui.menu_button("Help", |_| {});
-            });
-        });
+        // // top menu bar
+        // egui::TopBottomPanel::top("top_menu").show(ctx, |ui| {
+        //     egui::menu::bar(ui, |ui| {
+        //         ui.menu_button("File", |ui| {
+        //             if ui.button("Quit").clicked() {
+        //                 std::process::exit(0);
+        //             }
+        //         });
+        //         ui.menu_button("Edit", |_| {});
+        //         ui.menu_button("View", |_| {});
+        //         ui.menu_button("Help", |_| {});
+        //     });
+        // });
 
         // // collapsible left panel
         // egui::SidePanel::left("lhs")
@@ -152,9 +154,15 @@ pub mod ui {
                 });
 
                 ui.heading("Active Nodes");
+                let actives: Vec<&NodeMarker> = active_nodes.into_iter().collect();
+                actives.iter().for_each(|nid| {
+                    let poe_node = tree.nodes.get(&(**nid)).unwrap();
+                    _ = ui.small_button(format!("{} | {}", poe_node.name, nid.0));
+                });
+
                 ui.label(format!("Count: {}", active_nodes.iter().count()));
                 if ui.button("Clear Active").clicked() {
-                    active_nodes.into_iter().for_each(|nm| {
+                    actives.into_iter().for_each(|nm| {
                         // commands.entity(ent).remove::<NodeActive>();
                         deactivate_tx.send(NodeDeactivationReq(**nm));
                     });
