@@ -16,9 +16,16 @@ use poe_tree::{nodes::PoeNode, PassiveTree};
 
 pub struct UIPlugin; // our new EGUI-based plugin
 
+#[derive(Resource, Default)]
+struct UICapturesInput(pub bool);
+
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ActiveNodeCounter>() // store node count
+        app
+            // space
+            .init_resource::<UICapturesInput>()
+            .init_resource::<ActiveNodeCounter>() // store node count
+            // space
             .add_plugins(EguiPlugin)
             .add_systems(Update, update_active_nodecount) // track how many are active
             .add_systems(Update, egui_ui_system); // draw EGUI

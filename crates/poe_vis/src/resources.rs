@@ -25,6 +25,7 @@ pub struct CameraSettings {
     pub zoom_sensitivity: f32,
     pub min_zoom: f32,
     pub max_zoom: f32,
+    pub egui_has_lock: bool,
 }
 
 impl Default for CameraSettings {
@@ -34,7 +35,16 @@ impl Default for CameraSettings {
             zoom_sensitivity: 0.15,
             min_zoom: 3.10,
             max_zoom: 80.0,
+            egui_has_lock: false,
         }
+    }
+}
+impl CameraSettings {
+    pub fn egui_has_lock(settings: Res<CameraSettings>) -> bool {
+        settings.egui_has_lock
+    }
+    pub fn should_zoom(settings: Res<CameraSettings>) -> bool {
+        !settings.egui_has_lock
     }
 }
 
