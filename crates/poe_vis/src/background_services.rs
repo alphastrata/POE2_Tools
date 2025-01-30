@@ -309,15 +309,15 @@ fn path_repair(
 ) {
     // the most likely reason for path repair is a mouse activity breaking a path.
     let Some(most_recent) = recently_selected.back() else {
-        log::error!("This should be unreachable...");
-        return;
+        unreachable!("Unreachable because we pre-set this value in a startup system.");
     };
+
     let root_node = root_node.0.unwrap_or_default(); // There is no NodeId == 0.
     let active_nodes = query
         .into_iter()
         // A user selecting a node wayyyyy off will have marked it active.
         // So we strip out there most recent cursor selection and the root.
-        .filter(|nid| nid.0 != *most_recent && nid.0 != root_node)
+        .filter(|nid| nid.0 != *most_recent)
         .map(|n| **n)
         .collect::<Vec<NodeId>>();
 
@@ -353,6 +353,11 @@ fn path_repair(
             &active_nodes.len()
         );
             let shortest_path = tree.bfs_any(root_node, &active_nodes);
+            assert!(
+                !shortest_path.is_empty(),
+                "It should be impossible to return bfs without being able to reach the root_node"
+            );
+
             shortest_path.into_iter().for_each(|nid| {
                 activator.send(NodeActivationReq(nid));
             });

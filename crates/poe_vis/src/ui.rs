@@ -1,15 +1,14 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 // Minimal example using bevy_egui instead of standard bevy UI:
 use crate::{
-    camera::CameraSettings,
     components::{NodeActive, NodeMarker},
     events::{MoveCameraReq, NodeDeactivationReq},
-    resources::ActiveCharacter,
+    resources::{ActiveCharacter, CameraSettings},
     PassiveTreeWrapper,
 };
 use bevy::prelude::*;
 use bevy_egui::{
-    egui::{self, Align},
+    egui::{self, Align, SidePanel},
     EguiContexts, EguiPlugin,
 };
 
@@ -37,23 +36,22 @@ fn update_active_nodecount(
     counter.0 = active_nodes.iter().count();
 }
 fn egui_ui_system(
+    active_nodes: Query<&NodeMarker, With<NodeActive>>,
+    mut deactivate_tx: EventWriter<NodeDeactivationReq>,
+    mut move_camera_tx: EventWriter<MoveCameraReq>,
     counter: Res<ActiveNodeCounter>,
     tree: Res<PassiveTreeWrapper>,
     character: Res<ActiveCharacter>,
-    active_nodes: Query<&NodeMarker, With<NodeActive>>,
     mut contexts: EguiContexts,
-    mut deactivate_tx: EventWriter<NodeDeactivationReq>,
     settings: Res<CameraSettings>,
-    mut move_camera_tx: EventWriter<MoveCameraReq>,
 ) {
     let ctx = contexts.ctx_mut();
-    egui::SidePanel::right("rhs")
-        .resizable(true)
-        .show(ctx, |ui| {
-            ui.heading("Current Path");
-            ui.collapsing("Node details...", |ui| {
-                ui.separator();
-                ui.heading("Active Nodes");
+    SidePanel::right("rhs").resizable(true).show(ctx, |ui| {
+        ui.heading("Active Nodes");
+        ui.separator();
+        ui.collapsing("Node details...", |ui| {
+            ui.set_min_height(300.0); // Ensure enough space
+            egui::ScrollArea::vertical().show(ui, |ui| {
                 let root_id = character.starting_node;
                 if let Some(root) = tree.nodes.get(&root_id) {
                     let root_stats = root.as_passive_skill(&tree).stats();
@@ -75,11 +73,11 @@ fn egui_ui_system(
                         });
                     });
                 }
-                let actives: Vec<&NodeMarker> = active_nodes
+                let active_nodes: Vec<&NodeMarker> = active_nodes
                     .into_iter()
                     .filter(|nm| nm.0 != character.starting_node)
                     .collect();
-                actives.iter().for_each(|nm| {
+                active_nodes.iter().for_each(|nm| {
                     let poe_node = tree.nodes.get(&nm.0).unwrap();
                     let stats = poe_node.as_passive_skill(&tree).stats();
                     ui.horizontal(|ui| {
@@ -101,17 +99,20 @@ fn egui_ui_system(
                     });
                 });
             });
-            ui.separator();
-            ui.heading(format!("{} Points Spent", active_nodes.iter().len()));
-            ui.separator();
-            if ui.button("Clear Active").clicked() {
-                for nm in active_nodes.iter() {
-                    if nm.0 != character.starting_node {
-                        deactivate_tx.send(NodeDeactivationReq(nm.0));
-                    }
-                }
-            }
         });
+
+        ui.separator();
+        ui.heading(format!("{} Points Spent", active_nodes.iter().len()));
+        ui.separator();
+        if ui.button("Clear Active").clicked() {
+            active_nodes
+                .iter()
+                .filter(|nm| nm.0 != character.starting_node)
+                .for_each(|nm| {
+                    deactivate_tx.send(NodeDeactivationReq(nm.0));
+                });
+        }
+    });
 }
 
 fn fmt_for_ui(poe_node: &PoeNode, tree: &PassiveTree, ui: &mut egui::Ui) {
@@ -129,6 +130,8 @@ fn fmt_for_ui(poe_node: &PoeNode, tree: &PassiveTree, ui: &mut egui::Ui) {
         } else {
             egui::Color32::WHITE
         };
+        //TODO: If it was a passive attribute we need to offer three buttons + for each..
+        // When the user clicks those buttons, we need to update stats...
         ui.colored_label(color, name);
     }
 }

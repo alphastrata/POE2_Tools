@@ -33,6 +33,7 @@ search_for_node_by_name = ["/"]
 exit = ["esc"]
 load_character_nodes = ["l"]
 
+
 #TODO: base_node_size
 #TODO: default camera_zoom
 #TODO: zoom sensitivity

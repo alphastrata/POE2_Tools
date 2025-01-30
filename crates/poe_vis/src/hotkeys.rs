@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     components::SearchMarker,
     events::ShowSearch,
-    resources::{SearchState, UserConfig},
+    resources::{CameraSettings, SearchState, UserConfig},
 };
 
 pub struct HotkeysPlugin;
@@ -17,11 +17,12 @@ impl Plugin for HotkeysPlugin {
 }
 
 fn handle_input(
-    config: Res<UserConfig>,
-    keys: Res<ButtonInput<KeyCode>>,
     mut camera_query: Query<&mut Transform, With<Camera2d>>,
     mut searchbox_toggle: EventWriter<ShowSearch>,
+    config: Res<UserConfig>,
+    keys: Res<ButtonInput<KeyCode>>,
     searchstate: Res<SearchState>,
+    settings: Res<CameraSettings>,
 ) {
     if check_action_just_pressed(&config, "camera_reset_home", &keys) {
         if let Ok(mut transform) = camera_query.get_single_mut() {
@@ -41,6 +42,24 @@ fn handle_input(
                 searchbox_toggle.send(ShowSearch);
             }
         }
+    }
+
+    // Camera:
+    if let Ok(mut transform) = camera_query.get_single_mut() {
+        let mut movement = Vec3::ZERO;
+        if check_action(&config, "move_left", &keys) {
+            movement.x -= settings.drag_sensitivity;
+        }
+        if check_action(&config, "move_right", &keys) {
+            movement.x += settings.drag_sensitivity;
+        }
+        if check_action(&config, "move_up", &keys) {
+            movement.y += settings.drag_sensitivity;
+        }
+        if check_action(&config, "move_down", &keys) {
+            movement.y -= settings.drag_sensitivity;
+        }
+        transform.translation += movement;
     }
 }
 

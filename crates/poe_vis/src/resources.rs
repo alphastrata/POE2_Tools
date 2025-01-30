@@ -19,6 +19,32 @@ pub struct NodeScaling {
     pub hover_fade_time: f32,
 }
 
+#[derive(Resource)]
+pub struct CameraSettings {
+    pub drag_sensitivity: f32,
+    pub zoom_sensitivity: f32,
+    pub min_zoom: f32,
+    pub max_zoom: f32,
+}
+
+impl Default for CameraSettings {
+    fn default() -> Self {
+        Self {
+            drag_sensitivity: 10.0,
+            zoom_sensitivity: 0.15,
+            min_zoom: 3.10,
+            max_zoom: 80.0,
+        }
+    }
+}
+
+// Camera drag state
+#[derive(Resource, Default)]
+pub struct DragState {
+    pub active: bool,
+    pub start_position: Vec2,
+}
+
 #[derive(Resource, Deref, DerefMut)]
 pub struct ActiveCharacter {
     pub character: poe_tree::character::Character,
@@ -26,6 +52,11 @@ pub struct ActiveCharacter {
 
 #[derive(Resource, DerefMut, Deref)]
 pub struct RootNode(pub Option<NodeId>);
+impl RootNode {
+    pub fn is_set(root: Res<RootNode>) -> bool {
+        root.0.is_some()
+    }
+}
 
 #[derive(Debug, serde::Deserialize, Default, Resource)]
 pub struct UserConfig {

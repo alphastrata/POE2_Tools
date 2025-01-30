@@ -1,4 +1,3 @@
-
 # POO TOOLS
 
 I created this because I couldn't quite achieve what I wanted on maxroll.gg or with PathOfBuilding. This tool is intended more for people experimenting with the POE2 passive tree rather than those looking to fully plan and optimize their builds—there are plenty of tools for that, and they do a great job.
@@ -117,25 +116,27 @@ See the Rust contribution guidelines, but contributions are generally welcome (e
 ```sh
 git clone $this_repo
 cd $this_repo
-$env:RUST_LOG = "off,poe_tools=error,poe_vis=debug"; cargo run -p poe_vis --bin vis --release  
+$env:RUST_LOG = "off,poe_tools=error,poe_vis=debug"; cargo run -p poe_vis --bin vis --release
 ```
 
 # Linux getting started
 
 ```sh
+
 ```
 
 ## Examples
 
 1. How many nodes are there? what about just passives?
+
 ```sh
 cargo run --example -p poe_tree --example node_count
 ```
 
 2. How many `+%15 to Evasion Rating` nodes are there?
 
-
 ### RPC:
+
 ```sh
 #!/usr/bin/env bash
 
@@ -156,4 +157,12 @@ for node in "${PATH2[@]}"; do activate "$node"; done
 for node in "${PATH3[@]}"; do activate "$node"; done
 
 
+```
+
+## TROUBLESHOOTING:
+
+1. Problem with Pathfinding? Paths not highlighting etc?
+
+```bash
+ RUST_LOG=off,poe_tree::pathfinding=trace,poe_vis::background_services=trace cargo run -p poe_vis --bin vis
 ```

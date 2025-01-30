@@ -15,8 +15,16 @@ impl Plugin for MouseControlsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(MouseSelecetedNodeHistory(VecDeque::new()));
 
+        app.add_systems(PostStartup, insert_root_to_history.run_if(RootNode::is_set));
+
         app.add_systems(Update, (handle_node_clicks, hover_started, hover_ended));
     }
+}
+fn insert_root_to_history(
+    root: Res<crate::resources::RootNode>,
+    mut last_ten: ResMut<MouseSelecetedNodeHistory>,
+) {
+    last_ten.push_back(root.0.expect("Protected by run conditions."));
 }
 
 pub fn handle_node_clicks(

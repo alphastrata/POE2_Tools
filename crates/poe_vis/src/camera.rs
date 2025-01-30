@@ -4,6 +4,7 @@ use bevy::render::camera::ScalingMode;
 use bevy::text::{TextFont, TextLayout};
 
 use crate::events::MoveCameraReq;
+use crate::resources::{CameraSettings, DragState};
 
 // Plugin definition
 pub struct PoeVisCameraPlugin;
@@ -43,33 +44,6 @@ fn move_camera_to_target_system(
             transform.translation.z = 0.0;
             ortho.scale = target.z.clamp(settings.min_zoom, settings.max_zoom);
         });
-}
-
-// Add to your existing CameraSettings resource
-#[derive(Resource)]
-pub struct CameraSettings {
-    pub drag_sensitivity: f32,
-    pub zoom_sensitivity: f32,
-    pub min_zoom: f32,
-    pub max_zoom: f32,
-}
-
-impl Default for CameraSettings {
-    fn default() -> Self {
-        Self {
-            drag_sensitivity: 10.0,
-            zoom_sensitivity: 0.15,
-            min_zoom: 3.10,
-            max_zoom: 80.0,
-        }
-    }
-}
-
-// Camera drag state
-#[derive(Resource, Default)]
-pub struct DragState {
-    pub active: bool,
-    start_position: Vec2,
 }
 
 // Updated camera setup system
