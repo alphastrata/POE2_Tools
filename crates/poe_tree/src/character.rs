@@ -1,11 +1,11 @@
 //!$ crates/poe_tree/src/character.rs
-use crate::type_wrappings::NodeId;
+use crate::{type_wrappings::NodeId, PassiveTree};
 use chrono::{DateTime, Utc};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
-    fs, io,
+    default, fs, io,
     path::Path,
 };
 
@@ -37,6 +37,43 @@ impl Character {
             );
             None
         })
+    }
+
+    pub fn compute_stats(&self, tree: &PassiveTree) -> CharacterStats {
+        let mut start = CharacterStats::default_monk();
+
+        start.level = self.level;
+        start.name = self.name;
+
+        start
+    }
+
+    /// Calculations:
+    /*
+    At a minimum we should support the + to maximum and +% to for all of:
+    - energy shield
+    - evasion rating
+    - life
+    - attack speed
+    - chance to evade (% only?)
+    - attack damage
+    - physi
+    
+     */
+    pub fn calculate_evasion_rating(&self, tree: &PassiveTree) {
+        todo!()
+    }
+
+    pub fn calculate_energy_shield(&self, tree: &PassiveTree) {
+        todo!()
+    }
+
+    pub fn calculate_life(&self, tree: &PassiveTree) {
+        todo!()
+    }
+
+    pub fn calcluate_attack_speed(&self, tree: &PassiveTree) {
+        todo!()
     }
 }
 
