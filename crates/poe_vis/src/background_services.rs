@@ -12,18 +12,20 @@ use bevy::{
     utils::hashbrown::HashSet,
 };
 
-use poe_tree::type_wrappings::{EdgeId, NodeId};
+use poe_tree::{
+    type_wrappings::{EdgeId, NodeId},
+    PassiveTree,
+};
 
-use crate::consts::SEARCH_THRESHOLD;
 use crate::{
     components::*,
+    consts::SEARCH_THRESHOLD,
     events::{self, NodeActivationReq, *},
-    materials::GameMaterials,
+    materials::{self, GameMaterials},
     mouse::handle_node_clicks,
     resources::*,
-    PassiveTreeWrapper,
+    search, PassiveTreeWrapper,
 };
-use crate::{materials, search};
 
 pub(crate) struct BGServicesPlugin;
 
@@ -43,6 +45,7 @@ impl Plugin for BGServicesPlugin {
             .add_event::<SaveCharacterReq>()
             .add_event::<MoveCameraReq>()
             .add_event::<ShowSearch>()
+            .add_event::<ThrowWarning>()
             //spacing..
             ;
 
@@ -67,10 +70,9 @@ impl Plugin for BGServicesPlugin {
                 process_node_colour_changes,
                 process_edge_colour_changes,
                 /* Runs a BFS so, try not to spam it.*/
-                validate_paths_between_active_nodes.run_if(sufficient_active_nodes),
-                // .run_if(resource_equals(PathRepairRequired(true)))
-                // ,
-                path_repair.run_if(resource_equals(PathRepairRequired(true))),
+                path_repair
+                    .run_if(sufficient_active_nodes)
+                    .run_if(resource_equals(PathRepairRequired(true))),
             ),
         );
 
@@ -88,7 +90,7 @@ fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
 }
 
 fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
-    query.iter().count() >= 2 // Only run if at least 2 nodes are active
+    query.iter().count() > 1 // Only run if at least 2 nodes are active
 }
 
 // BG SERVICES INBOUND:
@@ -111,13 +113,14 @@ fn process_node_activations(
     mut colour_events: EventWriter<NodeColourReq>,
     query: Query<(Entity, &NodeMarker), With<NodeInactive>>,
     mut commands: Commands,
+    root_node: Res<RootNode>,
     game_materials: Res<GameMaterials>,
 ) {
     let events: Vec<NodeId> = activation_events.read().map(|nar| nar.0).collect();
 
     let mat = &game_materials.node_activated;
     query.iter().for_each(|(ent, nid)| {
-        if events.contains(nid) {
+        if events.contains(nid) || nid.0 == root_node.0.unwrap_or_default() {
             commands.entity(ent).remove::<NodeInactive>();
             log::trace!("Activating Node {}", **nid);
             commands.entity(ent).insert(NodeActive);
@@ -308,47 +311,9 @@ fn validate_paths_between_active_nodes(
     let active_and_validly_pathed =
         validate_path_to_root(tree, &active_nodes, &root_node, path_needs_repair);
 
-    // // When this panics we need to find the problematic nodes...
-    // if !active_nodes
-    //     .into_iter()
-    //     .all(|v| active_and_validly_pathed.contains(&v))
-    // {
-    //     log::error!("Not all paths in the current active nodes can reach the root...");
-    // }
-
     active_and_validly_pathed.into_iter().for_each(|an| {
         activate_req.send(NodeActivationReq(an));
     });
-}
-
-fn validate_path_to_root(
-    tree: Res<PassiveTreeWrapper>,
-    active_nodes: &[NodeId],
-    root_node: &RootNode,
-    mut path_needs_repair: ResMut<PathRepairRequired>,
-) -> HashSet<NodeId> {
-    if root_node.0.is_none() {
-        log::warn!("No root node set, can't path.");
-        return HashSet::new();
-    }
-    let start = root_node.0.unwrap();
-    let mut seen: HashSet<NodeId> = HashSet::new();
-    active_nodes.iter().for_each(|nm| {
-        let path = tree.bfs(start, *nm);
-        let added = path.into_iter().filter(|nid| seen.insert(*nid)).count();
-        log::debug!("Added {} nodes to our perfectly mapped path.", added);
-    });
-
-    if seen.is_empty() {
-        log::warn!(
-            "Serious problems we cannot find paths from the root to any of our active nodes.."
-        );
-        path_needs_repair.request_path_repair();
-    } else {
-        path_needs_repair.set_unrequired();
-    }
-
-    seen
 }
 
 fn path_repair(
@@ -364,11 +329,12 @@ fn path_repair(
         log::error!("This should be unreachable...");
         return;
     };
+    let root_node = root_node.0.unwrap_or_default(); // There is no NodeId == 0.
     let active_nodes = query
         .into_iter()
         // A user selecting a node wayyyyy off will have marked it active.
         // So we strip out there most recent cursor selection and the root.
-        .filter(|nid| nid.0 != *most_recent && nid.0 != root_node.0.unwrap())
+        .filter(|nid| nid.0 != *most_recent && nid.0 != root_node)
         .map(|n| **n)
         .collect::<Vec<NodeId>>();
 
@@ -380,14 +346,34 @@ fn path_repair(
 
     let shortest_path = tree.bfs_any(*most_recent, &active_nodes);
 
-    if !shortest_path.is_empty() {
-        log::debug!(
-            "Found a path between {most_recent}, and target {:#?}",
-            shortest_path
+    match shortest_path.is_empty() {
+        false => {
+            log::debug!(
+                "Found a path between {most_recent}, and target {:#?}",
+                shortest_path
+            );
+            if shortest_path.len() > PassiveTree::STEP_LIMIT as usize {
+                log::warn!("User is attemtping to allocate points a total of more than {} points! which isn't allowed!",
+                PassiveTree::STEP_LIMIT
+            );
+                //TODO: Throw warning text event
+                return;
+            };
+            shortest_path.into_iter().for_each(|nid| {
+                activator.send(NodeActivationReq(nid));
+            });
+            path_needs_repair.set_unrequired();
+        }
+        true => {
+            log::warn!("Unable to find a path from the {} to the any of the {} nodes in active_nodes, so instead we're trying to the root_node",
+            &most_recent,
+            &active_nodes.len()
         );
-        shortest_path.into_iter().for_each(|nid| {
-            activator.send(NodeActivationReq(nid));
-        });
-        path_needs_repair.set_unrequired();
+            let shortest_path = tree.bfs_any(root_node, &active_nodes);
+            shortest_path.into_iter().for_each(|nid| {
+                activator.send(NodeActivationReq(nid));
+            });
+            path_needs_repair.request_path_repair();
+        }
     }
 }

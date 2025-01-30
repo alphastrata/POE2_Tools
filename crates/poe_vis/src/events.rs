@@ -46,3 +46,6 @@ impl EdgeDeactivationReq {
 
 #[derive(Event)]
 pub struct ShowSearch;
+
+#[derive(Event)]
+pub struct ThrowWarning(String);

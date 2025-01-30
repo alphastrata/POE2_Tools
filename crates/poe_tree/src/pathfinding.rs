@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use rayon::prelude::*;
 use std::{
     cmp::Ordering,
@@ -14,7 +16,7 @@ use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
 
 impl PassiveTree {
     /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
-    const STEP_LIMIT: i32 = 123;
+    pub const STEP_LIMIT: u32 = 123;
 
     pub fn is_node_within_distance(&self, start: NodeId, target: NodeId, max_steps: usize) -> bool {
         let path = self.find_path(start, target);
