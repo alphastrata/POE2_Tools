@@ -67,7 +67,7 @@ fn main() {
             if let Some(poe_node) = tree.nodes.get(&node_id) {
                 let skill = poe_node.as_passive_skill(&tree);
                 let node_sum: f32 = skill
-                    .stats
+                    .stats()
                     .iter()
                     .filter(|s| {
                         s.name.contains(keyword)
@@ -94,7 +94,7 @@ fn main() {
         for &node_id in path {
             if let Some(poe_node) = tree.nodes.get(&node_id) {
                 let skill = poe_node.as_passive_skill(&tree);
-                for stat in &skill.stats {
+                for stat in skill.stats().iter() {
                     if stat.name == keyword {
                         println!(
                             "Node {}: {} = {} {:?}",

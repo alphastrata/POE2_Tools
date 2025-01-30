@@ -28,7 +28,7 @@ fn main() {
         .filter_map(|(_node_id, poe_node)| {
             let skill = poe_node.as_passive_skill(&tree);
             let stat_sum: f32 = skill
-                .stats
+                .stats()
                 .iter()
                 .filter(|s| {
                     s.name == keyword

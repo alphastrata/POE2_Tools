@@ -41,7 +41,7 @@ impl PassiveTree {
                 node.name.to_lowercase().contains(&query)
                     || self
                         .passive_for_node(node)
-                        .stats
+                        .stats()
                         .iter()
                         .any(|stat| stat.name.to_lowercase().contains(&query))
             })
@@ -123,7 +123,7 @@ impl PassiveTree {
         frontier_nodes.filter_map(move |node_id| {
             self.nodes
                 .get(&node_id)
-                .map(|node| (node_id, node.as_passive_skill(self).stats.to_vec()))
+                .map(|node| (node_id, node.as_passive_skill(self).stats().to_vec()))
         })
     }
     pub fn create_paths_lazy<'a>(

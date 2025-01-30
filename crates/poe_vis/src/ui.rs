@@ -8,7 +8,12 @@ use crate::{
     PassiveTreeWrapper,
 };
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts, EguiPlugin}; // same components
+use bevy_egui::{
+    egui::{self, Align},
+    EguiContexts, EguiPlugin,
+};
+
+use poe_tree::{nodes::PoeNode, PassiveTree};
 
 pub struct UIPlugin; // our new EGUI-based plugin
 
@@ -51,43 +56,54 @@ fn egui_ui_system(
                 ui.heading("Active Nodes");
                 let root_id = character.starting_node;
                 if let Some(root) = tree.nodes.get(&root_id) {
+                    let root_stats = root.as_passive_skill(&tree).stats();
                     ui.horizontal(|ui| {
-                        ui.label(&root.name);
-                        if ui.small_button(format!("{}", root_id)).clicked() {
-                            move_camera_tx.send(MoveCameraReq(Vec3::new(
-                                root.wx,
-                                -root.wy,
-                                settings.min_zoom,
-                            )));
-                            log::trace!("Move2Node triggered...");
-                        }
+                        fmt_for_ui(root, &tree, ui);
+                        ui.with_layout(egui::Layout::right_to_left(Align::RIGHT), |ui| {
+                            if ui
+                                .small_button("🏠")
+                                .on_hover_text(format!("{:?}", root_stats))
+                                .clicked()
+                            {
+                                move_camera_tx.send(MoveCameraReq(Vec3::new(
+                                    root.wx,
+                                    -root.wy,
+                                    settings.min_zoom,
+                                )));
+                                log::trace!("Move2Node triggered...");
+                            }
+                        });
                     });
                 }
                 let actives: Vec<&NodeMarker> = active_nodes
                     .into_iter()
                     .filter(|nm| nm.0 != character.starting_node)
                     .collect();
-
                 actives.iter().for_each(|nm| {
                     let poe_node = tree.nodes.get(&nm.0).unwrap();
+                    let stats = poe_node.as_passive_skill(&tree).stats();
                     ui.horizontal(|ui| {
-                        ui.label(&poe_node.name);
-                        if ui.small_button(format!("{}", nm.0)).clicked() {
-                            move_camera_tx.send(MoveCameraReq(Vec3::new(
-                                poe_node.wx,
-                                -poe_node.wy,
-                                settings.min_zoom,
-                            )));
-                            log::trace!("Move2Node triggered...");
-                        }
+                        fmt_for_ui(poe_node, &tree, ui);
+                        ui.with_layout(egui::Layout::right_to_left(Align::RIGHT), |ui| {
+                            if ui
+                                .small_button(format!("{}", nm.0))
+                                .on_hover_text(format!("{:?}", stats))
+                                .clicked()
+                            {
+                                move_camera_tx.send(MoveCameraReq(Vec3::new(
+                                    poe_node.wx,
+                                    -poe_node.wy,
+                                    settings.min_zoom,
+                                )));
+                                log::trace!("Move2Node triggered...");
+                            }
+                        });
                     });
                 });
             });
-
             ui.separator();
             ui.heading(format!("{} Points Spent", active_nodes.iter().len()));
             ui.separator();
-
             if ui.button("Clear Active").clicked() {
                 for nm in active_nodes.iter() {
                     if nm.0 != character.starting_node {
@@ -98,53 +114,21 @@ fn egui_ui_system(
         });
 }
 
-// fn egui_ui_system(
-//     counter: Res<ActiveNodeCounter>,
-//     tree: Res<PassiveTreeWrapper>,
-//     character: Res<ActiveCharacter>,
-//     active_nodes: Query<&NodeMarker, With<NodeActive>>,
-//     mut contexts: EguiContexts,
-//     mut deactivate_tx: EventWriter<NodeDeactivationReq>,
-//     settings: Res<CameraSettings>,
-//     mut move_camera_tx: EventWriter<MoveCameraReq>,
-// ) {
-//     let ctx = contexts.ctx_mut();
-
-//     egui::SidePanel::right("rhs")
-//         .resizable(true)
-//         .show(ctx, |ui| {
-//             ui.heading("Right Panel");
-//             ui.collapsing("Something else", |ui| {
-//                 ui.label("More details here.");
-//             });
-
-//             ui.heading("Active Nodes");
-//             let actives: Vec<&NodeMarker> = active_nodes
-//                 .into_iter()
-//                 .filter(|nm| nm.0 != character.starting_node)
-//                 .collect();
-
-//             actives.iter().into_iter().for_each(|nm| {
-//                 let poe_node = tree.nodes.get(&nm.0).unwrap(); // get data
-//                 ui.horizontal(|ui| {
-//                     ui.label(&poe_node.name);
-
-//                     if ui.small_button(format!("{}", nm.0)).clicked() {
-//                         move_camera_tx.send(MoveCameraReq(Vec3::new(
-//                             poe_node.wx,       // node x
-//                             -poe_node.wy,      // -1 * node wy
-//                             settings.min_zoom, // we zoom them RIIIIIGHT in baby
-//                         )));
-//                         log::trace!("Move2Node triggered...");
-//                     }
-//                 });
-//             });
-
-//             ui.label(format!("Count: {}", actives.len()));
-//             if ui.button("Clear Active").clicked() {
-//                 for nm in actives {
-//                     deactivate_tx.send(NodeDeactivationReq(nm.0));
-//                 }
-//             }
-//         });
-// }
+fn fmt_for_ui(poe_node: &PoeNode, tree: &PassiveTree, ui: &mut egui::Ui) {
+    let as_passive = poe_node.as_passive_skill(tree);
+    if as_passive.is_notable() {
+        ui.label(&poe_node.name);
+    } else {
+        let name = as_passive.name();
+        let color = if name.to_lowercase().contains("dexterity") {
+            egui::Color32::GREEN
+        } else if name.to_lowercase().contains("strength") {
+            egui::Color32::RED
+        } else if name.to_lowercase().contains("intelligence") {
+            egui::Color32::BLUE
+        } else {
+            egui::Color32::WHITE
+        };
+        ui.colored_label(color, name);
+    }
+}

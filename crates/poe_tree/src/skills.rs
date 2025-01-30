@@ -5,13 +5,13 @@ use super::stats::{deserialize_stats, Stat};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PassiveSkill {
-    pub name: Option<String>,
+    name: Option<String>,
     #[serde(default)]
-    pub is_notable: bool,
+    is_notable: bool,
 
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_stats")]
-    pub stats: Vec<Stat>,
+    stats: Vec<Stat>,
 
     //TODO: someday...
     #[serde(skip_deserializing)]
@@ -20,3 +20,21 @@ pub struct PassiveSkill {
     _icon: String,
 }
 
+// Beacsue we don't want ppl to 'edit' nodes or their associated Passives.
+impl PassiveSkill {
+    /// Is this Passive a + to Str/Dex/Int
+    pub fn is_attribute(&self) -> bool {
+        false
+    }
+
+    pub fn is_notable(&self) -> bool {
+        self.is_notable
+    }
+    pub fn stats(&self) -> &[Stat] {
+        &self.stats
+    }
+    /// NOTE PANICS! beware!
+    pub fn name(&self) -> String {
+        self.name.clone().unwrap()
+    }
+}

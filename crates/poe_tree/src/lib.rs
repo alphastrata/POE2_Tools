@@ -195,13 +195,9 @@ impl PassiveTree {
                             wx_wy
                         };
 
-                        // Get skill details with proper null handling
                         let skill = passive_skills.get(&skill_id);
-                        let name = skill
-                            .and_then(|s| s.name.as_ref())
-                            .cloned()
-                            .unwrap_or_default();
-                        let is_notable = skill.map(|s| s.is_notable).unwrap_or(false);
+                        let name = skill.and_then(|s| Some(s.name())).unwrap();
+                        let is_notable = skill.map(|s| s.is_notable()).unwrap_or(false);
 
                         Some((
                             node_id,
