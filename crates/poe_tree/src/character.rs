@@ -15,7 +15,7 @@ pub struct Character {
     pub name: String,
     pub activated_node_ids: HashSet<NodeId>,
     pub date_created: DateTime<Utc>,
-    pub level: u32,
+    pub level: u8,
     pub quest_passive_skills: u8,
     pub starting_node: NodeId,
 }
@@ -43,7 +43,7 @@ impl Character {
         let mut start = CharacterStats::default_monk();
 
         start.level = self.level;
-        start.name = self.name;
+        start.name = self.name.clone();
 
         start
     }
@@ -58,21 +58,23 @@ impl Character {
     - chance to evade (% only?)
     - attack damage
     - physi
-    
+
      */
-    pub fn calculate_evasion_rating(&self, tree: &PassiveTree) {
+    pub fn calculate_evasion_rating(&self, tree: &PassiveTree) -> f32 {
+        //NOTE: I think we just sum all the + to maximum, then +% ontop of that?
+        //TODO: I do not know the 'order' of how the operations are applied.
         todo!()
     }
 
-    pub fn calculate_energy_shield(&self, tree: &PassiveTree) {
+    pub fn calculate_energy_shield(&self, tree: &PassiveTree) -> f32 {
         todo!()
     }
 
-    pub fn calculate_life(&self, tree: &PassiveTree) {
+    pub fn calculate_life(&self, tree: &PassiveTree) -> f32 {
         todo!()
     }
 
-    pub fn calcluate_attack_speed(&self, tree: &PassiveTree) {
+    pub fn calcluate_attack_speed(&self, tree: &PassiveTree) -> f32 {
         todo!()
     }
 }
@@ -127,17 +129,6 @@ impl CharacterClass {
             CharacterClass::Mercenary => "Mercenary",
             CharacterClass::Ranger => "Ranger",
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn load_from_toml_file_example() {
-        let test_file_path = "../../data/character.toml";
-
-        _ = Character::load_from_toml(test_file_path).unwrap();
     }
 }
 
@@ -239,5 +230,27 @@ impl CharacterStats {
             misc: HashMap::new(),
             ..Default::default()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::quick_tree;
+
+    use super::Character;
+    const TEST_DATA_MONK: &'static str = "../../data/character.toml";
+
+    #[test]
+    fn compute_some_maximum_evasion() {
+        let tree = quick_tree();
+
+        let char = Character::load_from_toml(TEST_DATA_MONK).unwrap();
+
+        dbg!(char);
+    }
+
+    #[test]
+    fn load_from_toml_file_example() {
+        _ = Character::load_from_toml(TEST_DATA_MONK).unwrap();
     }
 }
