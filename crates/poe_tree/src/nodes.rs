@@ -18,6 +18,10 @@ pub struct PoeNode {
 }
 
 impl PoeNode {
+    pub fn num_points_required_from(&self, other: NodeId, tree: &PassiveTree) -> usize {
+        tree.bfs(self.node_id, other).len()
+    }
+
     pub fn distance_to(&self, other: &Self) -> f32 {
         ((self.wx - other.wx).powi(2) + (self.wy - other.wy).powi(2)).sqrt()
     }

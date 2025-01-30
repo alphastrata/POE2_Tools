@@ -32,6 +32,7 @@ camera_reset_home = ["esc"]
 search_for_node_by_name = ["/"]
 exit = ["esc"]
 load_character_nodes = ["l"]
+save_active_character = ["s"]
 
 
 #TODO: base_node_size

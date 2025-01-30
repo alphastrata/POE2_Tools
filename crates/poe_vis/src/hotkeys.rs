@@ -10,7 +10,7 @@ pub struct HotkeysPlugin;
 
 impl Plugin for HotkeysPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, handle_input);
+        app.add_systems(Update, handle_input.run_if(SearchState::lock_shortcuts));
 
         log::debug!("Hotkeys plugin enabled");
     }
