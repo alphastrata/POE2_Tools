@@ -63,14 +63,20 @@ for category, stats in stat_categories.items():
                 "Has Numeric Value": stat in stats_with_values,
             }
         )
-
 df = pd.DataFrame(stat_summary)
 
 # Count occurrences of each stat name
 stat_counts = df["Stat Name"].value_counts().reset_index()
 stat_counts.columns = ["Stat Name", "Count"]
 
+stat_counts = stat_counts.sort_values(by="Count", ascending=True)
+
+
 # # Display the dataframe with stat name frequencies
 # tools.display_dataframe_to_user(name="Stat Name Frequency", dataframe=stat_counts)
 
-print(df)
+for stat_name in stat_counts["Stat Name"]:
+    if "+%" not in stat_name:
+        if "+" not in stat_name:
+            if "%" not in stat_name:
+                print(stat_name)

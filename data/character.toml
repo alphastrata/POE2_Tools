@@ -1,20 +1,6 @@
 character_class = "Monk"
 name = "jengablox"
-activated_node_ids = [
-    15975,
-    62984,
-    49220,
-    10364,
-    5702,
-    20024,
-    44223,
-    48198,
-    21336,
-    42857,
-    13411,
-    56045,
-    24647,
-]
+activated_node_ids = [15975, 13411, 62984, 44223, 21336, 49220, 10364, 56045, 48198, 24647, 42857, 20024, 5702]
 date_created = "1970-01-01T00:00:00Z"
 level = 13
 quest_passive_skills = 0
