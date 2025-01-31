@@ -1,11 +1,14 @@
-//!$ crates/poe_tree/src/character.rs
-use crate::{type_wrappings::NodeId, PassiveTree};
+use crate::{
+    stats::{Operand, Stat},
+    type_wrappings::NodeId,
+    PassiveTree,
+};
 use chrono::{DateTime, Utc};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
-    default, fs, io,
+    fs, io,
     path::Path,
 };
 
@@ -63,7 +66,28 @@ impl Character {
     pub fn calculate_evasion_rating(&self, tree: &PassiveTree) -> f32 {
         //NOTE: I think we just sum all the + to maximum, then +% ontop of that?
         //TODO: I do not know the 'order' of how the operations are applied.
-        todo!()
+
+        let all_stats = self.all_stats(tree);
+        let total = all_stats
+            .filter(|s| matches!(s.operand, Operand::Add | Operand::Percentage))
+            .map(|s| {
+                dbg!(&s);
+
+                s
+            })
+            .map(|s| s.value)
+            .sum::<f32>();
+
+        total
+    }
+
+    fn all_stats<'t>(&'t self, tree: &'t PassiveTree) -> impl Iterator<Item = &'t Stat> + '_ {
+        self.activated_node_ids
+            .iter()
+            .map(|nid| tree.node(*nid))
+            .map(|pnode| tree.passive_for_node(&pnode))
+            .flat_map(|passive| passive.stats())
+            .into_iter()
     }
 
     pub fn calculate_energy_shield(&self, tree: &PassiveTree) -> f32 {
@@ -244,9 +268,19 @@ mod tests {
     fn compute_some_maximum_evasion() {
         let tree = quick_tree();
 
-        let char = Character::load_from_toml(TEST_DATA_MONK).unwrap();
+        //# A low lvl, but high in evasion nodes monk
+        let lvl_13_mostly_evasion_nodes = vec![
+            15975, 62984, 49220, 10364, 5702, 20024, 44223, 48198, 21336, 42857, 13411, 56045,
+            24647,
+        ]
+        .into_iter()
+        .map(|v| v)
+        .collect();
 
-        dbg!(char);
+        let mut char = Character::load_from_toml(TEST_DATA_MONK).unwrap();
+        char.activated_node_ids = lvl_13_mostly_evasion_nodes;
+
+        dbg!(char.calculate_evasion_rating(&tree));
     }
 
     #[test]

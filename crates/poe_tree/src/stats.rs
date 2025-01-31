@@ -5,9 +5,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Operand {
-    Add,        // Represents "+"
-    Multiply,   // Represents "x"
-    Percentage, // Represents "+%"
+    Add,      // Represents "+"
+    Multiply, // Represents "x"
+    Percentage,
+    Unhandled, // Represents "+%"
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -23,13 +24,17 @@ pub struct Stat {
     pub operand: Operand,
     pub value: f32,
 }
+
 impl Stat {
-    pub fn apply(&self, other: &Stat) -> Option<f32> {
+    // StatA + StatB, assuming they have the same name...
+    //NOTE: Does not handle the instance of StatA + StatB where one of them has ADDITIONAL values, therefore a different passive_skill name.
+    pub fn plus(&self, other: &Stat) -> Option<f32> {
         if self.name == other.name {
             match self.operand {
                 Operand::Add => Some(self.value + other.value),
                 Operand::Multiply => Some(self.value * other.value),
                 Operand::Percentage => Some(self.value + (self.value * other.value / 100.0)),
+                _ => None,
             }
         } else {
             None // Cannot apply operations on different stat types
@@ -43,18 +48,21 @@ where
     D: serde::Deserializer<'de>,
 {
     let map: HashMap<String, serde_json::Value> = HashMap::deserialize(deserializer)?;
-    let mut stats = Vec::new();
+    let mut stats: Vec<Stat> = Vec::new();
 
     for (name, value) in map {
         // Parse the value and determine the operand
-        let (operand, parsed_value) = match value {
+        let (operand, parsed_value) = match &value {
             serde_json::Value::Number(n) => {
                 // Value doesn't support deserialising to f32
                 let val = n.as_f64().unwrap_or(0.0) as f32;
                 if name.contains('%') {
                     (Operand::Percentage, val)
-                } else {
+                } else if name.contains("+") {
                     (Operand::Add, val)
+                } else {
+                    log::warn!("'n' Unhandled Stat type {:#?}", &value);
+                    (Operand::Unhandled, val)
                 }
             }
             serde_json::Value::String(s) => {
@@ -67,10 +75,14 @@ where
                         (Operand::Add, val)
                     }
                 } else {
-                    continue; // Skip invalid values
+                    log::warn!("'s' Unhandled Stat type {:#?}", &value);
+                    continue;
                 }
             }
-            _ => continue, // Skip other types
+            _ => {
+                log::warn!("'x' Unhandled Stat type {:#?}", &value);
+                continue;
+            }
         };
 
         stats.push(Stat {

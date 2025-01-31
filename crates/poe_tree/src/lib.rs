@@ -297,6 +297,10 @@ impl PassiveTree {
         })
     }
 
+    fn node(&self, target: NodeId) -> &PoeNode {
+        self.nodes.get(&target).unwrap()
+    }
+
     fn passive_for_node(&self, arg: &PoeNode) -> &PassiveSkill {
         self.passive_skills.get(&arg.skill_id).unwrap()
     }
