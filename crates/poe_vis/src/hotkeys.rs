@@ -57,11 +57,9 @@ fn handle_input(
     match ctx.wants_pointer_input() || ctx.wants_keyboard_input() {
         true => {
             settings.egui_has_lock = true;
-            log::debug!("egui wants cursor or keyboard.");
             return;
         }
         false => {
-            log::debug!("egui doesn't want cursor or keyboard.");
             settings.egui_has_lock = false;
         }
     }

@@ -83,11 +83,17 @@ impl Plugin for BGServicesPlugin {
 
 fn process_save_character(
     // save: EventReader<SaveCharacterReq>, // #run_condition
-    active_character: Res<ActiveCharacter>,
+    mut active_character: ResMut<ActiveCharacter>,
+    active_nodes: Query<&NodeMarker, With<NodeActive>>,
 ) {
+    //TODO: consider all the ECS -> Character updates be done in a helper function.
+    active_character.activated_node_ids = active_nodes.into_iter().map(|nm| **nm).collect();
+    active_character.level = active_character.activated_node_ids.len() as u8;
+
     if let Err(e) = (**active_character).save_to_toml(crate::consts::DEFAULT_SAVE_PATH) {
         log::error!("{}", e);
     }
+    log::debug!("Character Saved.");
 }
 
 // Conditional Helpers to rate-limit systems:

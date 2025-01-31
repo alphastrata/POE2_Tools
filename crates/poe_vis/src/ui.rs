@@ -122,14 +122,10 @@ fn egui_ui_system(
         }
 
         if ui.button("Save").clicked() {
-            active_nodes
-                .iter()
-                .filter(|nm| nm.0 != character.starting_node)
-                .for_each(|nm| {
-                    save_tx.send(SaveCharacterReq);
-                });
-            //TODO: save_as
+            save_tx.send(SaveCharacterReq);
         }
+
+        //TODO: save_as
     });
 }
 
