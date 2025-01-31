@@ -2,7 +2,7 @@
 // Minimal example using bevy_egui instead of standard bevy UI:
 use crate::{
     components::{NodeActive, NodeMarker},
-    events::{MoveCameraReq, NodeDeactivationReq},
+    events::{MoveCameraReq, NodeDeactivationReq, SaveCharacterReq},
     resources::{ActiveCharacter, CameraSettings},
     PassiveTreeWrapper,
 };
@@ -46,6 +46,7 @@ fn egui_ui_system(
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
     mut deactivate_tx: EventWriter<NodeDeactivationReq>,
     mut move_camera_tx: EventWriter<MoveCameraReq>,
+    mut save_tx: EventWriter<SaveCharacterReq>,
     counter: Res<ActiveNodeCounter>,
     tree: Res<PassiveTreeWrapper>,
     character: Res<ActiveCharacter>,
@@ -118,6 +119,16 @@ fn egui_ui_system(
                 .for_each(|nm| {
                     deactivate_tx.send(NodeDeactivationReq(nm.0));
                 });
+        }
+
+        if ui.button("Save").clicked() {
+            active_nodes
+                .iter()
+                .filter(|nm| nm.0 != character.starting_node)
+                .for_each(|nm| {
+                    save_tx.send(SaveCharacterReq);
+                });
+            //TODO: save_as
         }
     });
 }

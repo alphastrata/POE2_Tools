@@ -27,12 +27,12 @@ fn activate_starting_nodes(
     });
     path_repair.request_path_repair();
 }
+
 fn setup_character(
     mut commands: Commands,
     all_node_entities: Query<(Entity, &crate::components::NodeMarker)>,
 ) {
-    let character =
-        Character::load_from_toml("data/character.toml").expect("Failed to load character data");
+    let character = Character::load_from_toml("data/character.toml").unwrap_or_default();
 
     log::debug!("Loaded Character {}", character.name,);
 

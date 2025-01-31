@@ -10,3 +10,6 @@ pub const EDGE_PLACEMENT_Z_IDX: f32 = -10.0;
 
 /// The length a query MUST be in the searchbox before we allow the searching to begin...
 pub const SEARCH_THRESHOLD: usize = 5;
+
+/// Default path to which we'll save a character.
+pub const DEFAULT_SAVE_PATH: &'static str = "data/character.toml";

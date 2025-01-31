@@ -54,6 +54,7 @@ impl Plugin for BGServicesPlugin {
         app.add_systems(
             Update,
             (
+                process_save_character.run_if(on_event::<SaveCharacterReq>),
                 /* Users need to see paths magically illuminate */
                 //activations:
                 process_node_activations,
@@ -77,6 +78,15 @@ impl Plugin for BGServicesPlugin {
         );
 
         log::debug!("BGServices plugin enabled");
+    }
+}
+
+fn process_save_character(
+    // save: EventReader<SaveCharacterReq>, // #run_condition
+    active_character: Res<ActiveCharacter>,
+) {
+    if let Err(e) = (**active_character).save_to_toml(crate::consts::DEFAULT_SAVE_PATH) {
+        log::error!("{}", e);
     }
 }
 
