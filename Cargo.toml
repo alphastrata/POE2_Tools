@@ -32,6 +32,4 @@ crossbeam-channel = "0.5.14"
 bevy_cosmic_edit = "0.26.0"
 bevy_egui = "0.32.0"
 num_cpus = "1.16.0"
-
-[dependencies]
-crossbeam-channel.workspace = true
+reqwest = { version = "0.12.12", features = ["json", "blocking"] }

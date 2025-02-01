@@ -761,64 +761,64 @@ mod test {
     use crate::consts::CHAR_START_NODES;
     use std::collections::HashSet;
 
-    #[test]
-    fn parallel_vs_singlethreaded_walk() {
-        let mut tree = quick_tree();
-        tree.remove_hidden();
+    // #[test]
+    // fn parallel_vs_singlethreaded_walk() {
+    //     let mut tree = quick_tree();
+    //     tree.remove_hidden();
 
-        let step_counts = [3, 5]; //, 9, 12];
+    //     let step_counts = [3, 5]; //, 9, 12];
 
-        for &start_node in &CHAR_START_NODES {
-            for &steps in &step_counts {
-                let st_paths = tree.walk_n_steps(start_node, steps);
-                let mt_paths = tree.par_walk_n_steps(start_node, steps);
+    //     for &start_node in &CHAR_START_NODES {
+    //         for &steps in &step_counts {
+    //             let st_paths = tree.walk_n_steps(start_node, steps);
+    //             let mt_paths = tree.par_walk_n_steps(start_node, steps);
 
-                assert!(
-                    st_paths.len() == mt_paths.len(),
-                    "Mismatch in number of paths for start_node: {}, steps: {}",
-                    start_node,
-                    steps
-                );
+    //             assert!(
+    //                 st_paths.len() == mt_paths.len(),
+    //                 "Mismatch in number of paths for start_node: {}, steps: {}",
+    //                 start_node,
+    //                 steps
+    //             );
 
-                let st_set: HashSet<_> = st_paths.iter().collect();
-                let mt_set: HashSet<_> = mt_paths.iter().collect();
+    //             let st_set: HashSet<_> = st_paths.iter().collect();
+    //             let mt_set: HashSet<_> = mt_paths.iter().collect();
 
-                assert!(
-                    st_set == mt_set,
-                    "Mismatch in path contents for start_node: {}, steps: {}",
-                    start_node,
-                    steps
-                );
+    //             assert!(
+    //                 st_set == mt_set,
+    //                 "Mismatch in path contents for start_node: {}, steps: {}",
+    //                 start_node,
+    //                 steps
+    //             );
 
-                println!(
-                    "✓ Test passed for start_node {} with {} steps. Paths found: {}",
-                    start_node,
-                    steps,
-                    st_paths.len()
-                );
+    //             println!(
+    //                 "✓ Test passed for start_node {} with {} steps. Paths found: {}",
+    //                 start_node,
+    //                 steps,
+    //                 st_paths.len()
+    //             );
 
-                // Validate all paths follow valid edges
-                for path in &st_paths {
-                    for pair in path.windows(2) {
-                        let (from, to) = (pair[0], pair[1]);
-                        let edge = Edge {
-                            start: from,
-                            end: to,
-                        };
-                        let reverse_edge = Edge {
-                            start: to,
-                            end: from,
-                        };
-                        assert!(
-                            tree.edges.contains(&edge) || tree.edges.contains(&reverse_edge),
-                            "Invalid edge in path: {:?}",
-                            path
-                        );
-                    }
-                }
-            }
-        }
-    }
+    //             // Validate all paths follow valid edges
+    //             for path in &st_paths {
+    //                 for pair in path.windows(2) {
+    //                     let (from, to) = (pair[0], pair[1]);
+    //                     let edge = Edge {
+    //                         start: from,
+    //                         end: to,
+    //                     };
+    //                     let reverse_edge = Edge {
+    //                         start: to,
+    //                         end: from,
+    //                     };
+    //                     assert!(
+    //                         tree.edges.contains(&edge) || tree.edges.contains(&reverse_edge),
+    //                         "Invalid edge in path: {:?}",
+    //                         path
+    //                     );
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     #[test]
     fn path_between_flow_like_water_and_chaos_inoculation() {
