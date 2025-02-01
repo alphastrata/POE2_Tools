@@ -28,6 +28,7 @@ fn main() {
     };
 
     App::new()
+        .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
         .add_plugins((
             DefaultPlugins.set(bevy::log::LogPlugin {
                 filter: log_filter,
