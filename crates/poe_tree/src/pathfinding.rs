@@ -1,7 +1,8 @@
 #![allow(unused_imports)]
+use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::{unbounded, Receiver, Sender}; // for cloneable receivers
-
 use rayon::prelude::*;
+use std::time::Duration;
 use std::{
     cmp::Ordering,
     collections::{BinaryHeap, HashMap, HashSet, VecDeque},
@@ -293,63 +294,131 @@ impl PassiveTree {
         start: NodeId,
         steps: usize,
     ) -> Vec<Vec<NodeId>> {
+        log::debug!(
+            "Starting par_walk_n_steps_use_chains with start: {} and steps: {}",
+            start,
+            steps
+        );
         let (work_tx, work_rx): (Sender<Vec<NodeId>>, Receiver<Vec<NodeId>>) = unbounded();
         let (result_tx, result_rx): (Sender<Vec<NodeId>>, Receiver<Vec<NodeId>>) = unbounded();
 
         work_tx.send(vec![start]).unwrap();
+        log::debug!("Seeded work queue with initial path: [{}]", start);
 
         let num_workers = num_cpus::get();
+        log::debug!("Spawning {} worker threads", num_workers);
         let mut workers = Vec::with_capacity(num_workers);
 
-        for _ in 0..num_workers {
+        for i in 0..num_workers {
             let work_rx = work_rx.clone();
             let work_tx = work_tx.clone();
             let result_tx = result_tx.clone();
             let tree = Arc::clone(&self);
-
-            workers.push(thread::spawn(move || {
-                while let Ok(path) = work_rx.recv() {
-                    if path.len() - 1 == steps {
-                        result_tx.send(path).unwrap();
-                    } else {
-                        let last = *path.last().unwrap();
-                        let mut new_paths = Vec::new();
-                        for edge in &tree.edges {
-                            if edge.start == last && !path.contains(&edge.end) {
-                                let mut p = path.clone();
-                                p.push(edge.end);
-                                new_paths.push(p);
-                            } else if edge.end == last && !path.contains(&edge.start) {
-                                let mut p = path.clone();
-                                p.push(edge.start);
-                                new_paths.push(p);
+            let thread_name = format!("par_walker_{}", i);
+            let builder = thread::Builder::new().name(thread_name.clone());
+            workers.push(
+                builder
+                    .spawn(move || {
+                        log::debug!("Worker {} started", thread::current().name().unwrap());
+                        loop {
+                            match work_rx.recv_timeout(Duration::from_millis(5000)) {
+                                Ok(path) => {
+                                    log::debug!(
+                                        "Worker {} received path: {:?}",
+                                        thread::current().name().unwrap(),
+                                        path
+                                    );
+                                    if path.len() - 1 == steps {
+                                        log::debug!(
+                                            "Worker {} reached target steps with path: {:?}",
+                                            thread::current().name().unwrap(),
+                                            path
+                                        );
+                                        result_tx.send(path).unwrap();
+                                    } else {
+                                        let last = *path.last().unwrap();
+                                        let mut new_paths = Vec::new();
+                                        for edge in &tree.edges {
+                                            if edge.start == last && !path.contains(&edge.end) {
+                                                let mut p = path.clone();
+                                                p.push(edge.end);
+                                                new_paths.push(p);
+                                            } else if edge.end == last
+                                                && !path.contains(&edge.start)
+                                            {
+                                                let mut p = path.clone();
+                                                p.push(edge.start);
+                                                new_paths.push(p);
+                                            }
+                                        }
+                                        log::debug!(
+                                            "Worker {} expanded path {:?} into {} candidates",
+                                            thread::current().name().unwrap(),
+                                            path,
+                                            new_paths.len()
+                                        );
+                                        new_paths.sort_by(|a, b| {
+                                            a[..a.len() - 1].cmp(&b[..b.len() - 1])
+                                        });
+                                        new_paths
+                                            .dedup_by(|a, b| a[..a.len() - 1] == b[..b.len() - 1]);
+                                        log::debug!(
+                                            "Worker {} deduped candidates, {} remain",
+                                            thread::current().name().unwrap(),
+                                            new_paths.len()
+                                        );
+                                        for new_path in new_paths {
+                                            log::debug!(
+                                                "Worker {} sending new path: {:?}",
+                                                thread::current().name().unwrap(),
+                                                new_path
+                                            );
+                                            work_tx.send(new_path).unwrap();
+                                        }
+                                    }
+                                }
+                                Err(RecvTimeoutError::Timeout) => {
+                                    log::debug!(
+                                        "Worker {} timed out, assuming no more work, exiting",
+                                        thread::current().name().unwrap()
+                                    );
+                                    break;
+                                }
+                                Err(RecvTimeoutError::Disconnected) => {
+                                    log::debug!(
+                                        "Worker {} found channel disconnected, exiting",
+                                        thread::current().name().unwrap()
+                                    );
+                                    break;
+                                }
                             }
                         }
-                        new_paths.sort_by(|a, b| a[..a.len() - 1].cmp(&b[..b.len() - 1]));
-                        new_paths.dedup_by(|a, b| a[..a.len() - 1] == b[..b.len() - 1]);
-                        for new_path in new_paths {
-                            work_tx.send(new_path).unwrap();
-                        }
-                    }
-                }
-            }));
+                        log::debug!("Worker {} exiting", thread::current().name().unwrap());
+                    })
+                    .unwrap(),
+            );
         }
 
         drop(work_tx);
         drop(result_tx);
+        log::debug!("Dropped extra channel clones, awaiting finished paths...");
 
         let mut finished = Vec::new();
         for path in result_rx.iter() {
             if path.len() - 1 == steps {
+                log::debug!("Main thread received finished path: {:?}", path);
                 finished.push(path);
             }
         }
         for worker in workers {
             worker.join().unwrap();
         }
+        log::debug!(
+            "All workers completed. Total finished paths: {}",
+            finished.len()
+        );
         finished
     }
-
     pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
         let t1 = std::time::Instant::now();
         let mut paths = Vec::new();

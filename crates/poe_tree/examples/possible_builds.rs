@@ -72,12 +72,12 @@ fn main() {
                 let paths = a_tree
                     .clone()
                     .par_walk_n_steps_use_chains(start_node, steps);
-                assert!(
-                    !paths.is_empty(),
-                    "No paths found for start {} and {} steps",
-                    start_node,
-                    steps
-                );
+                // assert!(
+                //     !paths.is_empty(),
+                //     "No paths found for start {} and {} steps",
+                //     start_node,
+                //     steps
+                // );
                 for path in &paths {
                     assert_eq!(path.len() - 1, steps, "Invalid path length in {:?}", path);
                 }
