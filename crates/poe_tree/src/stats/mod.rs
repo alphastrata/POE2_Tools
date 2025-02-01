@@ -1,4 +1,5 @@
-//!$ crates/poe_tree/src/stats.rs
+pub mod stats_enum;
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -9,13 +10,6 @@ pub enum Operand {
     Multiply, // Represents "x"
     Percentage,
     Unhandled, // Represents "+%"
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum StatType {
-    Additive,
-    Percentage,
-    Grantable,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
