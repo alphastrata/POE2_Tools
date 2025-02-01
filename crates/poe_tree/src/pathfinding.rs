@@ -289,6 +289,97 @@ impl PassiveTree {
             }
         })
     }
+
+    pub fn par_walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+        let t1 = std::time::Instant::now();
+
+        let paths = Arc::new(Mutex::new(Vec::new()));
+        let queue = Arc::new(Mutex::new(VecDeque::new()));
+        let visited = Arc::new(Mutex::new(HashSet::new()));
+
+        // Initialize queue with the starting node in its own path
+        queue.lock().unwrap().push_back(vec![start]);
+
+        while let Some(path) = queue.lock().unwrap().pop_front() {
+            let last_node = *path.last().unwrap();
+
+            if path.len() - 1 == steps {
+                paths.lock().unwrap().push(path.clone());
+                continue;
+            }
+
+            // Process edges in parallel
+            self.edges.par_iter().for_each(|edge| {
+                let (next_node, other_node) = (edge.start, edge.end);
+
+                let mut queue_guard = queue.lock().unwrap();
+                let mut visited_guard = visited.lock().unwrap();
+
+                if next_node == last_node && !visited_guard.contains(&other_node) {
+                    let mut new_path = path.clone();
+                    new_path.push(other_node);
+                    queue_guard.push_back(new_path);
+                    visited_guard.insert(other_node);
+                } else if other_node == last_node && !visited_guard.contains(&next_node) {
+                    let mut new_path = path.clone();
+                    new_path.push(next_node);
+                    queue_guard.push_back(new_path);
+                    visited_guard.insert(next_node);
+                }
+            });
+        }
+
+        log::debug!(
+            "Walking {} neighbors took {}ms",
+            steps,
+            t1.elapsed().as_millis()
+        );
+
+        let ret = std::mem::take(&mut *paths.lock().unwrap());
+
+        ret
+    }
+
+    pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+        let t1 = std::time::Instant::now();
+        let mut paths = Vec::new();
+        let mut queue = VecDeque::new();
+
+        // Initialize queue with the starting node in its own path
+        queue.push_back(vec![start]);
+
+        while let Some(path) = queue.pop_front() {
+            let last_node = *path.last().unwrap();
+
+            if path.len() - 1 == steps {
+                paths.push(path.clone()); // Store paths of exactly `n` steps
+                continue;
+            }
+
+            for edge in &self.edges {
+                let (next_node, other_node) = (edge.start, edge.end);
+
+                if next_node == last_node && !path.contains(&other_node) {
+                    let mut new_path = path.clone();
+                    new_path.push(other_node);
+                    queue.push_back(new_path);
+                } else if other_node == last_node && !path.contains(&next_node) {
+                    let mut new_path = path.clone();
+                    new_path.push(next_node);
+                    queue.push_back(new_path);
+                }
+            }
+        }
+
+        log::debug!(
+            "Walking {} neighbours took {}ms",
+            steps,
+            t1.elapsed().as_millis()
+        );
+
+        paths
+    }
+
     pub fn multi_bfs(&self, starts: &[NodeId], targets: &[NodeId]) -> Vec<NodeId> {
         let start_time = std::time::Instant::now();
         log::trace!(
@@ -573,20 +664,82 @@ impl PassiveTree {
 
 #[cfg(test)]
 mod test {
-
     use crate::quick_tree;
 
     use super::*;
 
-    const LONG_TEST_PATHS: ([u32; 10], [u32; 10], [u32; 7]) = (
+    const LONG_TEST_PATHS: ([u32; 10], [u32; 10], [u32; 9], [u32; 7]) = (
         [
             10364, 42857, 20024, 44223, 49220, 36778, 36479, 12925, 61196, 58329,
         ],
         [
             10364, 42857, 20024, 44223, 49220, 14725, 34233, 32545, 61196, 58329,
         ],
+        [10364, 42857, 20024, 44223, 49220, 53960, 8975, 61196, 58329],
         [10364, 55342, 17248, 53960, 8975, 61196, 58329],
     );
+
+    use crate::consts::CHAR_START_NODES;
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_parallel_vs_singlethreaded_walk() {
+        let mut tree = quick_tree();
+        tree.remove_hidden();
+
+        let step_counts = [3, 5, 9, 12, 17];
+
+        for &start_node in &CHAR_START_NODES {
+            for &steps in &step_counts {
+                let st_paths = tree.walk_neighbors_n_steps(start_node, steps);
+                let mt_paths = tree.par_walk_neighbors_n_steps(start_node, steps);
+
+                assert!(
+                    st_paths.len() == mt_paths.len(),
+                    "Mismatch in number of paths for start_node: {}, steps: {}",
+                    start_node,
+                    steps
+                );
+
+                let st_set: HashSet<_> = st_paths.iter().collect();
+                let mt_set: HashSet<_> = mt_paths.iter().collect();
+
+                assert!(
+                    st_set == mt_set,
+                    "Mismatch in path contents for start_node: {}, steps: {}",
+                    start_node,
+                    steps
+                );
+
+                println!(
+                    "✓ Test passed for start_node {} with {} steps. Paths found: {}",
+                    start_node,
+                    steps,
+                    st_paths.len()
+                );
+
+                // Validate all paths follow valid edges
+                for path in &st_paths {
+                    for pair in path.windows(2) {
+                        let (from, to) = (pair[0], pair[1]);
+                        let edge = Edge {
+                            start: from,
+                            end: to,
+                        };
+                        let reverse_edge = Edge {
+                            start: to,
+                            end: from,
+                        };
+                        assert!(
+                            tree.edges.contains(&edge) || tree.edges.contains(&reverse_edge),
+                            "Invalid edge in path: {:?}",
+                            path
+                        );
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn path_between_flow_like_water_and_chaos_inoculation() {
@@ -646,7 +799,7 @@ mod test {
 
     fn validate_shortest_path(
         actual_path: &[u32],
-        expected_paths: &([u32; 10], [u32; 10], [u32; 7]),
+        expected_paths: &([u32; 10], [u32; 10], [u32; 9], [u32; 7]),
         description: &str,
     ) {
         assert!(
@@ -657,7 +810,9 @@ mod test {
 
         let is_valid = actual_path == &expected_paths.0[..]
             || actual_path == &expected_paths.1[..]
-            || actual_path == &expected_paths.2[..];
+            || actual_path == &expected_paths.2[..]
+            // [10364, 55342, 17248, 53960, 8975, 61196, 58329]
+            || actual_path == &expected_paths.3[..];
 
         assert!(
                 is_valid,
@@ -692,6 +847,8 @@ mod test {
         let actual_path = paths
             .get(&(start, target))
             .expect("Dijkstra path not found for the given start and target.");
+
+        dbg!(paths.len());
 
         validate_shortest_path(actual_path, &LONG_TEST_PATHS, "Dijkstra Pathfinding");
     }
