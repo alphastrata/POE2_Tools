@@ -1,7 +1,5 @@
-use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::sync::LazyLock;
-use std::sync::OnceLock;
 
 pub const ORBIT_RADII: [f32; 10] = [
     0.0, 82.0, 162.0, 335.0, 493.0, 662.0, 846.0, 251.0, 1080.0, 1322.0,
@@ -63,5 +61,5 @@ static LEVEL_ONE_NODES_MAP: LazyLock<HashMap<&'static str, [u32; 2]>> = LazyLock
 });
 
 pub fn get_level_one_nodes() -> &'static HashMap<&'static str, [u32; 2]> {
-    &*LEVEL_ONE_NODES_MAP
+    &LEVEL_ONE_NODES_MAP
 }

@@ -148,6 +148,8 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
         }
     });
 
+    io.add_sync_method("ping", |_p: Params| Ok(Value::String("ok".into())));
+
     // TODO: will need a way to query world...
     // io.add_sync_method("get_materials", {
     //     move |_params: Params| {

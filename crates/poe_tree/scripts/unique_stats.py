@@ -28,7 +28,7 @@ multiplication_pattern = re.compile(r"\*$")
 division_pattern = re.compile(r"/")
 subtraction_pattern = re.compile(r"-")
 
-# Iterate through passive_skills and categorize stats
+# Iterate through passive skills and categorize stats
 for skill in poe_tree.get("passive_skills", {}).values():
     if "stats" in skill:
         for stat_name, value in skill["stats"].items():
@@ -52,7 +52,7 @@ for skill in poe_tree.get("passive_skills", {}).values():
             else:
                 stats_without_values.add(stat_name)
 
-# Display results
+# Create a DataFrame with categorized stats
 stat_summary = []
 for category, stats in stat_categories.items():
     for stat in stats:
@@ -63,20 +63,30 @@ for category, stats in stat_categories.items():
                 "Has Numeric Value": stat in stats_with_values,
             }
         )
+
 df = pd.DataFrame(stat_summary)
 
 # Count occurrences of each stat name
 stat_counts = df["Stat Name"].value_counts().reset_index()
 stat_counts.columns = ["Stat Name", "Count"]
 
-stat_counts = stat_counts.sort_values(by="Count", ascending=True)
+# Sort the counts in descending order
+stat_counts = stat_counts.sort_values(by="Count", ascending=False)
 
+# Print the results
+print("Total number of unique stats:", len(stat_counts))
 
-# # Display the dataframe with stat name frequencies
-# tools.display_dataframe_to_user(name="Stat Name Frequency", dataframe=stat_counts)
+print("\nStats with numeric values:")
+print(stat_counts[stat_counts["Stat Name"].str.contains(r"\d")])
 
-for stat_name in stat_counts["Stat Name"]:
-    if "+%" not in stat_name:
-        if "+" not in stat_name:
-            if "%" not in stat_name:
-                print(stat_name)
+print("\nStats without numeric values:")
+print(stat_counts[~stat_counts["Stat Name"].str.contains(r"\d")])
+
+print("\nTop 20 stats by frequency:")
+print(stat_counts.head(20))
+
+print("\nBottom 20 stats by frequency:")
+print(stat_counts.tail(20))
+
+# Optional: Save the results to a CSV file
+# df.to_csv('unique_stats_results.csv', index=False)

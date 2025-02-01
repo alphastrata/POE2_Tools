@@ -1,3 +1,8 @@
+//! Demonstrating:
+//! - usage of `walk_n_steps` in serial and parallel.
+//! - examples of abstracting over the RPC interface that `poe_vis` provides
+//! - using rayon with the pathfinding output from methods on PassiveTree
+
 use poe_tree::{consts::get_level_one_nodes, edges::Edge, PassiveTree};
 use rayon::prelude::*;
 use reqwest::blocking::Client;
@@ -14,6 +19,16 @@ fn quick_tree() -> PassiveTree {
     let reader = std::io::BufReader::new(file);
     let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
     PassiveTree::from_value(&tree_data).unwrap()
+}
+
+// Examples of how one may abstract over the jsonrpc interface from poe_vis
+fn ping(client: &reqwest::blocking::Client) -> Result<reqwest::blocking::Response, reqwest::Error> {
+    let json = r#"{"jsonrpc":"2.0","method":"ping","params":[],"id":1}"#;
+    client
+        .post(VIS_URL)
+        .header("Content-Type", "application/json")
+        .body(json)
+        .send()
 }
 
 fn send_node_command(client: &Client, node: u32, method: &str) {
@@ -51,13 +66,20 @@ fn main() {
         .map(|(name, ids)| (*name, ids))
         .collect();
 
+    if visualiser && ping(&client).is_err() {
+        eprintln!("You have requested that this example app show you the visualistions of the paths it creates. For this to work poe_vis's `vis` binary must be running and available on port {VIS_URL}");
+        std::process::exit(1)
+    }
     nodes.par_iter().for_each(|(character, node_ids)| {
         let local_client = client.clone();
         let char_start = Instant::now();
         println!("{}:", character);
         node_ids.iter().for_each(|&start_node| {
             println!("\tStart node: {}", start_node);
-            for &steps in &[12] {
+            //NOTE: these numbers are kept low to spare your hardware && to save
+            // you life hours of watching the paths... it is rather hypnotic.
+            // You're welcome.
+            [5, 8, 12].iter().for_each(|&steps| {
                 let paths = tree.walk_n_steps(start_node, steps);
                 assert!(
                     !paths.is_empty(),
@@ -66,6 +88,7 @@ fn main() {
                     steps
                 );
                 println!("\t\tLevels {}: {} possible paths", steps, paths.len());
+
                 // Validate edges
                 paths.iter().for_each(|path| {
                     path.windows(2).for_each(|pair| {
@@ -85,22 +108,23 @@ fn main() {
                         );
                     });
                 });
+
                 if visualiser {
-                    for path in &paths {
+                    paths.iter().for_each(|path| {
                         // Activate path nodes
-                        for &node in path {
+                        path.iter().for_each(|&node| {
                             activate_node(&local_client, node);
                             sleep(Duration::from_millis(15));
-                        }
+                        });
                         sleep(Duration::from_millis(175));
                         // Deactivate path nodes
-                        for &node in path {
+                        path.iter().for_each(|&node| {
                             deactivate_node(&local_client, node);
                             sleep(Duration::from_millis(10));
-                        }
-                    }
+                        });
+                    });
                 }
-            }
+            });
         });
         println!("{} finished in: {:?}\n", character, char_start.elapsed());
     });

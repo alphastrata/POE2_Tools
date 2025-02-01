@@ -21,6 +21,10 @@ path = "examples/evasion.rs"
 name = "possible"
 path = "examples/possible_builds.rs"
 
+[[examples]]
+name = "all2chaos"
+path = "examples/all_starts_to_chaos_inoculation.rs"
+
 
 [dependencies]
 log = { workspace = true }
