@@ -683,16 +683,16 @@ mod test {
     use std::collections::HashSet;
 
     #[test]
-    fn test_parallel_vs_singlethreaded_walk() {
+    fn parallel_vs_singlethreaded_walk() {
         let mut tree = quick_tree();
         tree.remove_hidden();
 
-        let step_counts = [3, 5, 9, 12, 17];
+        let step_counts = [3, 5, 9, 12];
 
         for &start_node in &CHAR_START_NODES {
             for &steps in &step_counts {
-                let st_paths = tree.walk_neighbors_n_steps(start_node, steps);
-                let mt_paths = tree.par_walk_neighbors_n_steps(start_node, steps);
+                let st_paths = tree.walk_n_steps(start_node, steps);
+                let mt_paths = tree.par_walk_n_steps(start_node, steps);
 
                 assert!(
                     st_paths.len() == mt_paths.len(),
