@@ -21,63 +21,19 @@ fn main() {
         .collect();
 
     // St version, split par on starting nodes
-    // nodes.par_iter().for_each(|(character, node_ids)| {
-    //     let char_start = Instant::now();
-    //     println!("{}:", character);
-    //     node_ids.iter().for_each(|&start_node| {
-    //         println!("\tStart node: {}", start_node);
-    //         for &steps in &[20] {
-    //             let paths = tree.walk_n_steps(start_node, steps);
-    //             assert!(
-    //                 !paths.is_empty(),
-    //                 "No paths found for start {} and {} steps",
-    //                 start_node,
-    //                 steps
-    //             );
-    //             for path in &paths {
-    //                 assert_eq!(path.len() - 1, steps, "Invalid path length in {:?}", path);
-    //             }
-    //             println!("\t\tLevels {}: {} possible paths", steps, paths.len());
-    //             paths.iter().for_each(|path| {
-    //                 path.windows(2).for_each(|pair| {
-    //                     let (from, to) = (pair[0], pair[1]);
-    //                     let edge = Edge {
-    //                         start: from,
-    //                         end: to,
-    //                     };
-    //                     let rev_edge = Edge {
-    //                         start: to,
-    //                         end: from,
-    //                     };
-    //                     assert!(
-    //                         tree.edges.contains(&edge) || tree.edges.contains(&rev_edge),
-    //                         "Invalid edge in path: {:?}",
-    //                         path
-    //                     );
-    //                 });
-    //             });
-    //         }
-    //     });
-    //     println!("{} finished in: {:?}\n", character, char_start.elapsed());
-    // });
-
-    // fully par version, walking is par
-    let a_tree = std::sync::Arc::new(tree);
-    nodes.iter().for_each(|(character, node_ids)| {
+    nodes.par_iter().for_each(|(character, node_ids)| {
         let char_start = Instant::now();
         println!("{}:", character);
         node_ids.iter().for_each(|&start_node| {
             println!("\tStart node: {}", start_node);
-            for &steps in &[20] {
-                let paths = a_tree
-                    .clone()
-                    .par_walk_n_steps_use_chains(start_node, steps);
-                // assert!(
-                //     !paths.is_empty(),
-                //     "No paths found for start {} and {} steps",
-                //     start_node,
-                //     steps
-                // );
+            for &steps in &[12] {
+                let paths = tree.walk_n_steps(start_node, steps);
+                assert!(
+                    !paths.is_empty(),
+                    "No paths found for start {} and {} steps",
+                    start_node,
+                    steps
+                );
                 for path in &paths {
                     assert_eq!(path.len() - 1, steps, "Invalid path length in {:?}", path);
                 }
@@ -94,7 +50,7 @@ fn main() {
                             end: from,
                         };
                         assert!(
-                            a_tree.edges.contains(&edge) || a_tree.edges.contains(&rev_edge),
+                            tree.edges.contains(&edge) || tree.edges.contains(&rev_edge),
                             "Invalid edge in path: {:?}",
                             path
                         );
@@ -102,10 +58,55 @@ fn main() {
                 });
             }
         });
-        println!(
-            "par walk for {} finished in: {:?}\n",
-            character,
-            char_start.elapsed()
-        );
+        println!("{} finished in: {:?}\n", character, char_start.elapsed());
     });
+
+    // WIP:
+    // fully par version, walking is par
+    //     let a_tree = std::sync::Arc::new(tree);
+    //     nodes.iter().for_each(|(character, node_ids)| {
+    //         let char_start = Instant::now();
+    //         println!("{}:", character);
+    //         node_ids.iter().for_each(|&start_node| {
+    //             println!("\tStart node: {}", start_node);
+    //             for &steps in &[20] {
+    //                 let paths = a_tree
+    //                     .clone()
+    //                     .par_walk_n_steps_use_chains(start_node, steps);
+    //                 // assert!(
+    //                 //     !paths.is_empty(),
+    //                 //     "No paths found for start {} and {} steps",
+    //                 //     start_node,
+    //                 //     steps
+    //                 // );
+    //                 for path in &paths {
+    //                     assert_eq!(path.len() - 1, steps, "Invalid path length in {:?}", path);
+    //                 }
+    //                 println!("\t\tLevels {}: {} possible paths", steps, paths.len());
+    //                 paths.iter().for_each(|path| {
+    //                     path.windows(2).for_each(|pair| {
+    //                         let (from, to) = (pair[0], pair[1]);
+    //                         let edge = Edge {
+    //                             start: from,
+    //                             end: to,
+    //                         };
+    //                         let rev_edge = Edge {
+    //                             start: to,
+    //                             end: from,
+    //                         };
+    //                         assert!(
+    //                             a_tree.edges.contains(&edge) || a_tree.edges.contains(&rev_edge),
+    //                             "Invalid edge in path: {:?}",
+    //                             path
+    //                         );
+    //                     });
+    //                 });
+    //             }
+    //         });
+    //         println!(
+    //             "par walk for {} finished in: {:?}\n",
+    //             character,
+    //             char_start.elapsed()
+    //         );
+    //     });
 }
