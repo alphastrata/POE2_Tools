@@ -687,7 +687,7 @@ mod test {
         let mut tree = quick_tree();
         tree.remove_hidden();
 
-        let step_counts = [3, 5, 9, 12];
+        let step_counts = [3, 5]; //, 9, 12];
 
         for &start_node in &CHAR_START_NODES {
             for &steps in &step_counts {

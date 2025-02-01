@@ -19,9 +19,9 @@ fn main() {
 
     // let s1 = potential_starts[0];
     let start_node = 10364;
-    let steps = 12;
-    // let paths = tree.walk_n_steps(start_node, steps);
-    let paths = tree.par_walk_n_steps(start_node, steps);
+    let steps = 20;
+    let paths = tree.walk_n_steps(start_node, steps);
+    // let paths = tree.par_walk_n_steps(start_node, steps);
 
     // Validate that all paths have the correct length
     assert!(!paths.is_empty(), "No paths found!");
