@@ -1,13 +1,11 @@
 #![allow(unused_imports)]
+use crossbeam_channel::{unbounded, Receiver, Sender}; // for cloneable receivers
 
 use rayon::prelude::*;
 use std::{
     cmp::Ordering,
     collections::{BinaryHeap, HashMap, HashSet, VecDeque},
-    sync::{
-        mpsc::{channel, Receiver, Sender},
-        Arc, Mutex,
-    },
+    sync::{Arc, Mutex},
     thread,
     time::Instant,
 };
@@ -290,54 +288,66 @@ impl PassiveTree {
         })
     }
 
-    pub fn par_walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-        let t1 = std::time::Instant::now();
+    pub fn par_walk_n_steps_use_chains(
+        self: Arc<Self>,
+        start: NodeId,
+        steps: usize,
+    ) -> Vec<Vec<NodeId>> {
+        let (work_tx, work_rx): (Sender<Vec<NodeId>>, Receiver<Vec<NodeId>>) = unbounded();
+        let (result_tx, result_rx): (Sender<Vec<NodeId>>, Receiver<Vec<NodeId>>) = unbounded();
 
-        let paths = Arc::new(Mutex::new(Vec::new()));
-        let queue = Arc::new(Mutex::new(VecDeque::new()));
-        let visited = Arc::new(Mutex::new(HashSet::new()));
+        work_tx.send(vec![start]).unwrap();
 
-        // Initialize queue with the starting node in its own path
-        queue.lock().unwrap().push_back(vec![start]);
+        let num_workers = num_cpus::get();
+        let mut workers = Vec::with_capacity(num_workers);
 
-        while let Some(path) = queue.lock().unwrap().pop_front() {
-            let last_node = *path.last().unwrap();
+        for _ in 0..num_workers {
+            let work_rx = work_rx.clone();
+            let work_tx = work_tx.clone();
+            let result_tx = result_tx.clone();
+            let tree = Arc::clone(&self);
 
-            if path.len() - 1 == steps {
-                paths.lock().unwrap().push(path.clone());
-                continue;
-            }
-
-            // Process edges in parallel
-            self.edges.par_iter().for_each(|edge| {
-                let (next_node, other_node) = (edge.start, edge.end);
-
-                let mut queue_guard = queue.lock().unwrap();
-                let mut visited_guard = visited.lock().unwrap();
-
-                if next_node == last_node && !visited_guard.contains(&other_node) {
-                    let mut new_path = path.clone();
-                    new_path.push(other_node);
-                    queue_guard.push_back(new_path);
-                    visited_guard.insert(other_node);
-                } else if other_node == last_node && !visited_guard.contains(&next_node) {
-                    let mut new_path = path.clone();
-                    new_path.push(next_node);
-                    queue_guard.push_back(new_path);
-                    visited_guard.insert(next_node);
+            workers.push(thread::spawn(move || {
+                while let Ok(path) = work_rx.recv() {
+                    if path.len() - 1 == steps {
+                        result_tx.send(path).unwrap();
+                    } else {
+                        let last = *path.last().unwrap();
+                        let mut new_paths = Vec::new();
+                        for edge in &tree.edges {
+                            if edge.start == last && !path.contains(&edge.end) {
+                                let mut p = path.clone();
+                                p.push(edge.end);
+                                new_paths.push(p);
+                            } else if edge.end == last && !path.contains(&edge.start) {
+                                let mut p = path.clone();
+                                p.push(edge.start);
+                                new_paths.push(p);
+                            }
+                        }
+                        new_paths.sort_by(|a, b| a[..a.len() - 1].cmp(&b[..b.len() - 1]));
+                        new_paths.dedup_by(|a, b| a[..a.len() - 1] == b[..b.len() - 1]);
+                        for new_path in new_paths {
+                            work_tx.send(new_path).unwrap();
+                        }
+                    }
                 }
-            });
+            }));
         }
 
-        log::debug!(
-            "Walking {} neighbors took {}ms",
-            steps,
-            t1.elapsed().as_millis()
-        );
+        drop(work_tx);
+        drop(result_tx);
 
-        let ret = std::mem::take(&mut *paths.lock().unwrap());
-
-        ret
+        let mut finished = Vec::new();
+        for path in result_rx.iter() {
+            if path.len() - 1 == steps {
+                finished.push(path);
+            }
+        }
+        for worker in workers {
+            worker.join().unwrap();
+        }
+        finished
     }
 
     pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {

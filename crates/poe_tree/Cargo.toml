@@ -33,3 +33,5 @@ toml = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
 bitset.workspace = true
 rayon.workspace = true
+num_cpus.workspace = true
+crossbeam-channel.workspace = true

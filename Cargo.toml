@@ -31,3 +31,7 @@ crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }
 crossbeam-channel = "0.5.14"
 bevy_cosmic_edit = "0.26.0"
 bevy_egui = "0.32.0"
+num_cpus = "1.16.0"
+
+[dependencies]
+crossbeam-channel.workspace = true
