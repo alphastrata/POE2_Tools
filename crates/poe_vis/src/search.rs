@@ -148,7 +148,7 @@ fn cleanup_search_results(
     mut searchbox_state: ResMut<SearchState>,
     query: Query<(Entity, &NodeMarker), With<SearchResult>>,
 ) {
-    if !searchbox_state.open || &searchbox_state.search_query == "" {
+    if !searchbox_state.open || searchbox_state.search_query.is_empty() {
         searchbox_state.search_query.clear();
         for (ent, _) in &query {
             commands.entity(ent).remove::<SearchResult>();

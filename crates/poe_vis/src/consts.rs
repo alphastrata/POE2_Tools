@@ -12,4 +12,4 @@ pub const EDGE_PLACEMENT_Z_IDX: f32 = -10.0;
 pub const SEARCH_THRESHOLD: usize = 5;
 
 /// Default path to which we'll save a character.
-pub const DEFAULT_SAVE_PATH: &'static str = "data/character.toml";
+pub const DEFAULT_SAVE_PATH: &str = "data/character.toml";

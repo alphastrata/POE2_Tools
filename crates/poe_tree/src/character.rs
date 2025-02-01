@@ -68,26 +68,23 @@ impl Character {
         //TODO: I do not know the 'order' of how the operations are applied.
 
         let all_stats = self.all_stats(tree);
-        let total = all_stats
-            .filter(|s| matches!(s.operand, Operand::Add | Operand::Percentage))
-            .map(|s| {
-                dbg!(&s);
+        
 
-                s
+        all_stats
+            .filter(|s| matches!(s.operand, Operand::Add | Operand::Percentage))
+            .inspect(|s| {
+                dbg!(s);
             })
             .map(|s| s.value)
-            .sum::<f32>();
-
-        total
+            .sum::<f32>()
     }
 
     fn all_stats<'t>(&'t self, tree: &'t PassiveTree) -> impl Iterator<Item = &'t Stat> + '_ {
         self.activated_node_ids
             .iter()
             .map(|nid| tree.node(*nid))
-            .map(|pnode| tree.passive_for_node(&pnode))
+            .map(|pnode| tree.passive_for_node(pnode))
             .flat_map(|passive| passive.stats())
-            .into_iter()
     }
 
     pub fn calculate_energy_shield(&self, tree: &PassiveTree) -> f32 {
@@ -262,7 +259,7 @@ mod tests {
     use crate::quick_tree;
 
     use super::Character;
-    const TEST_DATA_MONK: &'static str = "../../data/character.toml";
+    const TEST_DATA_MONK: &str = "../../data/character.toml";
 
     #[test]
     fn compute_some_maximum_evasion() {
@@ -274,7 +271,6 @@ mod tests {
             24647,
         ]
         .into_iter()
-        .map(|v| v)
         .collect();
 
         let mut char = Character::load_from_toml(TEST_DATA_MONK).unwrap();

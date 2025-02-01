@@ -196,7 +196,7 @@ impl PassiveTree {
                         };
 
                         let skill = passive_skills.get(&skill_id);
-                        let name = skill.and_then(|s| Some(s.name())).unwrap();
+                        let name = skill.map(|s| s.name()).unwrap();
                         let is_notable = skill.map(|s| s.is_notable()).unwrap_or(false);
 
                         Some((

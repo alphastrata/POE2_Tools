@@ -35,7 +35,6 @@ fn move_camera_to_target_system(
 ) {
     move_requests
         .read()
-        .into_iter()
         .for_each(|MoveCameraReq(target)| {
             let mut transform = camera_q.single_mut();
             let mut ortho = ortho_q.single_mut();
