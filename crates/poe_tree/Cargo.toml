@@ -17,6 +17,10 @@ path = "examples/lightning_dam.rs"
 name = "evasion"
 path = "examples/evasion.rs"
 
+[[examples]]
+name = "possible"
+path = "examples/possible_builds.rs"
+
 
 [dependencies]
 log = { workspace = true }
