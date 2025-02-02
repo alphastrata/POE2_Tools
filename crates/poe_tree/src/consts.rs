@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+use crate::type_wrappings::NodeId;
+
 pub const ORBIT_RADII: [f32; 10] = [
     0.0, 82.0, 162.0, 335.0, 493.0, 662.0, 846.0, 251.0, 1080.0, 1322.0,
 ];
-pub const ORBIT_SLOTS: [u32; 10] = [1, 12, 24, 24, 72, 72, 72, 24, 72, 144];
+pub const ORBIT_SLOTS: [NodeId; 10] = [1, 12, 24, 24, 72, 72, 72, 24, 72, 144];
 
 /// Starting nodes for each character class in the passive tree.
 ///
@@ -16,7 +18,7 @@ pub const ORBIT_SLOTS: [u32; 10] = [1, 12, 24, 24, 72, 72, 72, 24, 72, 144];
 /// | 61525   | TEMPLAR   | Unknown   | 10 o'clock     |
 /// | 54447   | WITCH     | Witch     | 12 o'clock     |
 /// | 44683   | SIX       | Monk      | 2 o'clock      |
-pub const CHAR_START_NODES: [u32; 6] = [
+pub const CHAR_START_NODES: [NodeId; 6] = [
     50459, // RANGER (Ranger, 4 o'clock)
     47175, // WARRIOR (Warrior, 8 o'clock)
     50986, // DUELIST (Mercenary, 6 o'clock)
@@ -40,7 +42,7 @@ pub const CHAR_START_NODES: [u32; 6] = [
 /// | 13855   | Armour and Energy Shield  | Unknown        |
 /// | 4739    | Spell Damage              | Sorcerer/Witch |
 /// | 44871   | Energy Shield             | Sorcerer/Witch |
-pub const LEVEL_ONE_NODES: [u32; 12] = [
+pub const LEVEL_ONE_NODES: [NodeId; 12] = [
     10364, 52980, // Monk: Skill Speed, Evasion and Energy Shield
     56651, 13828, // Ranger: Projectile Damage
     59915, 59779, // Mercenary: Projectile Damage, Armour and Evasion
@@ -49,7 +51,7 @@ pub const LEVEL_ONE_NODES: [u32; 12] = [
     4739, 44871, // Sorcerer/Witch: Spell Damage, Energy Shield
 ];
 
-static LEVEL_ONE_NODES_MAP: LazyLock<HashMap<&'static str, [u32; 2]>> = LazyLock::new(|| {
+static LEVEL_ONE_NODES_MAP: LazyLock<HashMap<&'static str, [NodeId; 2]>> = LazyLock::new(|| {
     let mut m = HashMap::new();
     m.insert("Monk", [10364, 52980]);
     m.insert("Ranger", [56651, 13828]);
@@ -60,6 +62,6 @@ static LEVEL_ONE_NODES_MAP: LazyLock<HashMap<&'static str, [u32; 2]>> = LazyLock
     m
 });
 
-pub fn get_level_one_nodes() -> &'static HashMap<&'static str, [u32; 2]> {
+pub fn get_level_one_nodes() -> &'static HashMap<&'static str, [NodeId; 2]> {
     &LEVEL_ONE_NODES_MAP
 }

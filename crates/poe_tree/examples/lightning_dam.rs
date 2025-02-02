@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 mod common;
 use common::quick_tree;
-use poe_tree::stats::Operand;
+use poe_tree::{stats::Operand, type_wrappings::NodeId};
 
 /// Helper function to truncate the path to the first 3 and last 3 NodeIds
-fn truncate_path(path: &[u32]) -> String {
+fn truncate_path(path: &[NodeId]) -> String {
     if path.len() <= 6 {
         format!("{:?}", path)
     } else {
@@ -30,7 +30,7 @@ fn main() {
     let tree = quick_tree();
 
     // Mapping of start node IDs to class names
-    let char_start_nodes: HashMap<u32, &str> = HashMap::from([
+    let char_start_nodes: HashMap<NodeId, &str> = HashMap::from([
         (50459, "Ranger"),
         (47175, "Warrior"),
         (50986, "Mercenary"),
@@ -44,7 +44,7 @@ fn main() {
     let min_value = 1.0f32;
 
     // Extract start node IDs
-    let start_node_ids: Vec<u32> = char_start_nodes.keys().cloned().collect();
+    let start_node_ids: Vec<NodeId> = char_start_nodes.keys().cloned().collect();
 
     // Use the library's parallel Dijkstra function to get paths
     let paths = tree.parallel_dijkstra_with_all_paths(&start_node_ids, &levels);

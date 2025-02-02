@@ -3,7 +3,7 @@
 //! - examples of abstracting over the RPC interface that `poe_vis` provides
 //! - using rayon with the pathfinding output from methods on PassiveTree
 
-use poe_tree::{consts::get_level_one_nodes, edges::Edge};
+use poe_tree::{consts::get_level_one_nodes, edges::Edge, type_wrappings::NodeId};
 use rayon::prelude::*;
 use reqwest::blocking::Client;
 use std::{
@@ -22,7 +22,7 @@ fn main() {
     let mut tree = quick_tree();
     tree.remove_hidden();
 
-    let nodes: Vec<(&'static str, &[u32; 2])> = get_level_one_nodes()
+    let nodes: Vec<(&'static str, &[NodeId; 2])> = get_level_one_nodes()
         .iter()
         .map(|(name, ids)| (*name, ids))
         .collect();

@@ -1,4 +1,4 @@
-use poe_tree::PassiveTree;
+use poe_tree::{type_wrappings::NodeId, PassiveTree};
 use reqwest::blocking::Client;
 
 pub const VIS_URL: &str = "http://0.0.0.0:6004";
@@ -21,7 +21,7 @@ pub fn ping(
         .send()
 }
 
-pub fn send_node_command(client: &Client, node: u32, method: &str) {
+pub fn send_node_command(client: &Client, node: NodeId, method: &str) {
     let json = format!(
         r#"{{"jsonrpc":"2.0","method":"{}","params":[{}],"id":1}}"#,
         method, node
@@ -36,10 +36,10 @@ pub fn send_node_command(client: &Client, node: u32, method: &str) {
     }
 }
 
-pub fn activate_node(client: &Client, node: u32) {
+pub fn activate_node(client: &Client, node: NodeId) {
     send_node_command(client, node, "activate_node");
 }
 
-pub fn deactivate_node(client: &Client, node: u32) {
+pub fn deactivate_node(client: &Client, node: NodeId) {
     send_node_command(client, node, "deactivate_node");
 }

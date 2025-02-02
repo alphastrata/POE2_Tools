@@ -122,7 +122,7 @@ impl PassiveTree {
             .map(|obj| {
                 obj.iter()
                     .filter_map(|(gid, gval)| {
-                        let gid = gid.parse::<u32>().ok()?;
+                        let gid = gid.parse::<NodeId>().ok()?;
 
                         // Value doesn't support deserialising to f32
                         let x = gval.get("x")?.as_f64()?;
@@ -177,13 +177,13 @@ impl PassiveTree {
                             return None;
                         }
 
-                        let node_id = node_id.parse::<u32>().ok()?;
+                        let node_id = node_id.parse::<NodeId>().ok()?;
                         let skill_id = nval.get("skill_id")?.as_str()?.to_string();
                         let parent =
-                            nval.get("parent").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                            nval.get("parent").and_then(|v| v.as_u64()).unwrap_or(0) as NodeId;
                         let radius = nval.get("radius").and_then(|v| v.as_u64()).unwrap_or(0) as u8;
                         let position =
-                            nval.get("position").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                            nval.get("position").and_then(|v| v.as_u64()).unwrap_or(0) as NodeId;
 
                         // Calculate world position with null safety
                         let (wx, wy) = {
@@ -225,7 +225,7 @@ impl PassiveTree {
                     Some(obj) => {
                         obj.iter()
                             .flat_map(|(from_id, node)| {
-                                let from_id = match from_id.parse::<u32>() {
+                                let from_id = match from_id.parse::<NodeId>() {
                                     Ok(id) => id,
                                     Err(e) => {
                                         eprintln!("Failed to parse from_id `{}`: {}", from_id, e);
@@ -242,7 +242,7 @@ impl PassiveTree {
                                             match connection.get("id").and_then(|id| id.as_u64()) {
                                                 Some(to_id) => Some(Edge {
                                                     start: from_id,
-                                                    end: to_id as u32,
+                                                    end: to_id as NodeId,
                                                 }),
                                                 None => {
                                                     eprintln!(
@@ -310,7 +310,7 @@ impl PassiveTree {
 pub fn calculate_world_position(
     group: &coordinates::Group,
     radius: u8,
-    position: u32,
+    position: NodeId,
 ) -> (f32, f32) {
     let r = radius as usize;
     let position = position as usize;
@@ -333,7 +333,7 @@ pub fn calculate_world_position(
     // Calculate the angle in radians
     //TODO: f16, or f32?
 
-    let angle = match slots as u32 {
+    let angle = match slots as NodeId {
         16 => {
             // Use predefined angles for 16-slot orbits
             const PREDEFINED_16: [f32; 16] = [
@@ -369,7 +369,7 @@ pub fn calculate_world_position(
 pub fn calculate_world_position_with_negative_y(
     group: &coordinates::Group,
     radius: u8,
-    position: u32,
+    position: NodeId,
 ) -> (f32, f32) {
     let r = radius as usize;
     let position = position as usize;
@@ -389,7 +389,7 @@ pub fn calculate_world_position_with_negative_y(
         60
     }) as f32;
 
-    let angle = match slots as u32 {
+    let angle = match slots as NodeId {
         16 => {
             // Use predefined angles for 16-slot orbits
             const PREDEFINED_16: [f32; 16] = [

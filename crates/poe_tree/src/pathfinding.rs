@@ -15,13 +15,13 @@ use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
 
 impl PassiveTree {
     /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
-    pub const STEP_LIMIT: u32 = 123;
+    pub const STEP_LIMIT: NodeId = 123;
 
     pub fn is_node_within_distance(&self, start: NodeId, target: NodeId, max_steps: usize) -> bool {
         let path = self.find_path(start, target);
         !path.is_empty() && path.len() <= max_steps + 1
     }
-    pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<u32> {
+    pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<NodeId> {
         log::debug!("Performing search Nodes for query: {}", query);
         self.nodes
             .iter()
@@ -145,10 +145,10 @@ impl PassiveTree {
         })
     }
 
-    pub fn find_shortest_path(&self, a: NodeId, b: NodeId) -> Vec<u32> {
+    pub fn find_shortest_path(&self, a: NodeId, b: NodeId) -> Vec<NodeId> {
         self.bfs(a, b)
     }
-    pub fn find_path(&self, a: NodeId, b: NodeId) -> Vec<u32> {
+    pub fn find_path(&self, a: NodeId, b: NodeId) -> Vec<NodeId> {
         self.bfs(a, b)
     }
 }
@@ -546,7 +546,7 @@ impl PassiveTree {
         result
     }
 }
-fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<u32> {
+fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<NodeId> {
     let mut prev_node = 0;
     data.nodes
         .iter()
@@ -566,7 +566,7 @@ fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<u32> {
 
 #[derive(Debug, Eq, PartialEq)]
 struct NodeDistance {
-    node: u32,
+    node: NodeId,
     distance: u16,
 }
 
@@ -586,9 +586,9 @@ impl PassiveTree {
     /// Dijkstra's algorithm returning all paths traversed with verbose logs
     pub fn dijkstra_with_all_paths(
         &self,
-        starts: &[u32],
-        levels: &[u32],
-    ) -> HashMap<(u32, u32), Vec<u32>> {
+        starts: &[NodeId],
+        levels: &[NodeId],
+    ) -> HashMap<(NodeId, NodeId), Vec<NodeId>> {
         let mut paths = HashMap::new();
 
         for &start in starts {
@@ -662,9 +662,9 @@ impl PassiveTree {
     /// Parallelised Dijkstra's algorithm with all paths and logging
     pub fn parallel_dijkstra_with_all_paths(
         &self,
-        starts: &[u32],
-        levels: &[u32],
-    ) -> HashMap<(u32, u32), Vec<u32>> {
+        starts: &[NodeId],
+        levels: &[NodeId],
+    ) -> HashMap<(NodeId, NodeId), Vec<NodeId>> {
         let paths = Arc::new(Mutex::new(HashMap::new()));
 
         starts.par_iter().for_each(|&start| {
@@ -747,7 +747,7 @@ mod test {
 
     use super::*;
 
-    const LONG_TEST_PATHS: ([u32; 10], [u32; 10], [u32; 9], [u32; 7]) = (
+    const LONG_TEST_PATHS: ([NodeId; 10], [NodeId; 10], [NodeId; 9], [NodeId; 7]) = (
         [
             10364, 42857, 20024, 44223, 49220, 36778, 36479, 12925, 61196, 58329,
         ],
@@ -877,8 +877,8 @@ mod test {
     }
 
     fn validate_shortest_path(
-        actual_path: &[u32],
-        expected_paths: &([u32; 10], [u32; 10], [u32; 9], [u32; 7]),
+        actual_path: &[NodeId],
+        expected_paths: &([NodeId; 10], [NodeId; 10], [NodeId; 9], [NodeId; 7]),
         description: &str,
     ) {
         assert!(

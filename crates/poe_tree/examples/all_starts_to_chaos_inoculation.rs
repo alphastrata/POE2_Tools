@@ -17,7 +17,7 @@ fn quick_tree() -> PassiveTree {
     PassiveTree::from_value(&tree_data).unwrap()
 }
 
-fn send_node_command(client: &Client, node: u32, method: &str) {
+fn send_node_command(client: &Client, node: NodeId, method: &str) {
     let json = format!(
         r#"{{"jsonrpc":"2.0","method":"{}","params":[{}],"id":1}}"#,
         method, node
@@ -32,11 +32,11 @@ fn send_node_command(client: &Client, node: u32, method: &str) {
     }
 }
 
-fn activate_node(client: &Client, node: u32) {
+fn activate_node(client: &Client, node: NodeId) {
     send_node_command(client, node, "activate_node");
 }
 
-fn deactivate_node(client: &Client, node: u32) {
+fn deactivate_node(client: &Client, node: NodeId) {
     send_node_command(client, node, "deactivate_node");
 }
 
@@ -62,7 +62,7 @@ fn main() {
     }
 
     // Forcibly collect these so we can, if we want to trivially use rayon.
-    let nodes: Vec<(&'static str, &[u32; 2])> = get_level_one_nodes()
+    let nodes: Vec<(&'static str, &[NodeId; 2])> = get_level_one_nodes()
         .iter()
         .map(|(name, ids)| (*name, ids))
         .collect();

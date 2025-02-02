@@ -9,7 +9,7 @@ pub struct PoeNode {
     pub skill_id: String,
     pub parent: GroupId,
     pub radius: u8,
-    pub position: u32,
+    pub position: NodeId, // It's not actually, but as it'll be < the precision we use for a NodeId
     pub name: String,
     pub is_notable: bool,
     pub wx: f32,
