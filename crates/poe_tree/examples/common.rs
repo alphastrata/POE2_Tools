@@ -1,7 +1,7 @@
 use poe_tree::{type_wrappings::NodeId, PassiveTree};
 use reqwest::blocking::Client;
 
-pub const VIS_URL: &str = "http://0.0.0.0:6004";
+pub const VIS_URL: &str = "http://localhost:6004";
 
 pub fn quick_tree() -> PassiveTree {
     let file = std::fs::File::open("data/POE2_Tree.json").unwrap();

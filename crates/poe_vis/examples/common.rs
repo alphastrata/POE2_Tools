@@ -2,7 +2,7 @@ use poe_tree::{type_wrappings::NodeId, PassiveTree};
 use reqwest::blocking::Client;
 use serde_json::Value;
 
-pub const VIS_URL: &str = "http://0.0.0.0:6004";
+pub const VIS_URL: &str = "http://localhost:6004";
 
 pub fn quick_tree() -> PassiveTree {
     let file = std::fs::File::open("data/POE2_Tree.json").unwrap();
@@ -22,7 +22,7 @@ pub fn ping(
         .send()
 }
 
-pub fn send_node_command(client: &Client, node: NodeId, method: &str) {
+fn send_node_command(client: &Client, node: NodeId, method: &str) {
     let json = format!(
         r#"{{"jsonrpc":"2.0","method":"{}","params":[{}],"id":1}}"#,
         method, node
