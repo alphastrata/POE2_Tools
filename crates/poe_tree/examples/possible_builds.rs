@@ -33,8 +33,8 @@ fn main() {
     }
 
     // Less garbled output to stdout in the serial case.
-    nodes.iter().for_each(|(character, node_ids)| {
-        // nodes.par_iter().for_each(|(character, node_ids)| {
+    // nodes.iter().for_each(|(character, node_ids)| {
+    nodes.par_iter().for_each(|(character, node_ids)| {
         let local_client = client.clone();
         let char_start = Instant::now();
         println!("{}:", character);
@@ -43,7 +43,7 @@ fn main() {
             //NOTE: these numbers are kept low to spare your hardware && to save
             // you life hours of watching the paths... it is rather hypnotic.
             // You're welcome.
-            [5, 8, 12].iter().for_each(|&steps| {
+            [20].iter().for_each(|&steps| {
                 let paths = tree.walk_n_steps(start_node, steps);
                 assert!(
                     !paths.is_empty(),

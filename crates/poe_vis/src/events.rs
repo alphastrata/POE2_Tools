@@ -11,6 +11,10 @@ pub struct NodeScaleReq(pub Entity, pub f32);
 #[derive(Event)]
 pub struct NodeColourReq(pub Entity, pub Handle<ColorMaterial>);
 
+/// Like [`NodeColourReq`], but _this_ takes a NodeId and any string from the tailwind colours.
+#[derive(Event)]
+pub struct ActivateNodeWithColour(pub NodeId, pub String);
+
 #[derive(Event)]
 pub struct EdgeColourReq(pub Entity, pub Handle<ColorMaterial>);
 
