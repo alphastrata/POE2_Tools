@@ -12,7 +12,9 @@
 - Calculate the sum of the matching stats and count the nodes with matches.
 */
 
-use poe_tree::{stats::Operand, PassiveTree};
+use poe_tree::stats::Operand;
+mod common;
+use common::quick_tree;
 
 fn main() {
     let tree = quick_tree();
@@ -48,11 +50,4 @@ fn main() {
         .sum();
 
     println!("Total: {sum}+% from {num_nodes} matching nodes for {keyword}.");
-}
-
-fn quick_tree() -> PassiveTree {
-    let file = std::fs::File::open("data/POE2_Tree.json").unwrap();
-    let reader = std::io::BufReader::new(file);
-    let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
-    PassiveTree::from_value(&tree_data).unwrap()
 }

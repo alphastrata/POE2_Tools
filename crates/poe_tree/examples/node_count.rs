@@ -1,10 +1,7 @@
-use poe_tree::PassiveTree;
+mod common;
 
 fn main() {
-    let file = std::fs::File::open("data/POE2_Tree.json").unwrap();
-    let reader = std::io::BufReader::new(file);
-    let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
-    let mut tree = PassiveTree::from_value(&tree_data).unwrap();
+    let mut tree = common::quick_tree();
     println!("Total number of nodes [ALL] : {}", tree.nodes.len());
     println!("Total number of edges [ALL]: {}", tree.edges.len());
 

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use poe_tree::{stats::Operand, PassiveTree};
+mod common;
+use common::quick_tree;
+use poe_tree::stats::Operand;
 
 /// Helper function to truncate the path to the first 3 and last 3 NodeIds
 fn truncate_path(path: &[u32]) -> String {
@@ -21,14 +23,6 @@ fn truncate_path(path: &[u32]) -> String {
             .join(", ");
         format!("[{}, ..., {}]", first_str, last_str)
     }
-}
-
-fn quick_tree() -> PassiveTree {
-    let file = std::fs::File::open("data/POE2_Tree.json").expect("Failed to open POE2_Tree.json");
-    let reader = std::io::BufReader::new(file);
-    let tree_data: serde_json::Value =
-        serde_json::from_reader(reader).expect("Failed to parse JSON");
-    PassiveTree::from_value(&tree_data).expect("Failed to create PassiveTree")
 }
 
 fn main() {
