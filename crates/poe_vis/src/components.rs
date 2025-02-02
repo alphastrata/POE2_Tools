@@ -20,6 +20,9 @@ impl EdgeMarker {
 pub struct NodeActive;
 
 #[derive(Component)]
+pub struct ManuallyHighlighted;
+
+#[derive(Component)]
 pub struct EdgeActive;
 
 #[derive(Component)]

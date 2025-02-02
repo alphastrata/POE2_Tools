@@ -21,7 +21,7 @@ use poe_tree::{
 use crate::{
     components::*,
     consts::SEARCH_THRESHOLD,
-    events::{self, NodeActivationReq, *},
+    events::{self, ActivateNodeWithColour, NodeActivationReq, *},
     materials::{self, GameMaterials},
     mouse::handle_node_clicks,
     resources::*,
@@ -59,12 +59,13 @@ impl Plugin for BGServicesPlugin {
                 process_save_character.run_if(on_event::<SaveCharacterReq>),
                 /* Users need to see paths magically illuminate */
                 //activations:
-                process_node_activations,
+                // process_node_activations,
                 process_edge_activations,
+                process_activate_node_with_colour.run_if(on_event::<ActivateNodeWithColour>),
                 /* Only scan for edges when we KNOW the path is valid */
                 scan_edges_for_active_updates.run_if(resource_equals(PathRepairRequired(false))),
                 //deactivations:
-                process_node_deactivations,
+                // process_node_deactivations,
                 process_edge_deactivations,
                 scan_edges_for_inactive_updates,
                 /* happening all the time with camera moves. */
@@ -212,7 +213,7 @@ fn scan_edges_for_active_updates(
 fn process_node_deactivations(
     mut deactivation_events: EventReader<NodeDeactivationReq>,
     mut colour_events: EventWriter<NodeColourReq>,
-    query: Query<(Entity, &NodeMarker), With<NodeActive>>,
+    query: Query<(Entity, &NodeMarker), (With<NodeActive>, Without<ManuallyHighlighted>)>,
     mut commands: Commands,
     game_materials: Res<GameMaterials>,
 ) {
@@ -384,14 +385,12 @@ fn path_repair(
     }
 }
 
-use crate::events::ActivateNodeWithColour;
-
 fn process_activate_node_with_colour(
     mut events: EventReader<ActivateNodeWithColour>,
     mut colour_events: EventWriter<NodeColourReq>,
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    query: Query<(Entity, &NodeMarker), With<NodeInactive>>,
+    query: Query<(Entity, &NodeMarker)>,
 ) {
     events
         .read()
@@ -401,9 +400,15 @@ fn process_activate_node_with_colour(
             let mat = materials.add(color);
             query.iter().for_each(|(ent, marker)| {
                 if **marker == *node_id {
-                    // commands.entity(ent).remove::<NodeInactive>();
-                    // commands.entity(ent).insert(NodeActive);
+                    commands
+                        .entity(ent)
+                        .remove::<NodeInactive>()
+                        .remove::<NodeActive>()
+                        .insert(ManuallyHighlighted);
+
                     colour_events.send(NodeColourReq(ent, mat.clone()));
+
+                    log::debug!("Custom highlight on {} send for {}", colour_str, **marker);
                 }
             });
         });
@@ -678,5 +683,3 @@ fn parse_tailwind_color(name: &str) -> Color {
         _ => Color::WHITE,
     }
 }
-
-// Then add process_activate_node_with_colour to your App's Update stage.

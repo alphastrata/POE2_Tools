@@ -13,6 +13,10 @@ path = "src/main.rs"
 name = "poe_vis"
 path = "src/lib.rs"
 
+[[example]]
+name = "colourful"
+path = "examples/colourful.rs"
+
 
 [dependencies]
 poe_tree = { workspace = true }
@@ -31,3 +35,7 @@ serde_json = { workspace = true }
 serde.workspace = true
 toml.workspace = true
 tracing-subscriber.workspace = true
+
+[dev-dependencies]
+reqwest = { workspace = true, features = ["blocking"] }
+rand.workspace = true
