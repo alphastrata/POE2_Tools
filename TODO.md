@@ -1,11 +1,20 @@
 # **poe_vis**
 
+- [ ] Move the potential builds and the paths2chaos-inoculation visualiser examples out to poe_vis, from poe_tree. poe_tree should JUST be data.
+
+- [ ] starting node is perma-pegged, new button to set it to None in UI, RPC cmd too.
+
+## RPC
+
+- [ ] implement the todos.
+- [ ] colour node requests... all tailwind colours are available, just provide those?
+- [ ] fetch_colours RPC req...
+
 ## **Rendering & Performance**
 
 - [ ] **Arcs not lines:** The POE2 tree actually draws beautiful arcs for its `edge`s, but we draw lines. it shouldn't be too hard to say what's the x,y of where we `start` and the x,y of where we `finish` and then work out how to make an arc that makes both nodes positioned on a circle.
   1. use them to do euc dist then use that as the r of the circle? or are do we already know this with the (`calculate_world_position` fn we have on `node`?)
      I think we should be able, looking at the PathOfBuilding assets' .pngs of all those arcs work out the relationship between said arc's arc-length and radius etc...
-- [ ] Move the potential builds and the paths2chaos-inoculation visualiser examples out to poe_vis, from poe_tree. poe_tree should JUST be data.
 
 ## **Node & Path Handling**
 
@@ -26,6 +35,11 @@
 
 - [ ] **Icon Integration:** If node icons can be obtained, they should be incorporated into the visual representation.
 - [ ] **Expanded Colour Palette:** The colour palette needs expanding. The `user_config.toml` currently only contains approximately eight or nine usable colours.
+- [ ] We have the Arcs so... do the png thing? (After we work out WHICH arc to use...)
+
+## Custom shading:
+
+- [ ] How do we set the bg? --> make a screenspace shader that slightly tints the circle in 6 wedges of 60deg each, colouring a blend of int -> dex -> str with all in-betweens.
 
 ## **Background Services**
 
