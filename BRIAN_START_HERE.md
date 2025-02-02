@@ -9,15 +9,24 @@ My goal is very simple, currently I cannot really (in reasonable time) compute t
 
 To get possible start locations:
 
-````rust
+```rust
 let nodes: Vec<(&'static str, &[u32; 2])> = get_level_one_nodes()
         .iter()
         .map(|(name, ids)| (*name, ids))
         .collect();
-``` Why collect? because the static won't play nicely with rayon.
+```
 
+Why collect? because the static won't play nicely with rayon.
 
-````
+There's lots of this, around:
+
+```rust
+ // Less garbled output to stdout in the serial case.
+    nodes.iter().for_each(|(character, node_ids)| {
+        // nodes.par_iter().for_each(|(character, node_ids)| {
+```
+
+because for debugging it's usually easier to see the correct order of things in the serial case.
 
 At the moment my naive implementation to collect **all** possible paths of length `n` (i.e that many steps) is:
 
@@ -30,3 +39,7 @@ The impl is in `poe_tree::pathfinding`
 There's a bunch of other pathfinding shit in there, the BFS is good but the dijkstras area WIPs.
 
 the `NodeId` alias is deliberately `u16` because that's conspiciously the highest value assigned as an ID for the nodes in the raw data. (i'll take 4 for the price of a `usize` anyday!)
+
+you may need to purge the contents of `.cargo/config.toml` as you probs don't have the same home build server setup I do with `sccachce` etc.
+
+sorry about the mess [not really WIP is allowed to be messy IMO]

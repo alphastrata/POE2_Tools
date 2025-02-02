@@ -31,7 +31,10 @@ fn main() {
         eprintln!("You have requested that this example app show you the visualistions of the paths it creates. For this to work poe_vis's `vis` binary must be running and available on port {VIS_URL}");
         std::process::exit(1)
     }
-    nodes.par_iter().for_each(|(character, node_ids)| {
+
+    // Less garbled output to stdout in the serial case.
+    nodes.iter().for_each(|(character, node_ids)| {
+        // nodes.par_iter().for_each(|(character, node_ids)| {
         let local_client = client.clone();
         let char_start = Instant::now();
         println!("{}:", character);
