@@ -10,7 +10,6 @@ pub fn quick_tree() -> PassiveTree {
     PassiveTree::from_value(&tree_data).unwrap()
 }
 
-// Examples of how one may abstract over the jsonrpc interface from poe_vis
 pub fn ping(
     client: &reqwest::blocking::Client,
 ) -> Result<reqwest::blocking::Response, reqwest::Error> {
