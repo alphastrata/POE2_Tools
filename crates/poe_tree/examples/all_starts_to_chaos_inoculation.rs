@@ -70,7 +70,7 @@ fn main() {
     // Give yourself time to make sure the Visualiser is up and focused etc..
     sleep(Duration::from_millis(500));
 
-    nodes.par_iter().for_each(|(_character, node_ids)| {
+    nodes.par_iter().for_each(|(character, node_ids)| {
         let local_client = client.clone();
         node_ids.iter().for_each(|&start_node| {
             let paths = tree.bfs(start_node, chaos_inoculation);
@@ -87,6 +87,7 @@ fn main() {
                     sleep(Duration::from_millis(25));
                 });
             }
+            println!("Shortest path is {} steps for {character}", paths.len())
         });
     });
 }
