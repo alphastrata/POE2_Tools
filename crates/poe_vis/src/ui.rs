@@ -44,7 +44,7 @@ fn update_active_nodecount(
 }
 fn egui_ui_system(
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
-    mut deactivate_tx: EventWriter<NodeDeactivationReq>,
+    deactivate_tx: EventWriter<NodeDeactivationReq>,
     mut clear_all_tx: EventWriter<ClearAll>,
     mut move_camera_tx: EventWriter<MoveCameraReq>,
     mut save_tx: EventWriter<SaveCharacterReq>,

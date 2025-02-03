@@ -145,6 +145,11 @@ impl PassiveTree {
             .map(|obj| {
                 obj.iter()
                     .filter_map(|(skill_id, skill_val)| {
+                        if skill_val.get("is_just_icon").is_some() {
+                            log::debug!("just an icon!");
+                            return None;
+                        }
+
                         match serde_json::from_value(skill_val.clone()) {
                             Ok(skill) => Some((skill_id.clone(), skill)),
                             Err(e) => {
@@ -167,16 +172,6 @@ impl PassiveTree {
             .map(|obj| {
                 obj.iter()
                     .filter_map(|(node_id, nval)| {
-                        // Skip nodes marked as `is_just_icon: true`
-                        if nval
-                            .get("is_just_icon")
-                            .and_then(|v| v.as_bool())
-                            .unwrap_or(false)
-                        {
-                            log::debug!("Skipping node {} as it is just an icon.", node_id);
-                            return None;
-                        }
-
                         let node_id = node_id.parse::<NodeId>().ok()?;
                         let skill_id = nval.get("skill_id")?.as_str()?.to_string();
                         let parent =
@@ -195,25 +190,28 @@ impl PassiveTree {
                             wx_wy
                         };
 
-                        let skill = passive_skills.get(&skill_id);
-                        let name = skill.map(|s| s.name()).unwrap();
-                        let is_notable = skill.map(|s| s.is_notable()).unwrap_or(false);
+                        if let Some(skill) = passive_skills.get(&skill_id) {
+                            let name = skill.name();
+                            let is_notable = skill.is_notable();
 
-                        Some((
-                            node_id,
-                            PoeNode {
+                            Some((
                                 node_id,
-                                skill_id,
-                                parent,
-                                radius,
-                                position,
-                                name,
-                                is_notable,
-                                wx,
-                                wy,
-                                active: false,
-                            },
-                        ))
+                                PoeNode {
+                                    node_id,
+                                    skill_id,
+                                    parent,
+                                    radius,
+                                    position,
+                                    name,
+                                    is_notable,
+                                    wx,
+                                    wy,
+                                    active: false,
+                                },
+                            ))
+                        } else {
+                            None
+                        }
                     })
                     .collect()
             })

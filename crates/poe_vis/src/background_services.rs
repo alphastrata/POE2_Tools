@@ -86,7 +86,7 @@ impl Plugin for BGServicesPlugin {
             ),
         );
 
-        app.add_systems(PostUpdate, (clear.run_if(on_event::<ClearAll>)));
+        app.add_systems(PostUpdate, clear.run_if(on_event::<ClearAll>));
 
         log::debug!("BGServices plugin enabled");
     }
@@ -423,7 +423,7 @@ fn process_manual_hilights(
                 .other
                 .entry(colour_str.to_owned())
                 .or_insert_with(|| {
-                    let color = parse_tailwind_color(&colour_str);
+                    let color = parse_tailwind_color(colour_str);
                     materials.add(color)
                 })
                 .clone();
