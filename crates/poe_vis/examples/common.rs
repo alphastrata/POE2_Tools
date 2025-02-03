@@ -83,4 +83,13 @@ pub fn activate_node_with_colour(client: &Client, node: NodeId, colour: &str) {
     }
 }
 
+pub fn clear(client: &Client) -> Result<reqwest::blocking::Response, reqwest::Error> {
+    let json = r#"{"jsonrpc":"2.0","method":"clear","params":[],"id":1}"#;
+    client
+        .post(VIS_URL)
+        .header("Content-Type", "application/json")
+        .body(json)
+        .send()
+}
+
 fn main() {}

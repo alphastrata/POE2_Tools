@@ -33,7 +33,10 @@ pub enum Command {
 
     GetMaterials,            // returns the known material names
     ColourNode(u32, String), // (entity_id, some_color_string)
-    ColourEdge(u32, String), // (entity_id, some_color_string)
+    ColourEdge(u32, String),
+
+    /// Clears all highlithing effectively resetting the tree (visually.)
+    ClearAll,
 }
 
 #[derive(Resource)]
@@ -72,6 +75,12 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
                 .ok();
             Ok(Value::String("ok".into()))
         }
+    });
+
+    io.add_sync_method("clear", {
+        let tx = tx.clone();
+        tx.send(Command::ClearAll).ok();
+        move |_p: Params| Ok(Value::String("ok".into()))
     });
 
     io.add_sync_method("get_available_colours", |_params: Params| {
@@ -475,6 +484,7 @@ fn rx_rpx(
     mut activation: EventWriter<NodeActivationReq>,
     mut activate_with_colour: EventWriter<ManualHighlightWithColour>,
     mut deactivation: EventWriter<NodeDeactivationReq>,
+    mut clear: EventWriter<ClearAll>,
     mut scale: EventWriter<NodeScaleReq>,
     mut node_col: EventWriter<NodeColourReq>,
     mut edge_col: EventWriter<EdgeColourReq>,
@@ -487,6 +497,9 @@ fn rx_rpx(
 ) {
     while let Ok(cmd) = server.rx.try_recv() {
         match cmd {
+            Command::ClearAll => {
+                clear.send(ClearAll);
+            }
             Command::ActivateNodeWithColour(id, col) => {
                 activate_with_colour.send(ManualHighlightWithColour(id, col));
             }
