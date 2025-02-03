@@ -56,10 +56,10 @@ impl crate::resources::UserConfig {
             "z" => Some(KeyCode::KeyZ),
 
             // Arrow keys
-            "arrowup" => Some(KeyCode::ArrowUp),
-            "arrowdown" => Some(KeyCode::ArrowDown),
-            "arrowleft" => Some(KeyCode::ArrowLeft),
-            "arrowright" => Some(KeyCode::ArrowRight),
+            "up_arrow" => Some(KeyCode::ArrowUp),
+            "down_arrow" => Some(KeyCode::ArrowDown),
+            "left_arrow" => Some(KeyCode::ArrowLeft),
+            "right_arrow" => Some(KeyCode::ArrowRight),
 
             // Special keys
             "space" => Some(KeyCode::Space),

@@ -33,6 +33,9 @@ pub struct SaveCharacterReq;
 pub struct MoveCameraReq(pub Vec3);
 
 #[derive(Event)]
+pub struct ClearAll;
+
+#[derive(Event)]
 pub struct EdgeActivationReq(pub EdgeId, pub EdgeId);
 impl EdgeActivationReq {
     pub(crate) fn as_tuple(&self) -> (EdgeId, EdgeId) {

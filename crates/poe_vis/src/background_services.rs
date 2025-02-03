@@ -34,18 +34,19 @@ impl Plugin for BGServicesPlugin {
     fn build(&self, app: &mut App) {
         app
             // Spacing..
-            .add_event::<ManualHighlightWithColour>()
+            .add_event::<ClearAll>()
             .add_event::<EdgeActivationReq>()
-            .add_event::<EdgeDeactivationReq>()
             .add_event::<EdgeColourReq>()
+            .add_event::<EdgeDeactivationReq>()
+            .add_event::<LoadCharacterReq>()
+            .add_event::<ManualHighlightWithColour>()
+            .add_event::<MoveCameraReq>()
             .add_event::<NodeActivationReq>()
             .add_event::<NodeColourReq>()
+            .add_event::<NodeDeactivationReq>()
+            .add_event::<NodeDeactivationReq>()
             .add_event::<NodeScaleReq>()
-            .add_event::<NodeDeactivationReq>()
-            .add_event::<NodeDeactivationReq>()
-            .add_event::<LoadCharacterReq>()
             .add_event::<SaveCharacterReq>()
-            .add_event::<MoveCameraReq>()
             .add_event::<ShowSearch>()
             .add_event::<ThrowWarning>()
             //spacing..
@@ -85,10 +86,27 @@ impl Plugin for BGServicesPlugin {
             ),
         );
 
+        app.add_systems(PostUpdate, (clear.run_if(on_event::<ClearAll>)));
+
         log::debug!("BGServices plugin enabled");
     }
 }
-
+fn clear(
+    query: Query<(Entity, &NodeMarker)>,
+    // rx: EventReader<ClearAll>,
+    mut commands: Commands,
+    game_materials: Res<GameMaterials>,
+    mut colour_events: EventWriter<NodeColourReq>,
+) {
+    log::debug!("Clear command received.");
+    let mat = &game_materials.node_base;
+    query.iter().for_each(|(ent, _nid)| {
+        commands.entity(ent).remove::<NodeActive>();
+        commands.entity(ent).remove::<ManuallyHighlighted>();
+        commands.entity(ent).insert(NodeInactive);
+        colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+    });
+}
 fn process_save_character(
     // save: EventReader<SaveCharacterReq>, // #run_condition
     mut active_character: ResMut<ActiveCharacter>,

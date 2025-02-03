@@ -38,16 +38,16 @@ fn handle_input(
     if let Ok(mut transform) = camera_query.get_single_mut() {
         let mut movement = Vec3::ZERO;
         if check_action(&config, "move_left", &keys) {
-            movement.x -= settings.drag_sensitivity;
+            movement.x -= settings.drag_sensitivity * 40.;
         }
         if check_action(&config, "move_right", &keys) {
-            movement.x += settings.drag_sensitivity;
+            movement.x += settings.drag_sensitivity * 40.;
         }
         if check_action(&config, "move_up", &keys) {
-            movement.y += settings.drag_sensitivity;
+            movement.y += settings.drag_sensitivity * 40.;
         }
         if check_action(&config, "move_down", &keys) {
-            movement.y -= settings.drag_sensitivity;
+            movement.y -= settings.drag_sensitivity * 40.;
         }
         transform.translation += movement;
     }
