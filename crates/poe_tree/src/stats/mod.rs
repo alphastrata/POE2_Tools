@@ -1,4 +1,4 @@
-// pub mod stats_enum;
+pub mod stats_enum;
 
 use std::collections::HashMap;
 

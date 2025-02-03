@@ -28,8 +28,12 @@ subtraction_pattern = re.compile(r"-")
 
 # Iterate through passive_skills and categorize stats
 for skill in poe_tree.get("passive_skills", {}).values():
+    if "is_just_icon" in skill:
+        continue
+
     if "stats" in skill:
         for stat_name, value in skill["stats"].items():
+
             # Determine category based on the stat name
             if percentage_pattern.search(stat_name):
                 stat_categories["percentage (+%)"].add(stat_name)
@@ -49,6 +53,7 @@ for skill in poe_tree.get("passive_skills", {}).values():
 rust_enum_template = """use std::ops::Add;
 use std::ops::AddAssign;
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatType {{
 {variants}
@@ -159,12 +164,12 @@ add_arms = []
 for category, rust_type in category_to_variant.items():
     for stat_name in stat_categories[category]:
         formatted_name = (
-            stat_name.replace("%", "Percent")
-            .replace("+", "Plus")
-            .replace("-", "Minus")
-            .replace("*", "Multiply")
-            .replace("/", "Divide")
-            .replace(" ", "_")
+            stat_name.replace("%", "")
+            .replace("_+", "")
+            .replace("_-", "")
+            .replace("_*", "")
+            .replace("_/", "")
+            .replace(" ", "")
         )
 
         # Check for MinusPercentage specifically
@@ -173,7 +178,7 @@ for category, rust_type in category_to_variant.items():
 
         # Comment out "Other" types
         if category == "other":
-            rust_variant = f"    // {formatted_name}({rust_type}),"  # Corrected syntax
+            rust_variant = f"    // {formatted_name}({rust_type}),"
         else:
             rust_variant = f"    {formatted_name}({rust_type}),"
 
@@ -206,7 +211,7 @@ rust_enum = rust_enum_template.format(
 )
 
 # Output Rust enum to a file
-rust_file_path = "stats_enum.rs"
+rust_file_path = "crates/poe_tree/src/stats/stats_enum.rs"
 with open(rust_file_path, "w") as f:
     f.write(rust_enum)
 
