@@ -5,7 +5,9 @@ mod common;
 use common::*;
 
 fn main() {
-    let tree = common::quick_tree();
+    let mut tree = common::quick_tree();
+    tree.remove_hidden();
+
     let client = Client::new();
 
     if let Err(e) = common::ping(&client) {
@@ -32,7 +34,7 @@ fn main() {
                 );
 
                 common::activate_node_with_colour(&client, *nid, colour);
-                std::thread::sleep(std::time::Duration::from_millis(16));
+                std::thread::sleep(std::time::Duration::from_millis(5));
             }
             None => {
                 eprintln!("Bit problems... {}", colour_options.len());
