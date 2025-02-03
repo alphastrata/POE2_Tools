@@ -6,9 +6,9 @@
 
 ## RPC
 
-- [ ] implement the todos.
-- [ ] colour node requests... all tailwind colours are available, just provide those?
-- [ ] fetch_colours RPC req...
+- [x] implement the todos.
+- [x] colour node requests... all tailwind colours are available, just provide those?
+- [x] fetch_colours RPC req...
 
 ## **Rendering & Performance**
 
@@ -22,6 +22,13 @@
   - Turn red for two seconds.
   - Then be removed from both `PassiveTree.active` and `.highlighted_nodes`.
 - [ ] **Virtual Path for Hovered Nodes:** When the `.hovered_node` (on `PassiveTree`) is _not_ connected to the starting node, a 'virtual path' should be created and displayed. This path will indicate the route that would be taken if the node were to be selected (similar to maxroll.gg's functionality).
+
+- [ ] Performance of the `walk_n_steps` is frikkn garbage, I cannot compute 40 on my big rig ><, at least on wangblows...
+
+  - Try a CSR `impl`
+  - Maybe you can compute it on ze gpu?
+
+- [ ] implement a `take_while_for_n_steps(p: $predicate, n: $num_steps)` so we can do something like take_while 'evasion_rating' for 20, and get back all the paths with at least 1 evasion_rating mentioning buff.
 
 ## **User Interface & Interaction**
 
@@ -51,6 +58,7 @@
 
 # **poe_tree**
 
+- [x] prune eh non data-carrying 'is_just_icon' passive_skill items.
 - [ ] **Stats API:** Create a clean API to access and work with the `.stats`.
 
   - This should facilitate mathematical operations such as `+`, `-`, `*`, `%`, and `/` on the unconventional data structures in `passive_skills`. Some work has been started on this with the `Operand` concept.
