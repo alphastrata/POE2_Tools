@@ -32,7 +32,7 @@ fn main() {
                 );
 
                 common::activate_node_with_colour(&client, *nid, colour);
-                std::thread::sleep(std::time::Duration::from_millis(125));
+                std::thread::sleep(std::time::Duration::from_millis(16));
             }
             None => {
                 eprintln!("Bit problems... {}", colour_options.len());
