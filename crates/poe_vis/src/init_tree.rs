@@ -84,6 +84,9 @@ fn spawn_edges(
             tree.tree.groups.get(&end_node.parent).unwrap(),
         );
 
+        // TODO: work out how to connect the nodes with ArcSegment(s) instead
+        // of straight lines, ideally concave/convex as is appropriate from whatever the fuck
+        // algo they(GGG) are using
         let start_pos = calculate_world_position_with_negative_y(
             start_group,
             start_node.radius,

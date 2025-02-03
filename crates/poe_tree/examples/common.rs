@@ -43,3 +43,5 @@ pub fn activate_node(client: &Client, node: NodeId) {
 pub fn deactivate_node(client: &Client, node: NodeId) {
     send_node_command(client, node, "deactivate_node");
 }
+
+fn main() {}
