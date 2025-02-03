@@ -25,6 +25,12 @@ fn main() {
         .iter()
         .for_each(|(nid, _node)| match colour_options.choose(&mut rng) {
             Some(colour) => {
+                log::debug!(
+                    "Custom highlight requested for {} with colour: {}",
+                    nid,
+                    colour,
+                );
+
                 common::activate_node_with_colour(&client, *nid, colour);
                 std::thread::sleep(std::time::Duration::from_millis(125));
             }

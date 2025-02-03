@@ -31,7 +31,7 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
         .add_plugins((
             DefaultPlugins.set(bevy::log::LogPlugin {
-                filter: log_filter,
+                // filter: log_filter,
                 custom_layer: custom_log_formatting,
                 ..default()
             }),

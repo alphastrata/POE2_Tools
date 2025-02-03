@@ -21,7 +21,7 @@ use poe_tree::{
 use crate::{
     components::*,
     consts::SEARCH_THRESHOLD,
-    events::{self, ActivateNodeWithColour, NodeActivationReq, *},
+    events::{self, ManualHighlightWithColour, NodeActivationReq, *},
     materials::{self, GameMaterials},
     mouse::handle_node_clicks,
     resources::*,
@@ -34,7 +34,7 @@ impl Plugin for BGServicesPlugin {
     fn build(&self, app: &mut App) {
         app
             // Spacing..
-            .add_event::<ActivateNodeWithColour>()
+            .add_event::<ManualHighlightWithColour>()
             .add_event::<EdgeActivationReq>()
             .add_event::<EdgeDeactivationReq>()
             .add_event::<EdgeColourReq>()
@@ -59,19 +59,19 @@ impl Plugin for BGServicesPlugin {
                 process_save_character.run_if(on_event::<SaveCharacterReq>),
                 /* Users need to see paths magically illuminate */
                 //activations:
-                // process_node_activations,
+                process_node_activations.run_if(on_event::<NodeActivationReq>),
                 process_edge_activations,
-                process_activate_node_with_colour.run_if(on_event::<ActivateNodeWithColour>),
+                process_manual_hilights.run_if(on_event::<ManualHighlightWithColour>),
                 /* Only scan for edges when we KNOW the path is valid */
                 scan_edges_for_active_updates.run_if(resource_equals(PathRepairRequired(false))),
                 //deactivations:
-                // process_node_deactivations,
+                process_node_deactivations.run_if(on_event::<NodeDeactivationReq>),
                 process_edge_deactivations,
                 scan_edges_for_inactive_updates,
                 /* happening all the time with camera moves. */
                 adjust_node_sizes,
                 /* Pretty lightweight, can be spammed.*/
-                process_node_colour_changes,
+                process_node_colour_changes.run_if(on_event::<NodeColourReq>),
                 process_edge_colour_changes,
                 /* Runs a BFS so, try not to spam it.*/
                 path_repair
@@ -130,7 +130,7 @@ fn process_scale_requests(
 fn process_node_activations(
     mut activation_events: EventReader<NodeActivationReq>,
     mut colour_events: EventWriter<NodeColourReq>,
-    query: Query<(Entity, &NodeMarker), With<NodeInactive>>,
+    query: Query<(Entity, &NodeMarker), (With<NodeInactive>, Without<ManuallyHighlighted>)>,
     mut commands: Commands,
     root_node: Res<RootNode>,
     game_materials: Res<GameMaterials>,
@@ -385,8 +385,8 @@ fn path_repair(
     }
 }
 
-fn process_activate_node_with_colour(
-    mut events: EventReader<ActivateNodeWithColour>,
+fn process_manual_hilights(
+    mut events: EventReader<ManualHighlightWithColour>,
     mut colour_events: EventWriter<NodeColourReq>,
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -394,20 +394,23 @@ fn process_activate_node_with_colour(
 ) {
     events
         .read()
-        .for_each(|ActivateNodeWithColour(node_id, colour_str)| {
+        .for_each(|ManualHighlightWithColour(node_id, colour_str)| {
             let color = parse_tailwind_color(&colour_str);
             //TODO: Remove the material that is there?
             let mat = materials.add(color);
             query.iter().for_each(|(ent, marker)| {
                 if **marker == *node_id {
-                    commands
-                        .entity(ent)
-                        .remove::<NodeInactive>()
-                        .remove::<NodeActive>()
-                        .insert(ManuallyHighlighted);
+                    commands.entity(ent).remove::<NodeInactive>();
+                    log::debug!("NodeInactive component removed.");
+
+                    commands.entity(ent).remove::<NodeActive>();
+                    log::debug!("NodeActive component removed.");
+
+                    commands.entity(ent).insert(ManuallyHighlighted);
+                    log::debug!("ManuallyHighlighted component inserted.");
+                    commands.entity(ent).remove::<ColorMaterial>();
 
                     colour_events.send(NodeColourReq(ent, mat.clone()));
-
                     log::debug!("Custom highlight on {} send for {}", colour_str, **marker);
                 }
             });
