@@ -473,7 +473,7 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
 fn rx_rpx(
     server: Res<Server>,
     mut activation: EventWriter<NodeActivationReq>,
-    mut activate_with_colour: EventWriter<ActivateNodeWithColour>,
+    mut activate_with_colour: EventWriter<ManualHighlightWithColour>,
     mut deactivation: EventWriter<NodeDeactivationReq>,
     mut scale: EventWriter<NodeScaleReq>,
     mut node_col: EventWriter<NodeColourReq>,
@@ -488,7 +488,7 @@ fn rx_rpx(
     while let Ok(cmd) = server.rx.try_recv() {
         match cmd {
             Command::ActivateNodeWithColour(id, col) => {
-                activate_with_colour.send(ActivateNodeWithColour(id, col));
+                activate_with_colour.send(ManualHighlightWithColour(id, col));
             }
             Command::ActivateNode(id) => {
                 activation.send(NodeActivationReq(id));

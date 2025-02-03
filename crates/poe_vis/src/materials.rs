@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::hashbrown::HashMap};
 
 use crate::resources::UserConfig;
 
@@ -37,6 +37,8 @@ pub struct GameMaterials {
     pub blue: Handle<ColorMaterial>,
     pub purple: Handle<ColorMaterial>,
     pub cyan: Handle<ColorMaterial>,
+
+    pub other: HashMap<String, Handle<ColorMaterial>>,
 }
 fn init_materials(
     mut commands: Commands,
@@ -67,6 +69,7 @@ fn init_materials(
         blue: materials.add(parse_hex_color(&config.colors["blue"])),
         purple: materials.add(parse_hex_color(&config.colors["purple"])),
         cyan: materials.add(parse_hex_color(&config.colors["cyan"])),
+        other: HashMap::new(),
     });
 }
 
