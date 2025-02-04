@@ -1,16 +1,15 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-use super::stats::{deserialize_stats, Stat};
+use super::stats::Stat;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct PassiveSkill {
     name: Option<String>,
     #[serde(default)]
     is_notable: bool,
 
-    #[serde(default)]
-    #[serde(deserialize_with = "deserialize_stats")]
-    stats: Vec<Stat>,
+    #[serde(skip_deserializing)]
+    pub stats: Vec<Stat>,
 
     //TODO: someday...
     #[serde(skip_deserializing)]

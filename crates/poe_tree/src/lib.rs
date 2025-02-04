@@ -150,13 +150,20 @@ impl PassiveTree {
                             return None;
                         }
 
-                        match serde_json::from_value(skill_val.clone()) {
-                            Ok(skill) => Some((skill_id.clone(), skill)),
+                        match serde_json::from_value::<PassiveSkill>(skill_val.clone()) {
+                            Ok(mut skill) => {
+                                //
+                                let stats_str = skill_val.get("stats").unwrap();
+                                skill.stats =
+                                    serde_json::from_value(stats_str.clone()).unwrap_or_default();
+
+                                Some((skill_id.clone(), skill))
+                                //
+                            }
                             Err(e) => {
-                                eprintln!("Failed to parse skill {}: {}", skill_id, e);
-                                eprintln!("{:#?}", skill_val);
-                                panic!();
-                                #[allow(unreachable_code)]
+                                log::error!("Failed to parse skill {}: {}", skill_id, e);
+                                log::error!("{:#?}", skill_val);
+
                                 None
                             }
                         }

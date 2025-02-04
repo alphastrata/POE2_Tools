@@ -12,7 +12,6 @@
 - Calculate the sum of the matching stats and count the nodes with matches.
 */
 
-use poe_tree::stats::Operand;
 mod common;
 use common::quick_tree;
 
@@ -24,30 +23,30 @@ fn main() {
 
     let mut num_nodes = 0;
 
-    let sum: f32 = tree
-        .nodes
-        .iter()
-        .filter_map(|(_node_id, poe_node)| {
-            let skill = poe_node.as_passive_skill(&tree);
-            let stat_sum: f32 = skill
-                .stats()
-                .iter()
-                .filter(|s| {
-                    s.name == keyword
-                        && s.value == min_value
-                        && matches!(s.operand, Operand::Percentage)
-                })
-                .map(|s| s.value)
-                .sum();
+    // let sum: f32 = tree
+    //     .nodes
+    //     .iter()
+    //     .filter_map(|(_node_id, poe_node)| {
+    //         let skill = poe_node.as_passive_skill(&tree);
+    //         let stat_sum: f32 = skill
+    //             .stats()
+    //             .iter()
+    //             .filter(|s| {
+    //                 s.name == keyword
+    //                     && s.value == min_value
+    //                     && matches!(s.operand, Operand::Percentage)
+    //             })
+    //             .map(|s| s.value)
+    //             .sum();
 
-            if stat_sum > 0.0 {
-                num_nodes += 1;
-                Some(stat_sum)
-            } else {
-                None
-            }
-        })
-        .sum();
+    //         if stat_sum > 0.0 {
+    //             num_nodes += 1;
+    //             Some(stat_sum)
+    //         } else {
+    //             None
+    //         }
+    //     })
+    //     .sum();
 
-    println!("Total: {sum}+% from {num_nodes} matching nodes for {keyword}.");
+    // println!("Total: {sum}+% from {num_nodes} matching nodes for {keyword}.");
 }

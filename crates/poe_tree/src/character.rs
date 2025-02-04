@@ -1,8 +1,4 @@
-use crate::{
-    stats::{Operand, Stat},
-    type_wrappings::NodeId,
-    PassiveTree,
-};
+use crate::{stats::Stat, type_wrappings::NodeId, PassiveTree};
 use chrono::{DateTime, Utc};
 use core::fmt;
 use serde::{Deserialize, Serialize};
@@ -68,15 +64,8 @@ impl Character {
         //TODO: I do not know the 'order' of how the operations are applied.
 
         let all_stats = self.all_stats(tree);
-        
 
-        all_stats
-            .filter(|s| matches!(s.operand, Operand::Add | Operand::Percentage))
-            .inspect(|s| {
-                dbg!(s);
-            })
-            .map(|s| s.value)
-            .sum::<f32>()
+        todo!()
     }
 
     fn all_stats<'t>(&'t self, tree: &'t PassiveTree) -> impl Iterator<Item = &'t Stat> + '_ {

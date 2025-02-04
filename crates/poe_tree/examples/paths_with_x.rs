@@ -12,7 +12,6 @@
 - Calculate the sum of the matching stats and count the nodes with matches.
 */
 
-use poe_tree::stats::Operand;
 mod common;
 use common::quick_tree;
 
@@ -33,11 +32,13 @@ fn main() {
                 .stats()
                 .iter()
                 .filter(|s| {
-                    s.name == keyword
-                        && s.value == min_value
-                        && matches!(s.operand, Operand::Percentage)
+                    s.name() == keyword
+                    // && s.value == min_value
+                    // && matches!(s.operand, Operand::Percentage)
                 })
-                .map(|s| s.value)
+                .map(
+                    |s| 0.0, // s.value
+                )
                 .sum();
 
             if stat_sum > 0.0 {

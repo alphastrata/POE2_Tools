@@ -215,7 +215,7 @@ impl_basic_maths_for!(PlusPercentage);
 impl_basic_maths_for!(MinusPercentage);
 impl_basic_maths_for!(Other);
 
-#[allow(non_camel_Case)]
+#[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatType {
 {VARIANTS}
