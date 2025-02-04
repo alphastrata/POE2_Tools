@@ -51,7 +51,6 @@ fn main() {
                     start_node,
                     steps
                 );
-                println!("\t\tLevels {}: {} possible paths", steps, paths.len());
 
                 // Validate edges
                 paths.iter().for_each(|path| {
@@ -88,8 +87,14 @@ fn main() {
                         });
                     });
                 }
+                println!(
+                    "\t\tLevels {}: {} possible paths for {}",
+                    steps,
+                    paths.len(),
+                    character
+                );
             });
+            println!("{} finished in: {:?}\n", character, char_start.elapsed());
         });
-        println!("{} finished in: {:?}\n", character, char_start.elapsed());
     });
 }

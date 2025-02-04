@@ -109,7 +109,7 @@ fn main() {
     writeln!(file, "impl Stat {{").unwrap();
     writeln!(
         file,
-        "    pub fn from_key_value(k: &str, v: u16) -> Self {{"
+        "    pub fn from_key_value(k: &str, v: f64) -> Self {{"
     )
     .unwrap();
     writeln!(file, "        match k {{").unwrap();

@@ -46,7 +46,7 @@ impl Plugin for SearchToolsPlugin {
                     process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
                     cleanup_search_results,
                     scan_for_and_higlight_results,
-                    egui_searchbox_system, //egui is immediate must be called every frame.
+                    egui_searchbox_system,
                 ),
             );
 

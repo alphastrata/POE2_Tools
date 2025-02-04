@@ -16,6 +16,7 @@ use debug_utils::format_bytes;
 use edges::Edge;
 use nodes::PoeNode;
 use skills::PassiveSkill;
+use stats::Stat;
 use type_wrappings::{GroupId, NodeId};
 
 use serde_json::Value;
@@ -141,7 +142,7 @@ impl PassiveTree {
 
         let passive_skills: HashMap<String, skills::PassiveSkill> = val
             .get("passive_skills")
-            .and_then(|skills| skills.as_object())
+            .and_then(|ps| ps.as_object())
             .map(|obj| {
                 obj.iter()
                     .filter_map(|(skill_id, skill_val)| {
@@ -149,21 +150,22 @@ impl PassiveTree {
                             log::debug!("just an icon!");
                             return None;
                         }
-
+                        let stats_json = skill_val.get("stats")?;
                         match serde_json::from_value::<PassiveSkill>(skill_val.clone()) {
                             Ok(mut skill) => {
-                                //
-                                let stats_str = skill_val.get("stats").unwrap();
-                                skill.stats =
-                                    serde_json::from_value(stats_str.clone()).unwrap_or_default();
-
+                                // NOTE: custom deserialising of the Stat type.
+                                if let Some(stats_map) = stats_json.as_object() {
+                                    for (k, v) in stats_map {
+                                        if let Some(n) = v.as_f64() {
+                                            skill.stats.push(Stat::from_key_value(k, n));
+                                        }
+                                    }
+                                }
                                 Some((skill_id.clone(), skill))
-                                //
                             }
                             Err(e) => {
                                 log::error!("Failed to parse skill {}: {}", skill_id, e);
                                 log::error!("{:#?}", skill_val);
-
                                 None
                             }
                         }
@@ -254,7 +256,7 @@ impl PassiveTree {
                                                         "Invalid connection in node `{}`: {:?}",
                                                         from_id, connection
                                                     );
-                                                    dbg!(cons, array);
+                                                    log::error!("{}, {:#?}", cons, array);
                                                     None
                                                 }
                                             }

@@ -738,7 +738,7 @@ pub enum Stat {
 }
 
 impl Stat {
-    pub fn from_key_value(k: &str, v: u16) -> Self {
+    pub fn from_key_value(k: &str, v: f64) -> Self {
         match k {
             "accuracy_rating_+%" => Stat::AccuracyRating(Plus(v as f32)),
             "accuracy_rating_vs_bleeding_enemies" => Stat::AccuracyRatingVsBleedingEnemies(Other(v as f32)),

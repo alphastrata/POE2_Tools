@@ -3,8 +3,8 @@ mod stat;
 pub use stat::Stat;
 
 impl Stat {
-    pub fn name(&self) -> String {
-        todo!()
+    pub fn name(&self) -> &str {
+        self.as_str()
     }
 }
 // In your src/lib.rs:
@@ -46,4 +46,33 @@ pub mod arithmetic {
     impl_basic_maths_for!(PlusPercentage);
     impl_basic_maths_for!(MinusPercentage);
     impl_basic_maths_for!(Other);
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use crate::quick_tree;
+
+    #[test]
+    fn compute_all_evasion_rating_15_percents() {
+        _ = pretty_env_logger::init();
+
+        let mut tree = quick_tree();
+
+        tree.remove_hidden();
+
+        let stats = tree
+            .nodes
+            .iter()
+            .map(|(_nid, pnode)| pnode.as_passive_skill(&tree));
+
+        let er_count: usize = stats
+            .into_iter()
+            .flat_map(|passive| passive.stats())
+            .filter(|s| matches!(s, Stat::EvasionRating(_)))
+            .count();
+
+        println!("EvasionRating skills: {}", er_count);
+    }
 }
