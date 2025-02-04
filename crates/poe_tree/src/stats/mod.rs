@@ -52,10 +52,7 @@ pub mod arithmetic {
 mod tests {
 
     use super::*;
-    use crate::{
-        quick_tree,
-        stats::arithmetic::{Plus, PlusPercentage},
-    };
+    use crate::{quick_tree, stats::arithmetic::*};
 
     #[test]
     fn compute_all_evasion_rating_15_percents() {
@@ -91,8 +88,7 @@ mod tests {
             // At this stage it could be Plus or PlusPercentage
             .filter(|s| match s {
                 /*  "maximum_energy_shield_+%" => Stat::MaximumEnergyShield(PlusPercentage(v as f32)), */
-                Stat::EnergyShield(PlusPercentage()) => true,
-                // Stat::MaximumEnergyShield(plus) => true,
+                Stat::MaximumEnergyShield(plus) => true,
                 // Stat::MaximumEnergyShieldFromBodyArmour(plus) => true,
                 _ => false,
             })
