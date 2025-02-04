@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
-use super::stats::Stat;
+use crate::stats::Stat;
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub struct PassiveSkill {
     name: Option<String>,
     #[serde(default)]

@@ -4,6 +4,10 @@ name = "poe_tree"
 version = "0.1.0"
 edition = "2021"
 
+[[examples]]
+name = "stat_parse"
+path = "examples/stat_parse.rs"
+
 
 [[examples]]
 name = "node_count"
@@ -43,3 +47,9 @@ regex.workspace = true
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
+
+
+[build-dependencies]
+serde.workspace = true
+serde_json.workspace = true
+regex.workspace = true

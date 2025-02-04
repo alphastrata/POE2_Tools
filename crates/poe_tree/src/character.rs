@@ -1,4 +1,4 @@
-use crate::{stats::Stat, type_wrappings::NodeId, PassiveTree};
+use crate::{type_wrappings::NodeId, PassiveTree};
 use chrono::{DateTime, Utc};
 use core::fmt;
 use serde::{Deserialize, Serialize};
@@ -59,22 +59,22 @@ impl Character {
     - physi
 
      */
-    pub fn calculate_evasion_rating(&self, tree: &PassiveTree) -> f32 {
-        //NOTE: I think we just sum all the + to maximum, then +% ontop of that?
-        //TODO: I do not know the 'order' of how the operations are applied.
+    // pub fn calculate_evasion_rating(&self, tree: &PassiveTree) -> f32 {
+    //     //NOTE: I think we just sum all the + to maximum, then +% ontop of that?
+    //     //TODO: I do not know the 'order' of how the operations are applied.
 
-        let all_stats = self.all_stats(tree);
+    //     let all_stats = self.all_stats(tree);
 
-        todo!()
-    }
+    //     todo!()
+    // }
 
-    fn all_stats<'t>(&'t self, tree: &'t PassiveTree) -> impl Iterator<Item = &'t Stat> + '_ {
-        self.activated_node_ids
-            .iter()
-            .map(|nid| tree.node(*nid))
-            .map(|pnode| tree.passive_for_node(pnode))
-            .flat_map(|passive| passive.stats())
-    }
+    // fn all_stats<'t>(&'t self, tree: &'t PassiveTree) -> impl Iterator<Item = &'t Stat> + '_ {
+    //     self.activated_node_ids
+    //         .iter()
+    //         .map(|nid| tree.node(*nid))
+    //         .map(|pnode| tree.passive_for_node(pnode))
+    //         .flat_map(|passive| passive.stats())
+    // }
 
     pub fn calculate_energy_shield(&self, tree: &PassiveTree) -> f32 {
         todo!()
@@ -265,7 +265,7 @@ mod tests {
         let mut char = Character::load_from_toml(TEST_DATA_MONK).unwrap();
         char.activated_node_ids = lvl_13_mostly_evasion_nodes;
 
-        dbg!(char.calculate_evasion_rating(&tree));
+        // dbg!(char.calculate_evasion_rating(&tree));
     }
 
     #[test]
