@@ -34,3 +34,4 @@ bevy_egui = "0.32.0"
 num_cpus = "1.16.0"
 reqwest = { version = "0.12.12", features = ["json", "blocking"] }
 rand = "0.9.0"
+regex = "1.11.1"
