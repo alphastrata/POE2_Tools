@@ -58,3 +58,7 @@ pub struct ShowSearch;
 
 #[derive(Event)]
 pub struct ThrowWarning(String);
+
+#[derive(Event)]
+
+pub struct ClearVirtualPaths;

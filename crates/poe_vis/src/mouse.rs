@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use crate::{
     components::*,
     consts::DEFAULT_HOVER_FADE_TIME,
-    events::{NodeActivationReq, NodeColourReq, NodeDeactivationReq},
+    events::{ClearVirtualPaths, NodeActivationReq, NodeColourReq, NodeDeactivationReq},
     materials::GameMaterials,
     resources::*,
 };
@@ -102,6 +102,7 @@ pub fn hover_started(
 
 pub fn hover_ended(
     mut commands: Commands,
+    mut virtual_path_clear: EventWriter<ClearVirtualPaths>,
     mut out_events: EventReader<Pointer<Out>>,
     mut colour_events: EventWriter<NodeColourReq>,
     query_nodes: Query<(Entity, Option<&NodeActive>, Option<&Hovered>)>,
@@ -111,6 +112,7 @@ pub fn hover_ended(
         if let Ok((entity, maybe_active, maybe_hovered)) = query_nodes.get(ev.target) {
             if maybe_hovered.is_some() {
                 commands.entity(entity).remove::<Hovered>();
+                virtual_path_clear.send(ClearVirtualPaths);
 
                 let material = if maybe_active.is_some() {
                     game_materials.node_activated.clone_weak()

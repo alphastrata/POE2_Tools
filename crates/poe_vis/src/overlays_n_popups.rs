@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::{
     components::*,
-    events::{EdgeColourReq, NodeColourReq},
+    events::{ClearVirtualPaths, EdgeColourReq, NodeColourReq},
     materials::GameMaterials,
     resources::ActiveCharacter,
     PassiveTreeWrapper,
@@ -19,18 +19,12 @@ impl Plugin for OverlaysAndPopupsPlugin {
 }
 
 fn virtual_path_to_node_under_cursor(
-    mut node_colouriser: EventWriter<NodeColourReq>,
-    mut edge_colouriser: EventWriter<EdgeColourReq>,
+    mut commands: Commands,
     character: Res<ActiveCharacter>,
     hovered: Query<(Entity, &Hovered, &NodeMarker), With<NodeInactive>>,
     edges: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
-    materials: Res<GameMaterials>,
     tree: Res<PassiveTreeWrapper>,
 ) {
-    // if the hovered not in the character.active,
-    // take paths from the hovered to every note in active, settle on the shortest,
-    // mark them for virtualPath.
-    // mark the corresponding edges too.
     let tree = &**tree;
     let mut must_colour_edges = vec![];
     let targets: Vec<NodeId> = character.activated_node_ids.iter().map(|v| *v).collect();
@@ -38,24 +32,27 @@ fn virtual_path_to_node_under_cursor(
         tree.shortest_to_from_any_of(**nm, &targets)
             .into_iter()
             .for_each(|hit| {
-                node_colouriser.send(NodeColourReq(ent, materials.blue.clone()));
+                commands.entity(ent).insert(VirtualPath);
                 must_colour_edges.push(hit);
             });
     });
 
-    let edg_tx = Arc::new(Mutex::new(&mut edge_colouriser));
+    let a_cmds = Arc::new(Mutex::new(&mut commands));
     edges.par_iter().for_each(|(ent, em)| {
         let (s, e) = em.as_tuple();
         if must_colour_edges.contains(&s) && must_colour_edges.contains(&e) {
-            edg_tx
-                .lock()
-                .unwrap()
-                .send(EdgeColourReq(ent, materials.blue.clone()));
+            a_cmds.lock().unwrap().entity(ent).insert(VirtualPath);
         }
-        //
     });
-
-    //QUESTION: ok we've highlighted them... how do we stop?!
+}
+fn cleanup_virtual_paths(
+    mut out_events: EventReader<Pointer<Out>>,
+    mut cleanup: EventWriter<ClearVirtualPaths>,
+) {
+    for _r in out_events.read() {
+        cleanup.send(ClearVirtualPaths);
+        return;
+    }
 }
 
 //TODO: insert the virtual path length's extension to reach this node.
