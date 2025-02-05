@@ -154,11 +154,17 @@ impl PassiveTree {
 }
 
 impl PassiveTree {
-    pub fn shortest_to_from_any_of(&self, start: NodeId, targets: &[NodeId]) -> Vec<NodeId> {
+    pub fn shortest_to_target_from_any_of(
+        &self,
+        target: NodeId,
+        candidates: &[NodeId],
+    ) -> Vec<NodeId> {
         let mut options = Vec::new();
-        targets
-            .iter()
-            .for_each(|t| options.push(self.bfs(*t, start)));
+        candidates.iter().for_each(|t| {
+            let res = self.bfs(*t, target);
+            log::trace!("Candidate with length: {}", res.len());
+            options.push(res)
+        });
         options.sort_by_key(|opt| opt.len());
 
         options.first().unwrap().to_vec()

@@ -78,12 +78,12 @@ impl Plugin for BGServicesPlugin {
                 //activations:
                 process_node_activations.run_if(on_event::<NodeActivationReq>),
                 process_edge_activations,
-                process_manual_hilights.run_if(on_event::<ManualHighlightWithColour>),
+                process_manual_highlights.run_if(on_event::<ManualHighlightWithColour>),
                 /* Pretty lightweight, can be spammed.*/
                 process_node_colour_changes.run_if(on_event::<NodeColourReq>),
                 process_edge_colour_changes,
                 process_virtual_paths,
-                process_clear_virtual_paths.run_if(on_event::<ClearVirtualPaths>),
+                process_clear_virtual_paths.run_if(no_hover),
                 /* Runs a BFS so, try not to spam it.*/
                 path_repair
                     .run_if(sufficient_active_nodes)
@@ -95,6 +95,10 @@ impl Plugin for BGServicesPlugin {
 
         log::debug!("BGServices plugin enabled");
     }
+}
+
+fn no_hover(hovered: Query<Entity, With<Hovered>>) -> bool {
+    hovered.is_empty()
 }
 
 fn scan_for_char_updates(
@@ -491,7 +495,7 @@ fn path_repair(
     }
 }
 
-fn process_manual_hilights(
+fn process_manual_highlights(
     mut events: EventReader<ManualHighlightWithColour>,
     mut colour_events: EventWriter<NodeColourReq>,
     mut commands: Commands,
@@ -530,11 +534,12 @@ fn process_virtual_paths(
     materials: Res<GameMaterials>,
 ) {
     nodes.iter().for_each(|(ent, nm)| {
+        log::debug!("{} is in the VirtualPath", **nm);
         node_colouriser.send(NodeColourReq(ent, materials.blue.clone()));
     });
 
     let edg_tx = Arc::new(Mutex::new(&mut edge_colouriser));
-    edges.par_iter().for_each(|(ent, em)| {
+    edges.par_iter().for_each(|(ent, _em)| {
         edg_tx
             .lock()
             .unwrap()
@@ -549,12 +554,10 @@ fn process_clear_virtual_paths(
 ) {
     nodes.iter().for_each(|(ent, _nm)| {
         commands.entity(ent).remove::<VirtualPath>();
-        dbg!("HOVER OFF!");
     });
 
     let a_cmds = Arc::new(Mutex::new(&mut commands));
     edges.par_iter().for_each(|(ent, _em)| {
         a_cmds.lock().unwrap().entity(ent).remove::<VirtualPath>();
-        dbg!("HOVER OFF!");
     });
 }

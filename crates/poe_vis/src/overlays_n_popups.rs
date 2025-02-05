@@ -13,8 +13,15 @@ use crate::{
 pub struct OverlaysAndPopupsPlugin;
 impl Plugin for OverlaysAndPopupsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (virtual_path_to_node_under_cursor, show_node_info))
-            .add_systems(Startup, spawn_hover_text);
+        app.add_systems(
+            Update,
+            (
+                virtual_path_to_node_under_cursor,
+                cleanup_virtual_paths,
+                show_node_info,
+            ),
+        )
+        .add_systems(Startup, spawn_hover_text);
     }
 }
 
@@ -28,8 +35,9 @@ fn virtual_path_to_node_under_cursor(
     let tree = &**tree;
     let mut must_colour_edges = vec![];
     let targets: Vec<NodeId> = character.activated_node_ids.iter().map(|v| *v).collect();
+
     hovered.iter().for_each(|(ent, _hovered, nm)| {
-        tree.shortest_to_from_any_of(**nm, &targets)
+        tree.shortest_to_target_from_any_of(**nm, &targets)
             .into_iter()
             .for_each(|hit| {
                 commands.entity(ent).insert(VirtualPath);
@@ -51,7 +59,6 @@ fn cleanup_virtual_paths(
 ) {
     for _r in out_events.read() {
         cleanup.send(ClearVirtualPaths);
-        return;
     }
 }
 
