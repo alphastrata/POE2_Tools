@@ -1,99 +1,95 @@
-# **poe_vis**
+# poe_vis
 
-- [ ] Move the potential builds and the paths2chaos-inoculation visualiser examples out to poe_vis, from poe_tree. poe_tree should JUST be data.
+## Features
 
-- [ ] starting node is perma-pegged, new button to set it to None in UI, RPC cmd too.
+### Build & UI
 
-## RPC
+- [ ] Move potential builds and the paths2chaos-inoculation visualiser examples from poe_tree into poe_vis (poe_tree becomes just data).
+- [ ] Remove permanent starting node—add UI button and RPC command to set it to None.
 
-- [x] implement the todos.
-- [x] colour node requests... all tailwind colours are available, just provide those?
-- [x] fetch_colours RPC req...
+### RPC
 
-## **Rendering & Performance**
+- [x] Implement the todos.
+- [x] Colour node requests (use all Tailwind colours).
+- [x] `fetch_colours` RPC request.
 
-- [ ] **Arcs not lines:** The POE2 tree actually draws beautiful arcs for its `edge`s, but we draw lines. it shouldn't be too hard to say what's the x,y of where we `start` and the x,y of where we `finish` and then work out how to make an arc that makes both nodes positioned on a circle.
-  1. use them to do euc dist then use that as the r of the circle? or are do we already know this with the (`calculate_world_position` fn we have on `node`?)
-     I think we should be able, looking at the PathOfBuilding assets' .pngs of all those arcs work out the relationship between said arc's arc-length and radius etc...
+### Rendering & Performance
 
-## **Node & Path Handling**
+- [ ] **Arcs not lines:** Use arcs (like POE2) instead of straight lines. Calculate start and finish points to form an arc (maybe use `calculate_world_position` info, and compare with PoB assets to work out arc-length and radius).
 
-- [ ] **Pruned Node Handling:** When a path is pruned such that downstream nodes become unreachable from the starting node, those unreachable nodes should:
-  - Turn red for two seconds.
-  - Then be removed from both `PassiveTree.active` and `.highlighted_nodes`.
-- [ ] **Virtual Path for Hovered Nodes:** When the `.hovered_node` (on `PassiveTree`) is _not_ connected to the starting node, a 'virtual path' should be created and displayed. This path will indicate the route that would be taken if the node were to be selected (similar to maxroll.gg's functionality).
+### Node & Path Handling
 
-- [ ] Performance of the `walk_n_steps` is frikkn garbage, I cannot compute 40 on my big rig ><, at least on wangblows...
+- [ ] **Pruned Node Handling:** When a pruned path disconnects downstream nodes:
+  - Turn them red for two seconds.
+  - Remove them from both `PassiveTree.active` and `.highlighted_nodes`.
+- [ ] **Virtual Path for Hovered Nodes:** If `.hovered_node` isn’t connected to the starting node, display a 'virtual path' indicating the potential route (like maxroll.gg).
+- [ ] Improve performance of `walk_n_steps` (it's too slow):
+  - Try a CSR `impl`.
+  - Consider GPU computation.
+- [ ] Implement `take_while_for_n_steps(predicate, num_steps)` to retrieve paths with at least one evasion_rating buff over N steps.
 
-  - Try a CSR `impl`
-  - Maybe you can compute it on ze gpu?
+### User Interface & Interaction
+- [ ] BUG: typing the move keys' bindings will move the canvas around when we're searching.
+- [ ] piggybacking on the SearchState for the hover aggregated stats to show matching nodes is bad, because it encircles nodes that we haven't got inour current active build.
+- [ ] **Configurable Canvas Background:** Make it configurable via egui and a `user_config.toml`.
+- [ ] **Menu Mouse Interaction:** Ensure mouse actions over menu elements don’t trigger selection, removal, hover, translation, or zoom.
+- [ ] **Camera Home/Reset:** Bind `'h'` or `Esc` (configurable) to reset the camera view.
+- [ ] **Fuzzy Search Behaviour:** Pressing Enter in the fuzzy search field should close it and focus the top search result.
+- [ ] **Tab Navigation:** Implement tabs.
 
-- [ ] implement a `take_while_for_n_steps(p: $predicate, n: $num_steps)` so we can do something like take_while 'evasion_rating' for 20, and get back all the paths with at least 1 evasion_rating mentioning buff.
+### Visuals & Configuration
 
-## **User Interface & Interaction**
+- [ ] **Icon Integration:** Incorporate node icons if available.
+- [ ] **Expanded Colour Palette:** Expand the colour choices in `user_config.toml` (currently around eight or nine colours).
+- [ ] Use arcs with PNGs—choose the right arc once determined.
 
-- [ ] **Configurable Canvas Background:** The canvas background should be configurable via the `#egui` framework and a user configuration file (`user_config.toml`).
-- [ ] **Menu Mouse Interaction:** Mouse interactions over menu elements should _not_ trigger selection, removal, hover, translation, or zoom functions. This requires attention to the `#egui` implementation.
-- [ ] **Camera Home/Reset:** Assign either `'h'` or `Esc` (configurable via settings) to reset/home the camera view.
-- [ ] **Fuzzy Search Textline Behaviour:** Pressing `Enter` within the single edit textline of the fuzzy search should close the text line and jump/focus on the topmost search result.
-- [ ] **Tab Navigation:** Implement tabbed navigation.
+### Custom Shading
 
-## **Visuals & Configuration**
+- [ ] Develop a screenspace shader that tints the background circle in six 60° wedges, blending colours from int → dex → str (and intermediate values).
 
-- [ ] **Icon Integration:** If node icons can be obtained, they should be incorporated into the visual representation.
-- [ ] **Expanded Colour Palette:** The colour palette needs expanding. The `user_config.toml` currently only contains approximately eight or nine usable colours.
-- [ ] We have the Arcs so... do the png thing? (After we work out WHICH arc to use...)
+### Background Services
 
-## Custom shading:
+- [ ] **Backend Thread:** Have `PassiveTree` reference a backend thread (in `background_services.rs`) for heavy lifting.
+- [ ] **Update Pause:** Bind `'p'` to pause background pathfinding services for multi-destination/source BFS.
+- [ ] Expose an RPC interface for external programmatic access.
 
-- [ ] How do we set the bg? --> make a screenspace shader that slightly tints the circle in 6 wedges of 60deg each, colouring a blend of int -> dex -> str with all in-betweens.
+# poe_tree
 
-## **Background Services**
+## Tasks to Complete
 
-- [ ] **Backend Thread:** The `PassiveTree` should use references to a backend thread that handles all heavy lifting within `background_services.rs`. This should address current performance limitations.
-- [ ] **Update Pause:** Implement `'p'` to pause updates, which will temporarily halt the background pathfinding services. This is needed to allow for multi-destination/source breadth-first search (BFS).
-- [ ] RPC interface for programmatic access from outside `poe_vis`
-
----
-
-# **poe_tree**
-
-- [x] prune eh non data-carrying 'is_just_icon' passive_skill items.
-- [ ] **Stats API:** Create a clean API to access and work with the `.stats`.
-
-  - This should facilitate mathematical operations such as `+`, `-`, `*`, `%`, and `/` on the unconventional data structures in `passive_skills`. Some work has been started on this with the `Operand` concept.
-    some examples of the data:
+- [ ] **Stats API:** Create a clean API to work with `.stats` that supports math operations (`+`, `-`, `*`, `%`, `/`) on passive_skill data.
+  - Example data:
 
     ```json
-     "stun_threshold_if_no_recent_stun1": {
+    "stun_threshold_if_no_recent_stun1": {
       "name": "Stun Threshold while on Full Life",
       "icon": "skillicons/passives/life1",
       "stats": {
         "stun_threshold_+%_when_not_stunned_recently": 20
       }
     },
-      "dexterity26": {
+    "dexterity26": {
       "name": "Attribute",
       "icon": "skillicons/passives/plusattribute",
       "stats": {
         "display_passive_attribute_text": 1
       }
     },
-      "strength104": {
+    "strength104": {
       "name": "Strength",
       "icon": "skillicons/passives/plusstrength",
       "stats": {
         "base_strength": 8
       }
     },
-     "flail3": {
+    "flail3": {
       "name": "Flail Damage",
       "icon": "skillicons/passives/macedmg",
       "stats": {
         "flail_damage_+%": 10
       }
     },
-      "melee39": {
+    "melee39": {
       "name": "Deadly Flourish",
       "icon": "skillicons/passives/meleeaoenode",
       "stats": {
@@ -101,12 +97,19 @@
         "melee_critical_strike_chance_+%_when_on_full_life": 20
       },
       "is_notable": true
-    },
-    .... and so on...
+    }
     ```
 
-    There will be a lot of tedious one-off handling here.
+- [ ] **Default Starting Stats:** Set up default starting stats for all character classes, build them from POB exports.
+- [ ] **Streaming Pathfinding:** Create streaming versions of functions in `pathfinding.rs` for animation-friendly pathfinding.
+- [ ] **Manual Character Stats:** Allow users to manually set stats (armour, evasion, energy shield, etc.) via a `character.toml` in absence of in-game data.
 
-- [ ] **Default Starting Stats:** Implement default starting stats for all character classes.
-- [ ] **Streaming Pathfinding:** Create streaming versions of the functions in `pathfinding.rs`. This would enable pathfinding calculations to be performed with a delay to facilitate animations.
-- [ ] **Manual Character Stats:** In the absence of actual character statistics derived from in-game equipment, allow the user to manually set attributes like `armour`, `evasion`, `energy shield`, etc., perhaps via a `character.toml` file.
+## Changelog (Completed Tasks)
+
+- [x] implement the todos.
+- [x] colour node requests... all tailwind colours are available, just provide those?
+- [x] fetch_colours RPC req...
+- [x] prune eh non data-carrying 'is_just_icon' passive_skill items.
+- [x] POB parser.
+- [x] Begin aggregating stats into the UI.
+- [x] Top menu for File (Save, Load, Exit, Import, Export, etc.).

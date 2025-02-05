@@ -4,4 +4,4 @@ PathOfBuilding
 .vscode
 .cargo
 __pycache__
-
+data/.*
