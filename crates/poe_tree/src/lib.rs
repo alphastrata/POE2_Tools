@@ -1,4 +1,3 @@
-//!$ crates/poe_tree/src/lib.rs
 pub mod character;
 pub mod consts;
 pub mod coordinates;
@@ -9,7 +8,6 @@ pub mod pathfinding;
 pub mod pob_utils;
 pub mod skills;
 pub mod stats;
-
 pub mod type_wrappings;
 
 use consts::{CHAR_START_NODES, ORBIT_RADII, ORBIT_SLOTS};

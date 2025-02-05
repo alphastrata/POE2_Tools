@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::{unbounded, Receiver, Sender}; // for cloneable receivers
-use rayon::prelude::*;
+use rayon::{option, prelude::*};
 use std::time::Duration;
 use std::{
     cmp::Ordering,
@@ -154,6 +154,16 @@ impl PassiveTree {
 }
 
 impl PassiveTree {
+    pub fn shortest_to_from_any_of(&self, start: NodeId, targets: &[NodeId]) -> Vec<NodeId> {
+        let mut options = Vec::new();
+        targets
+            .iter()
+            .for_each(|t| options.push(self.bfs(*t, start)));
+        options.sort_by_key(|opt| opt.len());
+
+        options.first().unwrap().to_vec()
+    }
+
     pub fn bfs(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();

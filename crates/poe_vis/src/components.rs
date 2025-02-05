@@ -44,7 +44,6 @@ pub struct Hovered {
 }
 
 #[derive(Component, Deref)]
-
 pub struct Skill(pub PassiveSkill);
 
 #[derive(Component)]
@@ -55,3 +54,7 @@ pub struct SearchResult;
 
 #[derive(Component)]
 pub struct ActiveNodeCount;
+
+/// Entities marked with this are part of a 'virtual-path'
+#[derive(Component)]
+pub struct VirtualPath;

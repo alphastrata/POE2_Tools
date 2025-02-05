@@ -27,7 +27,6 @@ use crate::{
     resources::*,
     search, PassiveTreeWrapper,
 };
-
 pub(crate) struct BGServicesPlugin;
 
 impl Plugin for BGServicesPlugin {

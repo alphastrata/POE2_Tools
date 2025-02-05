@@ -1,15 +1,64 @@
 use bevy::prelude::*;
+use poe_tree::type_wrappings::NodeId;
+use std::sync::{Arc, Mutex};
 
-use crate::{components::*, PassiveTreeWrapper};
+use crate::{
+    components::*,
+    events::{EdgeColourReq, NodeColourReq},
+    materials::GameMaterials,
+    resources::ActiveCharacter,
+    PassiveTreeWrapper,
+};
 
 pub struct OverlaysAndPopupsPlugin;
 impl Plugin for OverlaysAndPopupsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, show_node_info)
+        app.add_systems(Update, (virtual_path_to_node_under_cursor, show_node_info))
             .add_systems(Startup, spawn_hover_text);
     }
 }
 
+fn virtual_path_to_node_under_cursor(
+    mut node_colouriser: EventWriter<NodeColourReq>,
+    mut edge_colouriser: EventWriter<EdgeColourReq>,
+    character: Res<ActiveCharacter>,
+    hovered: Query<(Entity, &Hovered, &NodeMarker), With<NodeInactive>>,
+    edges: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
+    materials: Res<GameMaterials>,
+    tree: Res<PassiveTreeWrapper>,
+) {
+    // if the hovered not in the character.active,
+    // take paths from the hovered to every note in active, settle on the shortest,
+    // mark them for virtualPath.
+    // mark the corresponding edges too.
+    let tree = &**tree;
+    let mut must_colour_edges = vec![];
+    let targets: Vec<NodeId> = character.activated_node_ids.iter().map(|v| *v).collect();
+    hovered.iter().for_each(|(ent, _hovered, nm)| {
+        tree.shortest_to_from_any_of(**nm, &targets)
+            .into_iter()
+            .for_each(|hit| {
+                node_colouriser.send(NodeColourReq(ent, materials.blue.clone()));
+                must_colour_edges.push(hit);
+            });
+    });
+
+    let edg_tx = Arc::new(Mutex::new(&mut edge_colouriser));
+    edges.par_iter().for_each(|(ent, em)| {
+        let (s, e) = em.as_tuple();
+        if must_colour_edges.contains(&s) && must_colour_edges.contains(&e) {
+            edg_tx
+                .lock()
+                .unwrap()
+                .send(EdgeColourReq(ent, materials.blue.clone()));
+        }
+        //
+    });
+
+    //QUESTION: ok we've highlighted them... how do we stop?!
+}
+
+//TODO: insert the virtual path length's extension to reach this node.
 fn show_node_info(
     windows: Query<&Window>,
     hovered: Query<(&Hovered, &NodeMarker, Option<&NodeActive>)>,
