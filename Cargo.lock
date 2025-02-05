@@ -4739,6 +4739,7 @@ dependencies = [
  "log",
  "num_cpus",
  "pretty_env_logger",
+ "quick-xml 0.37.2",
  "rayon",
  "regex",
  "reqwest",
@@ -4763,6 +4764,7 @@ dependencies = [
  "log",
  "poe_tree",
  "pretty_env_logger",
+ "quick-xml 0.37.2",
  "rand 0.9.0",
  "reqwest",
  "rfd",
@@ -4896,6 +4898,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7649a7b4df05aed9ea7ec6f628c67c9953a43869b8bc50929569b2999d443fe"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.37.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "165859e9e55f79d67b96c5d96f4e88b6f2695a1972849c15a6a3f5c59fc2c003"
+dependencies = [
+ "memchr",
+ "serde",
 ]
 
 [[package]]
@@ -6578,7 +6590,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "597f2001b2e5fc1121e3d5b9791d3e78f05ba6bfa4641053846248e3a13661c3"
 dependencies = [
  "proc-macro2",
- "quick-xml",
+ "quick-xml 0.36.2",
  "quote",
 ]
 

@@ -19,7 +19,7 @@ impl Plugin for PoeVisCameraPlugin {
                 (
                     camera_drag_system, // .after(crate::controls::handle_node_clicks)
                     camera_zoom_system.run_if(CameraSettings::should_zoom),
-                    debug_camera_info,
+                    // debug_camera_info,
                     move_camera_to_target_system.run_if(on_event::<MoveCameraReq>),
                 ),
             );
@@ -33,16 +33,14 @@ fn move_camera_to_target_system(
     mut ortho_q: Query<&mut OrthographicProjection, With<Camera2d>>,
     settings: Res<CameraSettings>,
 ) {
-    move_requests
-        .read()
-        .for_each(|MoveCameraReq(target)| {
-            let mut transform = camera_q.single_mut();
-            let mut ortho = ortho_q.single_mut();
-            transform.translation.x = target.x;
-            transform.translation.y = target.y;
-            transform.translation.z = 0.0;
-            ortho.scale = target.z.clamp(settings.min_zoom, settings.max_zoom);
-        });
+    move_requests.read().for_each(|MoveCameraReq(target)| {
+        let mut transform = camera_q.single_mut();
+        let mut ortho = ortho_q.single_mut();
+        transform.translation.x = target.x;
+        transform.translation.y = target.y;
+        transform.translation.z = 0.0;
+        ortho.scale = target.z.clamp(settings.min_zoom, settings.max_zoom);
+    });
 }
 
 // Updated camera setup system

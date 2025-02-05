@@ -52,20 +52,16 @@ pub mod arithmetic {
 mod tests {
 
     use super::*;
-    use crate::{quick_tree, stats::arithmetic::*};
+    use crate::quick_tree;
 
     #[test]
     fn compute_all_evasion_rating_15_percents() {
-        _ = pretty_env_logger::init();
-
         let mut tree = quick_tree();
 
         tree.remove_hidden();
 
         let stats = tree
-            .nodes
-            .iter()
-            .map(|(_nid, pnode)| pnode.as_passive_skill(&tree));
+            .nodes.values().map(|pnode| pnode.as_passive_skill(&tree));
 
         let er_count: usize = stats
             .into_iter()
@@ -78,41 +74,25 @@ mod tests {
 
     #[test]
     fn compute_all_energy_shield_15_percents() {
-        _ = pretty_env_logger::init();
+        // _ = pretty_env_logger::init();
         let mut tree = quick_tree();
         tree.remove_hidden();
-        let stats = tree.nodes.iter().map(|(_, p)| p.as_passive_skill(&tree));
+        let stats = tree.nodes.values().map(|p| p.as_passive_skill(&tree));
+        let mut total = 0.0;
         let es_count = stats
             .flat_map(|ps| ps.stats())
             .filter(|s| matches!(s, Stat::MaximumEnergyShield(_)))
-            // At this stage it could be Plus or PlusPercentage
             .filter(|s| match s {
-                /*  "maximum_energy_shield_+%" => Stat::MaximumEnergyShield(PlusPercentage(v as f32)), */
-                Stat::MaximumEnergyShield(plus) => true,
-                // Stat::MaximumEnergyShieldFromBodyArmour(plus) => true,
+                Stat::MaximumEnergyShield(perc) => {
+                    println!("{}", perc.0);
+
+                    total += perc.0;
+                    true
+                }
                 _ => false,
             })
             .count();
 
-        println!("+% EnergyShield skills: {}", es_count);
-    }
-
-    #[test]
-    fn compute_both_and_sum_plus_percentage() {
-        _ = pretty_env_logger::init();
-        let mut tree = quick_tree();
-        tree.remove_hidden();
-        let stats = tree.nodes.iter().map(|(_, p)| p.as_passive_skill(&tree));
-        let mut total = 0f32;
-        // for s in stats.flat_map(|ps| ps.stats()) {
-        //     match s {
-        //         Stat::Evasion(PlusPercentage(val)) | Stat::EnergyShield(Plus(val)) => total += val,
-        //         _ => {}
-        //     }
-        // }
-        // println!(
-        //     "Sum of EvasionRating and MaxEnergyShield (PlusPercentage): {}",
-        //     total
-        // );
+        println!("+% EnergyShield skills: {}, totalling {total}", es_count);
     }
 }

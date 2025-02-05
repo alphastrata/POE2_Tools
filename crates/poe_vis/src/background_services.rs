@@ -47,6 +47,7 @@ impl Plugin for BGServicesPlugin {
             .add_event::<NodeDeactivationReq>()
             .add_event::<NodeScaleReq>()
             .add_event::<SaveCharacterReq>()
+            .add_event::<LoadCharacterReq>()
             .add_event::<ShowSearch>()
             .add_event::<ThrowWarning>()
             //spacing..
@@ -57,6 +58,7 @@ impl Plugin for BGServicesPlugin {
         app.add_systems(
             PreUpdate,
             (
+                scan_for_char_updates.run_if(resource_changed::<ActiveCharacter>),
                 /* Only scan for edges when we KNOW the path is valid */
                 scan_edges_for_active_updates.run_if(resource_equals(PathRepairRequired(false))),
                 //deactivations:
@@ -70,6 +72,7 @@ impl Plugin for BGServicesPlugin {
         app.add_systems(
             Update,
             (
+                process_load_character.run_if(on_event::<LoadCharacterReq>),
                 process_save_character.run_if(on_event::<SaveCharacterReq>),
                 /* Users need to see paths magically illuminate */
                 //activations:
@@ -91,6 +94,33 @@ impl Plugin for BGServicesPlugin {
         log::debug!("BGServices plugin enabled");
     }
 }
+
+fn scan_for_char_updates(
+    active_character: Res<ActiveCharacter>,
+    mut starting_node: ResMut<RootNode>,
+    mut deactivator: EventWriter<NodeDeactivationReq>,
+    mut activator: EventWriter<NodeActivationReq>,
+    query: Query<(Entity, &NodeMarker)>,
+) {
+    log::trace!("Updating character.");
+    starting_node.0 = Some(active_character.starting_node);
+
+    let active = Arc::new(Mutex::new(&mut activator));
+    let deactive = Arc::new(Mutex::new(&mut deactivator));
+    query.par_iter().for_each(|(_ent, nm)| {
+        // We'll just be sloppy and potentially send activation requests to nodes that _may_
+        // already BE active, and so on.
+        match active_character.activated_node_ids.contains(&nm.0) {
+            true => {
+                active.lock().unwrap().send(NodeActivationReq(nm.0));
+            }
+            false => {
+                deactive.lock().unwrap().send(NodeDeactivationReq(nm.0));
+            }
+        }
+    });
+}
+
 fn clear(
     query: Query<(Entity, &NodeMarker)>,
     // rx: EventReader<ClearAll>,
@@ -120,6 +150,50 @@ fn process_save_character(
         log::error!("{}", e);
     }
     log::debug!("Character Saved.");
+}
+
+fn process_load_character(
+    mut loader: EventReader<LoadCharacterReq>,
+    mut active_character: ResMut<ActiveCharacter>,
+) {
+    println!("Load Character requested");
+    loader.read().for_each(|req| {
+        let path = &req.0;
+        match path.extension().and_then(|s| s.to_str()) {
+            Some("toml") => {
+                // Use ours.
+                match poe_tree::character::Character::load_from_toml(path) {
+                    Some(character) => {
+                        active_character.character = character;
+                        println!("Load Character from OUR format finalised");
+                    }
+                    None => eprintln!("Failed to load TOML from {}", path.display()),
+                }
+            }
+            Some("xml") => {
+                // Assume XML is in PoB export format.
+                match std::fs::read_to_string(path) {
+                    Ok(xml_str) => {
+                        match quick_xml::de::from_str::<poe_tree::pob_utils::POBCharacter>(&xml_str)
+                        {
+                            Ok(pob_char) => {
+                                active_character.character = pob_char.into();
+                                println!("Load Character from POB's format finalised");
+                            }
+                            Err(e) => log::error!("XML parse error in {}: {:?}", path.display(), e),
+                        }
+                    }
+                    Err(e) => eprintln!("Failed to read {}: {:?}", path.display(), e),
+                }
+            }
+            Some(ext) => {
+                log::error!("Unsupported file extension: {}", ext);
+            }
+            None => {
+                log::error!("Could not determine file extension for {}", path.display());
+            }
+        }
+    });
 }
 
 // Conditional Helpers to rate-limit systems:

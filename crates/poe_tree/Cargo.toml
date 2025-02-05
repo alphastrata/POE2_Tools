@@ -44,6 +44,7 @@ rayon.workspace = true
 num_cpus.workspace = true
 crossbeam-channel.workspace = true
 regex.workspace = true
+quick-xml = { workspace = true, features = ["serialize"] }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }

@@ -21,7 +21,7 @@ fn main() {
     let keyword = "evasion_rating_+%";
     let min_value = 15.0f32;
 
-    let mut num_nodes = 0;
+    let num_nodes = 0;
 
     // let sum: f32 = tree
     //     .nodes

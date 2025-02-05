@@ -6,6 +6,7 @@ pub mod debug_utils;
 pub mod edges;
 pub mod nodes;
 pub mod pathfinding;
+pub mod pob_utils;
 pub mod skills;
 pub mod stats;
 

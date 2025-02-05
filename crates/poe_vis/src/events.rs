@@ -4,6 +4,7 @@
 use bevy::prelude::Deref;
 use bevy::prelude::*;
 use poe_tree::type_wrappings::*;
+use std::path::PathBuf;
 
 #[derive(Event)]
 pub struct NodeScaleReq(pub Entity, pub f32);
@@ -24,8 +25,9 @@ pub struct NodeActivationReq(pub NodeId);
 #[derive(Event, Deref)]
 pub struct NodeDeactivationReq(pub NodeId);
 
-#[derive(Event)]
-pub struct LoadCharacterReq;
+#[derive(Event, Deref, DerefMut)]
+pub struct LoadCharacterReq(pub PathBuf);
+
 #[derive(Event)]
 pub struct SaveCharacterReq;
 

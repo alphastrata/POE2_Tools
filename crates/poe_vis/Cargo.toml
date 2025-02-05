@@ -35,6 +35,7 @@ serde_json = { workspace = true }
 serde.workspace = true
 toml.workspace = true
 tracing-subscriber.workspace = true
+quick-xml = { workspace = true, features = ["serialize"] }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }

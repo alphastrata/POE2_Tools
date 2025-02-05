@@ -5,7 +5,12 @@ use std::{
     time::Duration,
 };
 
-use bevy::{prelude::*, time::common_conditions::on_timer, utils::HashSet};
+use bevy::{
+    color::{self, palettes::tailwind},
+    prelude::*,
+    time::common_conditions::on_timer,
+    utils::HashSet,
+};
 use bevy_cosmic_edit::{
     cosmic_text::{Attrs, BufferRef, Edit, Family, Metrics},
     prelude::*,
@@ -47,16 +52,10 @@ impl Plugin for SearchToolsPlugin {
                     cleanup_search_results,
                     scan_for_and_higlight_results,
                     egui_searchbox_system,
+                    mark_matches,
                 ),
             );
 
-        app.add_systems(
-            Update,
-            (
-                read_searchtext.run_if(on_timer(Duration::from_millis(32))),
-                (mark_matches).after(read_searchtext).chain(),
-            ),
-        );
         log::debug!("SearchTools plugin is enabled");
     }
 }
@@ -75,24 +74,6 @@ fn egui_searchbox_system(mut search_state: ResMut<SearchState>, mut contexts: Eg
             ui.add(field).request_focus();
         });
     }
-}
-
-fn read_searchtext(
-    mut searchbox_state: ResMut<SearchState>,
-    query: Query<&CosmicEditor, With<SearchMarker>>,
-) {
-    query.iter().for_each(|buffer| {
-        if let BufferRef::Owned(buffer) = buffer.editor.buffer_ref() {
-            buffer.lines.iter().for_each(|l| {
-                let mut txt = l.clone().into_text();
-
-                if searchbox_state.search_query != txt {
-                    txt = txt.trim_start_matches("/").to_string();
-                    std::mem::swap(&mut searchbox_state.search_query, &mut txt);
-                }
-            });
-        }
-    });
 }
 
 fn mark_matches(
@@ -133,14 +114,15 @@ fn mark_matches(
 fn scan_for_and_higlight_results(
     mut gizmos: Gizmos,
     search_results: Query<(&GlobalTransform, &NodeMarker), With<SearchResult>>,
+    materials: Res<GameMaterials>,
 ) {
-    for (transform, _) in &search_results {
+    search_results.iter().for_each(|(transform, _)| {
         gizmos.circle_2d(
             transform.translation().truncate(),
             80.0,
-            Color::hsl(120.0, 1.0, 0.5), // any hue you like
+            tailwind::ORANGE_500,
         );
-    }
+    });
 }
 
 fn cleanup_search_results(
