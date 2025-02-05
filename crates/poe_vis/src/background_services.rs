@@ -83,7 +83,7 @@ impl Plugin for BGServicesPlugin {
                 process_node_colour_changes.run_if(on_event::<NodeColourReq>),
                 process_edge_colour_changes,
                 process_virtual_paths,
-                process_clear_virtual_paths.run_if(no_hover),
+                process_clear_virtual_paths.run_if(on_event::<ClearVirtualPaths>),
                 /* Runs a BFS so, try not to spam it.*/
                 path_repair
                     .run_if(sufficient_active_nodes)
