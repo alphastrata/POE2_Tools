@@ -155,13 +155,22 @@ impl VirtualPath {
         false
     }
 
-    /// NOTE: we keep the VP sorted, so that when (in particular we look for contained edges), we're FAST.
+    /// NOTE: we keep the nodes sorted, so that when (in particular we look for contained edges), we're FAST.
+    /// We do NOT sort the edges (there is no meaning to it in the context of the tree.)
+    /*
+    This change was observed, when we stopped sorting the edges.
+    virtual path contains_edge (unsorted)
+        time:   [22.916 ns 22.953 ns 22.993 ns]
+        change: [-44.287% -43.952% -43.627%] (p = 0.00 < 0.05)
+        Performance has improved.
+     */
     pub fn sort(&mut self) {
         self.nodes.sort_unstable();
-        self.edges.sort_unstable_by_key(|em| {
-            let (s, e) = em.as_tuple();
-            (s, e)
-        });
+        // self.edges.sort_unstable_by_key(|em| {
+        //     let (s, e) = em.as_tuple();
+        //     (s, e)
+        //
+        // });
     }
 }
 

@@ -100,8 +100,6 @@ fn scan_for_hovered(
     let m_virt_edges = Arc::new(Mutex::new(&mut scratch));
 
     edges.par_iter().for_each(|(ent, edg)| {
-        //TODO: measure to see if creating a HashSet of the Nodes we've just picked up is worth it for perf vs the brute force below...
-        //TODO: the pointer on all these is wider than the value, we should do our own custom contains...
         if m_virtpath.contains_edge(edg) {
             m_virt_edges.lock().unwrap().push(edg.clone());
             m_cmd.lock().unwrap().entity(ent).insert(VirtualPathMember);
