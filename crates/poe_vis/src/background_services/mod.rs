@@ -518,8 +518,8 @@ fn process_manual_highlights(
 fn process_virtual_paths(
     mut colour_events: EventWriter<NodeColourReq>,
     game_materials: Res<GameMaterials>,
-    edges: Query<(Entity, &EdgeMarker), With<VirtualPathMember>>,
-    nodes: Query<(Entity, &NodeMarker), With<VirtualPathMember>>,
+    edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
+    nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
 ) {
     nodes.iter().for_each(|(ent, em)| {
         let mat = game_materials.blue.clone();
@@ -583,19 +583,21 @@ fn clear_virtual_paths(
     mut colour_nodes: EventWriter<NodeColourReq>,
     mut colour_events: EventWriter<EdgeColourReq>,
     game_materials: Res<GameMaterials>,
-    edges: Query<(Entity, &EdgeMarker), With<VirtualPathMember>>,
-    nodes: Query<(Entity, &NodeMarker), With<VirtualPathMember>>,
+    edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
+    nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
 ) {
     nodes.iter().for_each(|(ent, em)| {
-        let mat = game_materials.blue.clone();
-        colour_nodes.send(NodeColourReq(ent, mat.clone()));
+        let mat = game_materials.node_base.clone();
         commands.entity(ent).remove::<VirtualPathMember>();
+
+        colour_nodes.send(NodeColourReq(ent, mat.clone()));
     });
 
     edges.iter().for_each(|(ent, em)| {
-        let mat = game_materials.blue.clone();
-        colour_events.send(EdgeColourReq(ent, mat.clone()));
+        let mat = game_materials.edge_base.clone();
         commands.entity(ent).remove::<VirtualPathMember>();
+
+        colour_events.send(EdgeColourReq(ent, mat.clone()));
     });
 }
 
