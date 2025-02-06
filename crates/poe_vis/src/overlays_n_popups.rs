@@ -1,10 +1,18 @@
 use bevy::prelude::*;
+use poe_tree::{character, type_wrappings::NodeId};
+use std::sync::{Arc, Mutex};
 
-use crate::{components::*, PassiveTreeWrapper};
+use crate::{
+    components::*,
+    resources::{ActiveCharacter, VirtualPath},
+    PassiveTreeWrapper,
+};
 
 pub struct OverlaysAndPopupsPlugin;
 impl Plugin for OverlaysAndPopupsPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(VirtualPath::default());
+
         app.add_systems(Update, show_node_info)
             .add_systems(Startup, spawn_hover_text);
     }
@@ -65,4 +73,40 @@ fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         NodeHoverText, // Your custom marker
     ));
+}
+
+fn scan_for_hovered(
+    mut commands: Commands,
+    mut virt_path: ResMut<VirtualPath>,
+    hovered: Query<(Entity, &NodeMarker), With<Hovered>>,
+    edges: Query<(Entity, &EdgeMarker), Without<EdgeActive>>,
+
+    character: Res<ActiveCharacter>,
+    tree: Res<PassiveTreeWrapper>,
+) {
+    let targets: Vec<NodeId> = character.activated_node_ids.iter().copied().collect();
+
+    hovered.iter().for_each(|(ent, nm)| {
+        virt_path.nodes = tree.shortest_to_target_from_any_of(**nm, &targets);
+        commands.entity(ent).insert(VirtualPathMember);
+    });
+    virt_path.nodes.sort();
+
+    // Take only the ref to the vp so we can use fewer mutexes.
+    let m_virtpath = Arc::new(&virt_path);
+
+    let m_cmd = Arc::new(Mutex::new(&mut commands));
+    let mut scratch = vec![];
+    let m_virt_edges = Arc::new(Mutex::new(&mut scratch));
+
+    edges.par_iter().for_each(|(ent, edg)| {
+        //TODO: measure to see if creating a HashSet of the Nodes we've just picked up is worth it for perf vs the brute force below...
+        //TODO: the pointer on all these is wider than the value, we should do our own custom contains...
+        if m_virtpath.contains_edge(edg) {
+            m_virt_edges.lock().unwrap().push(edg.clone());
+            m_cmd.lock().unwrap().entity(ent).insert(VirtualPathMember);
+        }
+    });
+
+    std::mem::swap(&mut virt_path.edges, &mut scratch);
 }

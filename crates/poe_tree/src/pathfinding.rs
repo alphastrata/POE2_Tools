@@ -154,6 +154,19 @@ impl PassiveTree {
 }
 
 impl PassiveTree {
+    pub fn shortest_to_target_from_any_of(
+        &self,
+        target: NodeId,
+        candidates: &[NodeId],
+    ) -> Vec<NodeId> {
+        let mut options = Vec::new();
+        for c in candidates {
+            options.push(self.bfs(*c, target));
+        }
+        options.sort_by_key(|opt| opt.len());
+
+        options[0].to_vec()
+    }
     pub fn bfs(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
