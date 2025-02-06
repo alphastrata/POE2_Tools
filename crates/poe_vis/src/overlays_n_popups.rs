@@ -13,8 +13,14 @@ impl Plugin for OverlaysAndPopupsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(VirtualPath::default());
 
-        app.add_systems(Update, show_node_info)
-            .add_systems(Startup, spawn_hover_text);
+        app.add_systems(Update, show_node_info).add_systems(
+            Startup,
+            (
+                spawn_hover_text,
+                //
+                scan_for_hovered.run_if(resource_exists::<ActiveCharacter>),
+            ),
+        );
     }
 }
 
@@ -90,6 +96,9 @@ fn scan_for_hovered(
         virt_path.nodes = tree.shortest_to_target_from_any_of(**nm, &targets);
         commands.entity(ent).insert(VirtualPathMember);
     });
+    if virt_path.nodes.is_empty() {
+        return;
+    }
     virt_path.nodes.sort();
 
     // Take only the ref to the vp so we can use fewer mutexes.
@@ -107,4 +116,8 @@ fn scan_for_hovered(
     });
 
     std::mem::swap(&mut virt_path.edges, &mut scratch);
+
+    if !virt_path.edges.is_empty() {
+        println!("Hovered edges were found and populated.");
+    }
 }

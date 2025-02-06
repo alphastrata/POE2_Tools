@@ -84,6 +84,7 @@ pub fn hover_started(
             query_nodes.get(ev.target)
         {
             if maybe_hovered.is_none() {
+                println!("SOMETHING HOVERED2");
                 commands.entity(entity).insert(Hovered {
                     timer: Timer::from_seconds(DEFAULT_HOVER_FADE_TIME, TimerMode::Once),
                     base_scale: transform.scale.x,
@@ -109,7 +110,7 @@ pub fn hover_ended(
 ) {
     out_events.read().for_each(|ev| {
         if let Ok((entity, maybe_active, maybe_hovered)) = query_nodes.get(ev.target) {
-            if maybe_hovered.is_some() {
+            if maybe_hovered.is_some() && maybe_active.is_some() {
                 commands.entity(entity).remove::<Hovered>();
 
                 let material = if maybe_active.is_some() {
