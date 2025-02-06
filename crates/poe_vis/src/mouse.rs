@@ -4,7 +4,9 @@ use std::collections::VecDeque;
 use crate::{
     components::*,
     consts::DEFAULT_HOVER_FADE_TIME,
-    events::{NodeActivationReq, NodeColourReq, NodeDeactivationReq},
+    events::{
+        ClearVirtualPath, NodeActivationReq, NodeColourReq, NodeDeactivationReq, VirtualPathReq,
+    },
     materials::GameMaterials,
     resources::*,
 };
@@ -38,7 +40,7 @@ pub fn handle_node_clicks(
             Option<&NodeInactive>,
             Option<&NodeActive>,
         ),
-        Or<(With<NodeInactive>, With<NodeActive>)>,
+        // Or<(With<NodeInactive>, With<NodeActive>)>,
     >,
     mut path_repair: ResMut<PathRepairRequired>,
     mut activate_events: EventWriter<NodeActivationReq>,
@@ -70,6 +72,7 @@ pub fn hover_started(
     mut commands: Commands,
     mut over_events: EventReader<Pointer<Over>>,
     mut colour_events: EventWriter<NodeColourReq>,
+    mut virt_path_starter: EventWriter<VirtualPathReq>,
     query_nodes: Query<(
         Entity,
         &NodeMarker,
@@ -80,8 +83,7 @@ pub fn hover_started(
     game_materials: Res<GameMaterials>,
 ) {
     over_events.read().for_each(|ev| {
-        if let Ok((entity, _marker, transform, maybe_hovered, maybe_active)) =
-            query_nodes.get(ev.target)
+        if let Ok((entity, nm, transform, maybe_hovered, maybe_active)) = query_nodes.get(ev.target)
         {
             if maybe_hovered.is_none() {
                 println!("SOMETHING HOVERED2");
@@ -96,6 +98,7 @@ pub fn hover_started(
                     game_materials.orange.clone_weak()
                 };
                 colour_events.send(NodeColourReq(entity, material));
+                virt_path_starter.send(VirtualPathReq(**nm));
             }
         }
     });
@@ -105,12 +108,15 @@ pub fn hover_ended(
     mut commands: Commands,
     mut out_events: EventReader<Pointer<Out>>,
     mut colour_events: EventWriter<NodeColourReq>,
+    mut virt_path_clear: EventWriter<ClearVirtualPath>,
     query_nodes: Query<(Entity, Option<&NodeActive>, Option<&Hovered>)>,
     game_materials: Res<GameMaterials>,
 ) {
     out_events.read().for_each(|ev| {
         if let Ok((entity, maybe_active, maybe_hovered)) = query_nodes.get(ev.target) {
-            if maybe_hovered.is_some() && maybe_active.is_some() {
+            if maybe_hovered.is_some() {
+                println!("SOMETHING UNHOVERED2");
+
                 commands.entity(entity).remove::<Hovered>();
 
                 let material = if maybe_active.is_some() {
@@ -118,7 +124,9 @@ pub fn hover_ended(
                 } else {
                     game_materials.node_base.clone_weak()
                 };
+
                 colour_events.send(NodeColourReq(entity, material));
+                virt_path_clear.send(ClearVirtualPath);
             }
         }
     });

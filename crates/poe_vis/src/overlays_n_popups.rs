@@ -18,10 +18,22 @@ impl Plugin for OverlaysAndPopupsPlugin {
             (
                 spawn_hover_text,
                 //
+            ),
+        );
+        app.add_systems(
+            Update,
+            (
+                // debug_num_nodes_in_virt_path,
                 scan_for_hovered.run_if(resource_exists::<ActiveCharacter>),
             ),
         );
+
+        log::debug!("OverlaysAndPopups plugin enabled.");
     }
+}
+
+fn debug_num_nodes_in_virt_path(query: Query<(Entity, &NodeMarker), With<VirtualPathMember>>) {
+    println!("Members in VP: {}", query.iter().count());
 }
 
 fn show_node_info(
