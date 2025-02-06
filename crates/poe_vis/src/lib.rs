@@ -20,7 +20,7 @@ use ui::UIPlugin;
 mod background_services;
 mod camera;
 mod characters;
-mod components;
+pub mod components; // Pub because used in benchmarks
 mod config;
 mod consts;
 mod edges;
@@ -32,7 +32,7 @@ mod mouse;
 mod nodes;
 mod overlays_n_popups;
 mod remote;
-mod resources;
+pub mod resources; // Pub because used in benchmarks
 mod search;
 mod ui;
 
