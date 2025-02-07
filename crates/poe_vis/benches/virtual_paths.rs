@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use poe_tree::{type_wrappings::NodeId, PassiveTree};
+use poe_tree::type_wrappings::NodeId;
 use poe_vis::{components::EdgeMarker, resources::VirtualPath};
 
 const SEARCH_FOR_NODES: ([NodeId; 10], [NodeId; 10], [NodeId; 9], [NodeId; 7]) = (

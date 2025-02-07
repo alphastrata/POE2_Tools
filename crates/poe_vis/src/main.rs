@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use tracing_subscriber::{fmt::format::FmtSpan, Layer, Registry};
+use tracing_subscriber::{Layer, Registry};
 fn custom_log_formatting(_app: &mut App) -> Option<Box<dyn Layer<Registry> + Send + Sync>> {
     Some(
         tracing_subscriber::fmt::Layer::default()
