@@ -1,5 +1,6 @@
 use crate::{
-    components::{NodeActive, NodeInactive},
+    background_services::active_nodes_changed,
+    components::{NodeActive, NodeInactive, NodeMarker},
     events::NodeActivationReq,
     resources::{ActiveCharacter, PathRepairRequired, RootNode},
 };
@@ -10,7 +11,13 @@ pub struct CharacterPlugin;
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_character);
+
         app.add_systems(PostStartup, activate_starting_nodes);
+
+        app.add_systems(
+            PostUpdate,
+            update_active_character.run_if(active_nodes_changed),
+        );
 
         log::debug!("CharacterPlugin plugin enabled");
     }
@@ -26,6 +33,13 @@ fn activate_starting_nodes(
         node_activator.send(NodeActivationReq(*nid));
     });
     path_repair.request_path_repair();
+}
+fn update_active_character(
+    mut active_character: ResMut<ActiveCharacter>,
+    actuals: Query<&NodeMarker, With<NodeActive>>,
+) {
+    active_character.activated_node_ids = actuals.into_iter().map(|nm| nm.0).collect();
+    log::debug!("activated node updates pushed to Character");
 }
 
 fn setup_character(

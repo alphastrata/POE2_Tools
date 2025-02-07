@@ -317,6 +317,94 @@ impl PassiveTree {
         })
     }
 
+    pub fn bfs_all_shortest(&self, start: NodeId, targets: &[NodeId]) -> Vec<Vec<NodeId>> {
+        use std::collections::{HashMap, HashSet, VecDeque};
+        let target_set: HashSet<NodeId> = targets.iter().copied().collect();
+        if target_set.is_empty() {
+            return vec![];
+        }
+
+        // Use u16 for distances.
+        let mut info: HashMap<NodeId, (u16, Vec<NodeId>)> = HashMap::new();
+        let mut queue = VecDeque::new();
+        info.insert(start, (0, Vec::new()));
+        queue.push_back(start);
+        let mut found_dist: Option<u16> = None;
+
+        while let Some(current) = queue.pop_front() {
+            // Copy the distance value out to avoid holding an immutable borrow.
+            let cur_dist = info.get(&current).unwrap().0;
+            if let Some(fd) = found_dist {
+                if cur_dist > fd {
+                    break;
+                }
+            }
+            if target_set.contains(&current) {
+                found_dist = Some(cur_dist);
+            }
+            if cur_dist >= Self::STEP_LIMIT {
+                continue;
+            }
+            // Process neighbors.
+            for neighbor in self.edges.iter().filter_map(|edge| {
+                if edge.start == current {
+                    Some(edge.end)
+                } else if edge.end == current {
+                    Some(edge.start)
+                } else {
+                    None
+                }
+            }) {
+                let next_dist = cur_dist + 1;
+                if let Some((d, preds)) = info.get_mut(&neighbor) {
+                    if *d == next_dist {
+                        preds.push(current);
+                    }
+                } else {
+                    info.insert(neighbor, (next_dist, vec![current]));
+                    queue.push_back(neighbor);
+                }
+            }
+        }
+
+        let min_dist = match found_dist {
+            Some(d) => d,
+            None => return vec![],
+        };
+
+        // Gather targets reached with the minimum distance.
+        let reached: Vec<NodeId> = target_set
+            .into_iter()
+            .filter(|&t| info.get(&t).map(|&(d, _)| d) == Some(min_dist))
+            .collect();
+
+        let mut all_paths = Vec::new();
+        for target in reached {
+            all_paths.extend(Self::reconstruct_paths(start, target, &info));
+        }
+        all_paths
+    }
+
+    fn reconstruct_paths(
+        start: NodeId,
+        node: NodeId,
+        info: &HashMap<NodeId, (u16, Vec<NodeId>)>,
+    ) -> Vec<Vec<NodeId>> {
+        if node == start {
+            return vec![vec![start]];
+        }
+        let mut paths = Vec::new();
+        if let Some((_, preds)) = info.get(&node) {
+            for &pred in preds {
+                for mut path in Self::reconstruct_paths(start, pred, info) {
+                    path.push(node);
+                    paths.push(path);
+                }
+            }
+        }
+        paths
+    }
+
     pub fn par_walk_n_steps_use_chains(
         self: Arc<Self>,
         start: NodeId,

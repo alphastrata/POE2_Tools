@@ -33,23 +33,23 @@ use crate::{
 pub(crate) struct BGServicesPlugin;
 
 // Conditional Helpers to rate-limit systems:
-fn active_nodes_changed(query: Query<(), Changed<NodeActive>>) -> bool {
+pub fn active_nodes_changed(query: Query<(), Changed<NodeActive>>) -> bool {
     !query.is_empty()
 }
 
-fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
+pub fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
     !query.is_empty()
 }
 
-fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
+pub fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
     query.iter().count() > 1 // Only run if at least 2 nodes are active
 }
 
-fn something_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
+pub fn something_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
     // println!("SOMETHING HOVERED");
     !query.is_empty()
 }
-fn nothing_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
+pub fn nothing_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
     // println!("NOTHING HOVERED");
     query.is_empty()
 }
@@ -104,7 +104,7 @@ impl Plugin for BGServicesPlugin {
                 //activations:
                 process_node_activations.run_if(on_event::<NodeActivationReq>),
                 process_edge_activations,
-                populate_virtual_path.run_if(on_event::<VirtualPathReq>),
+                populate_virtual_path.run_if(on_event::<VirtualPathReq>.and(time_passed(0.025))),
                 process_virtual_paths
                     .run_if(sufficient_active_nodes)
                     .after(populate_virtual_path),
@@ -123,6 +123,20 @@ impl Plugin for BGServicesPlugin {
         app.add_systems(PostUpdate, clear.run_if(on_event::<ClearAll>));
 
         log::debug!("BGServices plugin enabled");
+    }
+}
+
+// SOURCE: https://github.com/bevyengine/bevy/blob/main/examples/ecs/run_conditions.rs
+/// This is a function that returns a closure which can be used as a run condition.
+///
+/// This is useful because you can reuse the same run condition but with different variables.
+/// This is how the common conditions module works.
+fn time_passed(t: f32) -> impl FnMut(Local<f32>, Res<Time>) -> bool {
+    move |mut timer: Local<f32>, time: Res<Time>| {
+        // Tick the timer
+        *timer += time.delta_secs();
+        // Return true if the timer has passed the time
+        *timer >= t
     }
 }
 
@@ -549,6 +563,11 @@ fn populate_virtual_path(
         .min_by_key(|path| path.len());
 
     if best.is_none() {
+        log::warn!(
+            "No best path found from {:#?} to any of {:#?}",
+            hover_hits,
+            active_character.activated_node_ids
+        );
         return;
     }
 

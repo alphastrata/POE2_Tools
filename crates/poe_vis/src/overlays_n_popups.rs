@@ -33,7 +33,7 @@ impl Plugin for OverlaysAndPopupsPlugin {
 }
 
 fn debug_num_nodes_in_virt_path(query: Query<(Entity, &NodeMarker), With<VirtualPathMember>>) {
-    println!("Members in VP: {}", query.iter().count());
+    log::debug!("Members in VP: {}", query.iter().count());
 }
 
 fn show_node_info(
