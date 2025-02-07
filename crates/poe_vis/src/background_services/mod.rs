@@ -105,7 +105,9 @@ impl Plugin for BGServicesPlugin {
                 process_node_activations.run_if(on_event::<NodeActivationReq>),
                 process_edge_activations,
                 populate_virtual_path.run_if(on_event::<VirtualPathReq>),
-                process_virtual_paths.after(populate_virtual_path),
+                process_virtual_paths
+                    .run_if(sufficient_active_nodes)
+                    .after(populate_virtual_path),
                 clear_virtual_paths.run_if(on_event::<ClearVirtualPath>),
                 process_manual_highlights.run_if(on_event::<ManualHighlightWithColour>),
                 /* Pretty lightweight, can be spammed.*/
@@ -537,8 +539,8 @@ fn populate_virtual_path(
     tree: Res<PassiveTreeWrapper>,
     active_character: Res<ActiveCharacter>,
     mut virt_path_req: EventReader<VirtualPathReq>,
-    edges: Query<(Entity, &EdgeMarker), Without<EdgeActive>>,
-    nodes: Query<(Entity, &NodeMarker), Without<NodeActive>>,
+    edges: Query<(Entity, &EdgeMarker)>,
+    nodes: Query<(Entity, &NodeMarker)>,
 ) {
     let mut test_against: HashSet<NodeId> = active_character
         .activated_node_ids

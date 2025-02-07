@@ -159,14 +159,18 @@ impl PassiveTree {
         target: NodeId,
         candidates: &[NodeId],
     ) -> Vec<NodeId> {
-        let mut options = Vec::new();
-        for c in candidates {
-            options.push(self.bfs(*c, target));
-        }
-        options.sort_by_key(|opt| opt.len());
+        let mut options: Vec<Vec<NodeId>> = candidates
+            .iter()
+            .map(|&c| self.bfs(c, target))
+            .filter(|path| !path.is_empty()) // ignore failed paths
+            .collect();
+        options.sort_by_key(|p| p.len());
 
-        options[0].to_vec()
+        let out = options.first().cloned().unwrap_or_default();
+        dbg!(&out);
+        out
     }
+
     pub fn bfs(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
