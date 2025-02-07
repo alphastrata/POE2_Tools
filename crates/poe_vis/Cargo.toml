@@ -40,3 +40,10 @@ quick-xml = { workspace = true, features = ["serialize"] }
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
 rand.workspace = true
+criterion.workspace = true
+
+
+[[bench]]
+name = "virtual_paths"
+harness = false
+path = "benches/virtual_paths.rs"

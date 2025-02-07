@@ -1,68 +1,41 @@
 use bevy::prelude::*;
-use poe_tree::type_wrappings::NodeId;
+use poe_tree::{character, type_wrappings::NodeId};
 use std::sync::{Arc, Mutex};
 
 use crate::{
     components::*,
-    events::{ClearVirtualPaths, EdgeColourReq, NodeColourReq},
-    materials::GameMaterials,
-    resources::ActiveCharacter,
+    resources::{ActiveCharacter, VirtualPath},
     PassiveTreeWrapper,
 };
 
 pub struct OverlaysAndPopupsPlugin;
 impl Plugin for OverlaysAndPopupsPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(VirtualPath::default());
+
+        app.add_systems(Update, show_node_info).add_systems(
+            Startup,
+            (
+                spawn_hover_text,
+                //
+            ),
+        );
         app.add_systems(
             Update,
             (
-                virtual_path_to_node_under_cursor,
-                cleanup_virtual_paths,
-                show_node_info,
+                debug_num_nodes_in_virt_path,
+                scan_for_hovered.run_if(resource_exists::<ActiveCharacter>),
             ),
-        )
-        .add_systems(Startup, spawn_hover_text);
+        );
+
+        log::debug!("OverlaysAndPopups plugin enabled.");
     }
 }
 
-fn virtual_path_to_node_under_cursor(
-    mut commands: Commands,
-    character: Res<ActiveCharacter>,
-    hovered: Query<(Entity, &Hovered, &NodeMarker), With<NodeInactive>>,
-    edges: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
-    tree: Res<PassiveTreeWrapper>,
-) {
-    let tree = &**tree;
-    let mut must_colour_edges = vec![];
-    let targets: Vec<NodeId> = character.activated_node_ids.iter().map(|v| *v).collect();
-
-    hovered.iter().for_each(|(ent, _hovered, nm)| {
-        tree.shortest_to_target_from_any_of(**nm, &targets)
-            .into_iter()
-            .for_each(|hit| {
-                commands.entity(ent).insert(VirtualPath);
-                must_colour_edges.push(hit);
-            });
-    });
-
-    let a_cmds = Arc::new(Mutex::new(&mut commands));
-    edges.par_iter().for_each(|(ent, em)| {
-        let (s, e) = em.as_tuple();
-        if must_colour_edges.contains(&s) && must_colour_edges.contains(&e) {
-            a_cmds.lock().unwrap().entity(ent).insert(VirtualPath);
-        }
-    });
-}
-fn cleanup_virtual_paths(
-    mut out_events: EventReader<Pointer<Out>>,
-    mut cleanup: EventWriter<ClearVirtualPaths>,
-) {
-    for _r in out_events.read() {
-        cleanup.send(ClearVirtualPaths);
-    }
+fn debug_num_nodes_in_virt_path(query: Query<(Entity, &NodeMarker), With<VirtualPathMember>>) {
+    println!("Members in VP: {}", query.iter().count());
 }
 
-//TODO: insert the virtual path length's extension to reach this node.
 fn show_node_info(
     windows: Query<&Window>,
     hovered: Query<(&Hovered, &NodeMarker, Option<&NodeActive>)>,
@@ -118,4 +91,10 @@ fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         NodeHoverText, // Your custom marker
     ));
+}
+
+fn scan_for_hovered(mut commands: Commands, hovered: Query<(Entity, &NodeMarker), With<Hovered>>) {
+    hovered.iter().for_each(|(ent, _nm)| {
+        commands.entity(ent).insert(VirtualPathMember);
+    });
 }

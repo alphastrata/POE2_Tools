@@ -6,6 +6,12 @@ use bevy::prelude::*;
 use poe_tree::type_wrappings::*;
 use std::path::PathBuf;
 
+#[derive(Event, DerefMut, Deref)]
+pub struct VirtualPathReq(pub NodeId);
+
+#[derive(Event)]
+pub struct ClearVirtualPath;
+
 #[derive(Event)]
 pub struct NodeScaleReq(pub Entity, pub f32);
 

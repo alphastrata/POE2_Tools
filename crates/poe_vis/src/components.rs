@@ -7,7 +7,7 @@ use poe_tree::{
 #[derive(Component, Deref, DerefMut)]
 pub struct NodeMarker(pub NodeId); // Marker component for nodes
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct EdgeMarker(pub NodeId, pub NodeId); // Marker component for nodes
 
 impl EdgeMarker {
@@ -18,6 +18,9 @@ impl EdgeMarker {
 
 #[derive(Component)]
 pub struct NodeActive;
+
+#[derive(Component)]
+pub struct VirtualPathMember;
 
 #[derive(Component)]
 pub struct ManuallyHighlighted;

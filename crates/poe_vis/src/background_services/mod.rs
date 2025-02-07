@@ -1,3 +1,5 @@
+mod generated;
+
 use std::{
     ops::ControlFlow,
     sync::{Arc, Mutex},
@@ -27,14 +29,38 @@ use crate::{
     resources::*,
     search, PassiveTreeWrapper,
 };
+
 pub(crate) struct BGServicesPlugin;
+
+// Conditional Helpers to rate-limit systems:
+fn active_nodes_changed(query: Query<(), Changed<NodeActive>>) -> bool {
+    !query.is_empty()
+}
+
+fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
+    !query.is_empty()
+}
+
+fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
+    query.iter().count() > 1 // Only run if at least 2 nodes are active
+}
+
+fn something_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
+    // println!("SOMETHING HOVERED");
+    !query.is_empty()
+}
+fn nothing_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
+    // println!("NOTHING HOVERED");
+    query.is_empty()
+}
 
 impl Plugin for BGServicesPlugin {
     fn build(&self, app: &mut App) {
         app
             // Spacing..
             .add_event::<ClearAll>()
-            .add_event::<ClearVirtualPaths>()
+            .add_event::<ClearVirtualPath>()
+            .add_event::<VirtualPathReq>()
             .add_event::<EdgeActivationReq>()
             .add_event::<EdgeColourReq>()
             .add_event::<EdgeDeactivationReq>()
@@ -78,12 +104,15 @@ impl Plugin for BGServicesPlugin {
                 //activations:
                 process_node_activations.run_if(on_event::<NodeActivationReq>),
                 process_edge_activations,
+                populate_virtual_path.run_if(on_event::<VirtualPathReq>),
+                process_virtual_paths
+                    .run_if(sufficient_active_nodes)
+                    .after(populate_virtual_path),
+                clear_virtual_paths.run_if(on_event::<ClearVirtualPath>),
                 process_manual_highlights.run_if(on_event::<ManualHighlightWithColour>),
                 /* Pretty lightweight, can be spammed.*/
                 process_node_colour_changes.run_if(on_event::<NodeColourReq>),
                 process_edge_colour_changes,
-                process_virtual_paths,
-                process_clear_virtual_paths.run_if(on_event::<ClearVirtualPaths>),
                 /* Runs a BFS so, try not to spam it.*/
                 path_repair
                     .run_if(sufficient_active_nodes)
@@ -95,10 +124,6 @@ impl Plugin for BGServicesPlugin {
 
         log::debug!("BGServices plugin enabled");
     }
-}
-
-fn no_hover(hovered: Query<Entity, With<Hovered>>) -> bool {
-    hovered.is_empty()
 }
 
 fn scan_for_char_updates(
@@ -202,33 +227,6 @@ fn process_load_character(
     });
 }
 
-// Conditional Helpers to rate-limit systems:
-fn active_nodes_changed(query: Query<(), Changed<NodeActive>>) -> bool {
-    !query.is_empty()
-}
-
-fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
-    !query.is_empty()
-}
-
-fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
-    query.iter().count() > 1 // Only run if at least 2 nodes are active
-}
-
-// BG SERVICES INBOUND:
-fn process_scale_requests(
-    mut scale_events: EventReader<NodeScaleReq>,
-    mut transforms: Query<&mut Transform>,
-) {
-    scale_events
-        .read()
-        .for_each(|NodeScaleReq(entity, new_scale)| {
-            if let Ok(mut t) = transforms.get_mut(*entity) {
-                t.scale = Vec3::splat(*new_scale);
-            }
-        });
-}
-
 //Activations
 fn process_node_activations(
     mut activation_events: EventReader<NodeActivationReq>,
@@ -316,14 +314,7 @@ fn scan_edges_for_active_updates(
 fn process_node_deactivations(
     mut deactivation_events: EventReader<NodeDeactivationReq>,
     mut colour_events: EventWriter<NodeColourReq>,
-    query: Query<
-        (Entity, &NodeMarker),
-        (
-            With<NodeActive>,
-            Without<ManuallyHighlighted>,
-            Without<VirtualPath>,
-        ),
-    >,
+    query: Query<(Entity, &NodeMarker), (With<NodeActive>, Without<ManuallyHighlighted>)>,
     mut commands: Commands,
     game_materials: Res<GameMaterials>,
 ) {
@@ -510,7 +501,7 @@ fn process_manual_highlights(
                 .other
                 .entry(colour_str.to_owned())
                 .or_insert_with(|| {
-                    let color = crate::parse_tailwind_color(colour_str);
+                    let color = generated::parse_tailwind_color(colour_str);
                     materials.add(color)
                 })
                 .clone();
@@ -527,37 +518,89 @@ fn process_manual_highlights(
 }
 
 fn process_virtual_paths(
-    mut node_colouriser: EventWriter<NodeColourReq>,
-    mut edge_colouriser: EventWriter<EdgeColourReq>,
-    nodes: Query<(Entity, &NodeMarker), With<VirtualPath>>,
-    edges: Query<(Entity, &EdgeMarker), With<VirtualPath>>,
-    materials: Res<GameMaterials>,
+    mut colour_events: EventWriter<NodeColourReq>,
+    game_materials: Res<GameMaterials>,
+    edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
+    nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
 ) {
-    nodes.iter().for_each(|(ent, nm)| {
-        log::debug!("{} is in the VirtualPath", **nm);
-        node_colouriser.send(NodeColourReq(ent, materials.blue.clone()));
+    nodes.iter().for_each(|(ent, em)| {
+        let mat = game_materials.blue.clone();
+        colour_events.send(NodeColourReq(ent, mat.clone()));
     });
 
-    let edg_tx = Arc::new(Mutex::new(&mut edge_colouriser));
-    edges.par_iter().for_each(|(ent, _em)| {
-        edg_tx
-            .lock()
-            .unwrap()
-            .send(EdgeColourReq(ent, materials.blue.clone()));
+    edges.iter().for_each(|(ent, em)| {
+        let mat = game_materials.blue.clone();
+        colour_events.send(NodeColourReq(ent, mat.clone()));
+    });
+}
+fn populate_virtual_path(
+    mut commands: Commands,
+    tree: Res<PassiveTreeWrapper>,
+    active_character: Res<ActiveCharacter>,
+    mut virt_path_req: EventReader<VirtualPathReq>,
+    edges: Query<(Entity, &EdgeMarker), Without<EdgeActive>>,
+    nodes: Query<(Entity, &NodeMarker), Without<NodeActive>>,
+) {
+    let hover_hits: Vec<NodeId> = virt_path_req.read().map(|req| **req).collect();
+    let best = active_character
+        .activated_node_ids
+        .iter()
+        .filter_map(|&candidate| tree.shortest_to_target_from_any_of(candidate, &hover_hits))
+        .min_by_key(|path| path.len());
+
+    if best.is_none() {
+        return;
+    }
+
+    let best = best.unwrap();
+    nodes
+        .iter()
+        .filter(|(_, nm)| best.contains(&nm.0))
+        .for_each(|(ent, _)| {
+            commands.entity(ent).insert(VirtualPathMember);
+        });
+
+    let m_cmd = Arc::new(Mutex::new(&mut commands));
+    edges.par_iter().for_each(|(ent, em)| {
+        let (start, end) = em.as_tuple();
+        if best.contains(&start) && best.contains(&end) {
+            m_cmd.lock().unwrap().entity(ent).insert(VirtualPathMember);
+        }
     });
 }
 
-fn process_clear_virtual_paths(
+fn clear_virtual_paths(
     mut commands: Commands,
-    nodes: Query<(Entity, &NodeMarker), With<VirtualPath>>,
-    edges: Query<(Entity, &EdgeMarker), With<VirtualPath>>,
+    mut colour_nodes: EventWriter<NodeColourReq>,
+    mut colour_events: EventWriter<EdgeColourReq>,
+    game_materials: Res<GameMaterials>,
+    edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
+    nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
 ) {
-    nodes.iter().for_each(|(ent, _nm)| {
-        commands.entity(ent).remove::<VirtualPath>();
+    nodes.iter().for_each(|(ent, em)| {
+        let mat = game_materials.node_base.clone();
+        commands.entity(ent).remove::<VirtualPathMember>();
+
+        colour_nodes.send(NodeColourReq(ent, mat.clone()));
     });
 
-    let a_cmds = Arc::new(Mutex::new(&mut commands));
-    edges.par_iter().for_each(|(ent, _em)| {
-        a_cmds.lock().unwrap().entity(ent).remove::<VirtualPath>();
+    edges.iter().for_each(|(ent, em)| {
+        let mat = game_materials.edge_base.clone();
+        commands.entity(ent).remove::<VirtualPathMember>();
+
+        colour_events.send(EdgeColourReq(ent, mat.clone()));
     });
+}
+
+fn process_scale_requests(
+    mut scale_events: EventReader<NodeScaleReq>,
+    mut transforms: Query<&mut Transform>,
+) {
+    scale_events
+        .read()
+        .for_each(|NodeScaleReq(entity, new_scale)| {
+            if let Ok(mut t) = transforms.get_mut(*entity) {
+                t.scale = Vec3::splat(*new_scale);
+            }
+        });
 }
