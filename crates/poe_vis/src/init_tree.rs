@@ -56,11 +56,11 @@ fn spawn_nodes(
 
         commands.spawn((
             Mesh2d(meshes.add(Circle::new(node_radius))),
-            MeshMaterial2d(materials.node_base.clone()),
+            MeshMaterial2d(materials.node_base.clone_weak()),
             Transform::from_translation(Vec3::new(x, y, NODE_PLACEMENT_Z_IDX)),
             NodeMarker(node.node_id),
             NodeInactive,
-            Skill(node.as_passive_skill(&tree).clone()),
+            Skill(node.as_passive_skill(&tree).clone_weak()),
         ));
     });
 
@@ -105,7 +105,7 @@ fn spawn_edges(
 
         commands.spawn((
             Mesh2d(meshes.add(Rectangle::new(width, height))),
-            MeshMaterial2d(materials.edge_base.clone()),
+            MeshMaterial2d(materials.edge_base.clone_weak()),
             EdgeMarker(edge.start, edge.end),
             Transform::from_translation(midpoint.extend(EDGE_PLACEMENT_Z_IDX))
                 .with_rotation(Quat::from_rotation_z(angle)),

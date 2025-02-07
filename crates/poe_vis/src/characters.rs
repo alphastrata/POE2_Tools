@@ -1,7 +1,7 @@
 use crate::{
     background_services::active_nodes_changed,
     components::{NodeActive, NodeInactive, NodeMarker},
-    events::NodeActivationReq,
+    events::{LoadCharacterReq, NodeActivationReq, VirtualPathReq},
     resources::{ActiveCharacter, PathRepairRequired, RootNode},
 };
 use bevy::{color::Color, prelude::*, utils::HashMap};
@@ -12,11 +12,20 @@ impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_character);
 
-        app.add_systems(PostStartup, activate_starting_nodes);
+        app.add_systems(Startup, activate_starting_nodes);
+
+        app.add_systems(
+            Update,
+            activate_starting_nodes.run_if(on_event::<LoadCharacterReq>),
+        );
 
         app.add_systems(
             PostUpdate,
-            update_active_character.run_if(active_nodes_changed),
+            update_active_character.run_if(
+                active_nodes_changed
+                    .or(on_event::<VirtualPathReq>)
+                    .or(on_event::<NodeActivationReq>),
+            ),
         );
 
         log::debug!("CharacterPlugin plugin enabled");

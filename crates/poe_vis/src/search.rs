@@ -98,7 +98,7 @@ fn mark_matches(
         .filter(|(_, nm)| !new_matches.contains(&nm.0))
         .for_each(|(ent, _)| {
             commands.entity(ent).remove::<SearchResult>();
-            colour_events.send(NodeColourReq(ent, materials.node_base.clone()));
+            colour_events.send(NodeColourReq(ent, materials.node_base.clone_weak()));
         });
 
     let cmd = Arc::new(Mutex::new(commands));

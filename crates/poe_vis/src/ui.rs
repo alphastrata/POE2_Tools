@@ -56,7 +56,7 @@ fn egui_ui_system(
     settings: Res<CameraSettings>,
     searchbox_state: ResMut<SearchState>,
 ) {
-    topbar_menu_system(&mut contexts, &mut save_tx, &mut load_tx);
+    topbar_menu_system(&mut contexts, &mut save_tx, &mut load_tx, &mut clear_all_tx);
 
     rhs_menu(
         active_nodes,
@@ -172,6 +172,7 @@ fn topbar_menu_system(
     contexts: &mut EguiContexts<'_, '_>,
     save_tx: &mut EventWriter<SaveCharacterReq>,
     load_tx: &mut EventWriter<LoadCharacterReq>,
+    clear_all_tx: &mut EventWriter<ClearAll>,
 ) {
     let ctx = contexts.ctx_mut();
     egui::TopBottomPanel::top("top_menu").show(ctx, |ui| {
@@ -187,6 +188,7 @@ fn topbar_menu_system(
                         .add_filter("PoB File", &["xml", "toml"])
                         .pick_file()
                     {
+                        clear_all_tx.send(ClearAll);
                         log::trace!("Selected file: {:?}", path);
                         load_tx.send(LoadCharacterReq(path));
                         return;

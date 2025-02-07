@@ -168,7 +168,7 @@ fn scan_for_char_updates(
 
 fn clear(
     query: Query<(Entity, &NodeMarker)>,
-    // rx: EventReader<ClearAll>,
+    // rx: EventReader<ClearAll>, // run_condition
     mut commands: Commands,
     game_materials: Res<GameMaterials>,
     mut colour_events: EventWriter<NodeColourReq>,
@@ -178,10 +178,14 @@ fn clear(
     query.iter().for_each(|(ent, _nid)| {
         commands.entity(ent).remove::<NodeActive>();
         commands.entity(ent).remove::<ManuallyHighlighted>();
+        commands.entity(ent).remove::<VirtualPathMember>();
         commands.entity(ent).insert(NodeInactive);
+
         colour_events.send(NodeColourReq(ent, mat.clone_weak()));
     });
+    log::debug!("ClearAll executed successfully, NOTHING should be highlighet/coloured etc.");
 }
+
 fn process_save_character(
     // save: EventReader<SaveCharacterReq>, // #run_condition
     mut active_character: ResMut<ActiveCharacter>,
@@ -325,7 +329,7 @@ fn scan_edges_for_active_updates(
 }
 
 // Deactivations
-fn process_node_deactivations(
+pub fn process_node_deactivations(
     mut deactivation_events: EventReader<NodeDeactivationReq>,
     mut colour_events: EventWriter<NodeColourReq>,
     query: Query<(Entity, &NodeMarker), (With<NodeActive>, Without<ManuallyHighlighted>)>,
@@ -524,7 +528,7 @@ fn process_manual_highlights(
                 if **marker == *node_id {
                     commands.entity(ent).remove::<NodeInactive>();
                     commands.entity(ent).remove::<NodeActive>();
-                    colour_events.send(NodeColourReq(ent, mat.clone()));
+                    colour_events.send(NodeColourReq(ent, mat.clone_weak()));
                     commands.entity(ent).insert(ManuallyHighlighted);
                 }
             });
@@ -538,13 +542,13 @@ fn process_virtual_paths(
     nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
 ) {
     nodes.iter().for_each(|(ent, em)| {
-        let mat = game_materials.blue.clone();
-        colour_events.send(NodeColourReq(ent, mat.clone()));
+        let mat = game_materials.blue.clone_weak();
+        colour_events.send(NodeColourReq(ent, mat.clone_weak()));
     });
 
     edges.iter().for_each(|(ent, em)| {
-        let mat = game_materials.blue.clone();
-        colour_events.send(NodeColourReq(ent, mat.clone()));
+        let mat = game_materials.blue.clone_weak();
+        colour_events.send(NodeColourReq(ent, mat.clone_weak()));
     });
 }
 fn populate_virtual_path(
@@ -597,17 +601,17 @@ fn clear_virtual_paths(
     nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
 ) {
     nodes.iter().for_each(|(ent, em)| {
-        let mat = game_materials.node_base.clone();
+        let mat = game_materials.node_base.clone_weak();
         commands.entity(ent).remove::<VirtualPathMember>();
 
-        colour_nodes.send(NodeColourReq(ent, mat.clone()));
+        colour_nodes.send(NodeColourReq(ent, mat.clone_weak()));
     });
 
     edges.iter().for_each(|(ent, em)| {
-        let mat = game_materials.edge_base.clone();
+        let mat = game_materials.edge_base.clone_weak();
         commands.entity(ent).remove::<VirtualPathMember>();
 
-        colour_events.send(EdgeColourReq(ent, mat.clone()));
+        colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
     });
 }
 
