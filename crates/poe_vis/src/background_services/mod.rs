@@ -533,7 +533,6 @@ fn process_virtual_paths(
         colour_events.send(NodeColourReq(ent, mat.clone()));
     });
 }
-
 fn populate_virtual_path(
     mut commands: Commands,
     tree: Res<PassiveTreeWrapper>,
@@ -542,27 +541,34 @@ fn populate_virtual_path(
     edges: Query<(Entity, &EdgeMarker)>,
     nodes: Query<(Entity, &NodeMarker)>,
 ) {
-    let mut test_against: HashSet<NodeId> = active_character
+    let hover_hits: Vec<NodeId> = virt_path_req.read().map(|req| **req).collect();
+
+    let mut best = None;
+    active_character
         .activated_node_ids
-        .iter()
-        .map(|v| *v)
-        .collect();
+        .into_iter()
+        .flat_map(|candidate| tree.shortest_to_target_from_any_of(candidate, &hover_hits))
+        .for_each(|v| best = v);
 
-    virt_path_req.read().for_each(|target| {
-        let candidates: Vec<NodeId> = active_character
-            .activated_node_ids
-            .iter()
-            .map(|v| *v)
-            .collect();
+    // let mut test_against: HashSet<NodeId> = active_character
+    //     .activated_node_ids
+    //     .iter()
+    //     .copied()
+    //     .collect();
 
-        let added = tree
-            .shortest_to_target_from_any_of(**target, &candidates)
-            .into_iter()
-            .map(|nid| test_against.insert(nid))
-            .count();
+    // virt_path_req.read().for_each(|target| {
+    //     let candidates = active_character
+    //         .activated_node_ids
+    //         .iter()
+    //         .copied()
+    //         .collect::<Vec<_>>();
 
-        log::debug!("added {}", added);
-    });
+    //     if let Some(path) = tree.shortest_to_target_from_any_of(**target, &candidates) {
+    //         path.into_iter().for_each(|nid| {
+    //             test_against.remove(&nid);
+    //         });
+    //     }
+    // });
 
     nodes
         .iter()
@@ -574,7 +580,7 @@ fn populate_virtual_path(
     let m_cmd = Arc::new(Mutex::new(&mut commands));
     edges.par_iter().for_each(|(ent, em)| {
         let (start, end) = em.as_tuple();
-        if let (true, true) = (test_against.contains(&start), test_against.contains(&end)) {
+        if test_against.contains(&start) && test_against.contains(&end) {
             m_cmd.lock().unwrap().entity(ent).insert(VirtualPathMember);
         }
     });

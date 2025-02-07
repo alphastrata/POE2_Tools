@@ -23,7 +23,7 @@ impl Plugin for OverlaysAndPopupsPlugin {
         app.add_systems(
             Update,
             (
-                // debug_num_nodes_in_virt_path,
+                debug_num_nodes_in_virt_path,
                 scan_for_hovered.run_if(resource_exists::<ActiveCharacter>),
             ),
         );
@@ -93,43 +93,8 @@ fn spawn_hover_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 }
 
-fn scan_for_hovered(
-    mut commands: Commands,
-    mut virt_path: ResMut<VirtualPath>,
-    hovered: Query<(Entity, &NodeMarker), With<Hovered>>,
-    edges: Query<(Entity, &EdgeMarker), Without<EdgeActive>>,
-
-    character: Res<ActiveCharacter>,
-    tree: Res<PassiveTreeWrapper>,
-) {
-    let targets: Vec<NodeId> = character.activated_node_ids.iter().copied().collect();
-
-    hovered.iter().for_each(|(ent, nm)| {
-        virt_path.nodes = tree.shortest_to_target_from_any_of(**nm, &targets);
+fn scan_for_hovered(mut commands: Commands, hovered: Query<(Entity, &NodeMarker), With<Hovered>>) {
+    hovered.iter().for_each(|(ent, _nm)| {
         commands.entity(ent).insert(VirtualPathMember);
     });
-    if virt_path.nodes.is_empty() {
-        return;
-    }
-    virt_path.nodes.sort();
-
-    // Take only the ref to the vp so we can use fewer mutexes.
-    let m_virtpath = Arc::new(&virt_path);
-
-    let m_cmd = Arc::new(Mutex::new(&mut commands));
-    let mut scratch = vec![];
-    let m_virt_edges = Arc::new(Mutex::new(&mut scratch));
-
-    edges.par_iter().for_each(|(ent, edg)| {
-        if m_virtpath.contains_edge(edg) {
-            m_virt_edges.lock().unwrap().push(edg.clone());
-            m_cmd.lock().unwrap().entity(ent).insert(VirtualPathMember);
-        }
-    });
-
-    std::mem::swap(&mut virt_path.edges, &mut scratch);
-
-    if !virt_path.edges.is_empty() {
-        println!("Hovered edges were found and populated.");
-    }
 }

@@ -47,66 +47,66 @@ fn main() {
     let start_node_ids: Vec<NodeId> = char_start_nodes.keys().cloned().collect();
 
     // Use the library's parallel Dijkstra function to get paths
-    let paths = tree.parallel_dijkstra_with_all_paths(&start_node_ids, &levels);
+    // let paths = tree.parallel_dijkstra_with_all_paths(&start_node_ids, &levels);
 
-    for ((start, level), path) in &paths {
-        // Get the class name from the start node ID
-        let class_name = char_start_nodes.get(start).unwrap_or(&"Unknown");
+    // for ((start, level), path) in &paths {
+    //     // Get the class name from the start node ID
+    //     let class_name = char_start_nodes.get(start).unwrap_or(&"Unknown");
 
-        // Truncate the path
-        let truncated_path = truncate_path(path);
+    //     // Truncate the path
+    //     let truncated_path = truncate_path(path);
 
-        // Calculate sum and count of stats using iterators
-        // let (_num_nodes, sum) = path.iter().fold((0, 0.0f32), |(count, acc), &node_id| {
-        //     if let Some(poe_node) = tree.nodes.get(&node_id) {
-        //         let skill = poe_node.as_passive_skill(&tree);
-        // let node_sum: f32 = skill
-        //     .stats()
-        //     .iter()
-        // .filter(|s| {
-        // s.name.contains(keyword)
-        //     && s.value > min_value
-        //     && matches!(s.operand, Operand::Percentage)
-        // })
-        // .map(|s| {
-        //     println!("total+={:?}", s.value);
-        //     s.value
-        // })
-        // .sum();
+    //     // Calculate sum and count of stats using iterators
+    //     // let (_num_nodes, sum) = path.iter().fold((0, 0.0f32), |(count, acc), &node_id| {
+    //     //     if let Some(poe_node) = tree.nodes.get(&node_id) {
+    //     //         let skill = poe_node.as_passive_skill(&tree);
+    //     // let node_sum: f32 = skill
+    //     //     .stats()
+    //     //     .iter()
+    //     // .filter(|s| {
+    //     // s.name.contains(keyword)
+    //     //     && s.value > min_value
+    //     //     && matches!(s.operand, Operand::Percentage)
+    //     // })
+    //     // .map(|s| {
+    //     //     println!("total+={:?}", s.value);
+    //     //     s.value
+    //     // })
+    //     // .sum();
 
-        // if node_sum > 0.0 {
-        //     (count + 1, acc + node_sum)
-        // } else {
-        //     (count, acc)
-        // }
-        //     } else {
-        //         (count, acc)
-        //     }
-        // });
+    //     // if node_sum > 0.0 {
+    //     //     (count + 1, acc + node_sum)
+    //     // } else {
+    //     //     (count, acc)
+    //     // }
+    //     //     } else {
+    //     //         (count, acc)
+    //     //     }
+    //     // });
 
-        // Debugging: Inspect stats on nodes with non-zero contributions
-        for &node_id in path {
-            if let Some(poe_node) = tree.nodes.get(&node_id) {
-                let skill = poe_node.as_passive_skill(&tree);
-                for stat in skill.stats().iter() {
-                    if stat.name() == keyword {
-                        // println!(
-                        //     "Node {}: {} = {} {:?}",
-                        //     node_id,
-                        //     stat.name(),
-                        //     stat.value,
-                        //     stat.operand
-                        // );
-                    }
-                }
-            }
-        }
+    //     // Debugging: Inspect stats on nodes with non-zero contributions
+    //     for &node_id in path {
+    //         if let Some(poe_node) = tree.nodes.get(&node_id) {
+    //             let skill = poe_node.as_passive_skill(&tree);
+    //             for stat in skill.stats().iter() {
+    //                 if stat.name() == keyword {
+    //                     // println!(
+    //                     //     "Node {}: {} = {} {:?}",
+    //                     //     node_id,
+    //                     //     stat.name(),
+    //                     //     stat.value,
+    //                     //     stat.operand
+    //                     // );
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        // if sum > 0.0 {
-        //     println!(
-        //         "{} @{} can obtain {:.1} to {} with path: {}",
-        //         class_name, level, sum, keyword, truncated_path
-        //     );
-        // }
-    }
+    //     // if sum > 0.0 {
+    //     //     println!(
+    //     //         "{} @{} can obtain {:.1} to {} with path: {}",
+    //     //         class_name, level, sum, keyword, truncated_path
+    //     //     );
+    //     // }
+    // }
 }
