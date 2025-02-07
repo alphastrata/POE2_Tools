@@ -538,41 +538,24 @@ fn populate_virtual_path(
     tree: Res<PassiveTreeWrapper>,
     active_character: Res<ActiveCharacter>,
     mut virt_path_req: EventReader<VirtualPathReq>,
-    edges: Query<(Entity, &EdgeMarker)>,
-    nodes: Query<(Entity, &NodeMarker)>,
+    edges: Query<(Entity, &EdgeMarker), Without<EdgeActive>>,
+    nodes: Query<(Entity, &NodeMarker), Without<NodeActive>>,
 ) {
     let hover_hits: Vec<NodeId> = virt_path_req.read().map(|req| **req).collect();
-
-    let mut best = None;
-    active_character
+    let best = active_character
         .activated_node_ids
-        .into_iter()
-        .flat_map(|candidate| tree.shortest_to_target_from_any_of(candidate, &hover_hits))
-        .for_each(|v| best = v);
+        .iter()
+        .filter_map(|&candidate| tree.shortest_to_target_from_any_of(candidate, &hover_hits))
+        .min_by_key(|path| path.len());
 
-    // let mut test_against: HashSet<NodeId> = active_character
-    //     .activated_node_ids
-    //     .iter()
-    //     .copied()
-    //     .collect();
+    if best.is_none() {
+        return;
+    }
 
-    // virt_path_req.read().for_each(|target| {
-    //     let candidates = active_character
-    //         .activated_node_ids
-    //         .iter()
-    //         .copied()
-    //         .collect::<Vec<_>>();
-
-    //     if let Some(path) = tree.shortest_to_target_from_any_of(**target, &candidates) {
-    //         path.into_iter().for_each(|nid| {
-    //             test_against.remove(&nid);
-    //         });
-    //     }
-    // });
-
+    let best = best.unwrap();
     nodes
         .iter()
-        .filter(|(_, nm)| test_against.contains(&nm.0))
+        .filter(|(_, nm)| best.contains(&nm.0))
         .for_each(|(ent, _)| {
             commands.entity(ent).insert(VirtualPathMember);
         });
@@ -580,7 +563,7 @@ fn populate_virtual_path(
     let m_cmd = Arc::new(Mutex::new(&mut commands));
     edges.par_iter().for_each(|(ent, em)| {
         let (start, end) = em.as_tuple();
-        if test_against.contains(&start) && test_against.contains(&end) {
+        if best.contains(&start) && best.contains(&end) {
             m_cmd.lock().unwrap().entity(ent).insert(VirtualPathMember);
         }
     });
