@@ -153,7 +153,7 @@ impl PassiveTree {
         self.bfs(a, b)
     }
 
-    pub fn shorto_target_from_any_of(
+    pub fn shortest_to_target_from_any_of(
         &self,
         target: NodeId,
         candidates: &[NodeId],
