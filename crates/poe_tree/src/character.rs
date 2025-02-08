@@ -1,4 +1,4 @@
-use crate::{stats::Stat, type_wrappings::NodeId, PassiveTree};
+use crate::{pob_utils, stats::Stat, type_wrappings::NodeId, PassiveTree};
 use chrono::{DateTime, Utc};
 use core::fmt;
 use serde::{Deserialize, Serialize};
@@ -20,6 +20,28 @@ pub struct Character {
 }
 
 impl Character {
+    fn load_pob_empty(file: &str) -> Self {
+        let xml = std::fs::read_to_string(file).unwrap();
+        let pob_char: pob_utils::POBCharacter = quick_xml::de::from_str(&xml).unwrap();
+        pob_char.into()
+    }
+
+    pub fn default_sorceress() -> Self {
+        Self::load_pob_empty("../../data/empty-sorceress.xml")
+    }
+    pub fn default_witch() -> Self {
+        Self::default_sorceress()
+    }
+    pub fn default_monk() -> Self {
+        Self::load_pob_empty("../../data/empty-monk.xml")
+    }
+    pub fn default_ranger() -> Self {
+        Self::load_pob_empty("../../data/empty-ranger.xml")
+    }
+    pub fn default_warrior() -> Self {
+        Self::load_pob_empty("../../data/empty-warrior.xml")
+    }
+
     pub fn save_to_toml<P: AsRef<Path>>(&self, path: P) -> Result<(), io::Error> {
         let toml_string = toml::to_string(self).expect("Failed to serialize to TOML");
         fs::write(path, toml_string)
@@ -47,28 +69,7 @@ impl Character {
         start
     }
 
-    /// Calculations:
-    /*
-    At a minimum we should support the + to maximum and +% to for all of:
-    - energy shield
-    - evasion rating
-    - life
-    - attack speed
-    - chance to evade (% only?)
-    - attack damage
-    - physi
-
-     */
-    // pub fn calculate_evasion_rating(&self, tree: &PassiveTree) -> f32 {
-    //     //NOTE: I think we just sum all the + to maximum, then +% ontop of that?
-    //     //TODO: I do not know the 'order' of how the operations are applied.
-
-    //     let all_stats = self.all_stats(tree);
-
-    //     todo!()
-    // }
-
-    fn all_stats<'t>(&'t self, tree: &'t PassiveTree) -> impl Iterator<Item = &'t Stat> + '_ {
+    pub fn all_stats<'t>(&'t self, tree: &'t PassiveTree) -> impl Iterator<Item = &'t Stat> + '_ {
         self.activated_node_ids
             .iter()
             .map(|nid| tree.node(*nid))
@@ -76,7 +77,7 @@ impl Character {
             .flat_map(|pnode| pnode.stats())
     }
 
-    fn all_stats_with_ids<'t>(
+    pub fn all_stats_with_ids<'t>(
         &'t self,
         tree: &'t PassiveTree,
     ) -> impl Iterator<Item = (NodeId, &'t [Stat])> + '_ {
