@@ -52,7 +52,7 @@ fn egui_ui_system(
     mut clear_all_tx: EventWriter<ClearAll>,
     move_camera_tx: EventWriter<MoveCameraReq>,
     mut save_tx: EventWriter<SaveCharacterReq>,
-    mut save_as_tx: &mut EventWriter<SaveCharacterAsReq>,
+    mut save_as_tx: EventWriter<SaveCharacterAsReq>,
     mut load_tx: EventWriter<LoadCharacterReq>,
     tree: Res<PassiveTreeWrapper>,
     character: Res<ActiveCharacter>,
@@ -196,6 +196,7 @@ fn topbar_menu_system(
                 {
                     log::trace!("Import selected...");
                     if let Some(path) = rfd::FileDialog::new()
+                        .set_title("Import character")
                         .add_filter("PoB File", &["xml", "toml"])
                         .pick_file()
                     {

@@ -73,6 +73,7 @@ impl Plugin for BGServicesPlugin {
             .add_event::<NodeDeactivationReq>()
             .add_event::<NodeScaleReq>()
             .add_event::<SaveCharacterReq>()
+            .add_event::<SaveCharacterAsReq>()
             .add_event::<LoadCharacterReq>()
             .add_event::<ShowSearch>()
             .add_event::<ThrowWarning>()
@@ -101,7 +102,8 @@ impl Plugin for BGServicesPlugin {
             (
                 //
                 process_load_character.run_if(on_event::<LoadCharacterReq>),
-                process_save_character.run_if(on_event::<SaveCharacterReq>),
+                process_save_character
+                    .run_if(on_event::<SaveCharacterReq>.or(on_event::<SaveCharacterAsReq>)),
                 /* Users need to see paths magically illuminate */
                 //activations:
                 process_node_activations.run_if(on_event::<NodeActivationReq>),
@@ -203,7 +205,7 @@ pub fn clear(
 }
 
 fn process_save_character(
-    save: EventReader<SaveCharacterReq>, // regular save event
+    save: EventReader<SaveCharacterReq>,
     mut save_as: EventReader<SaveCharacterAsReq>, // "save as" event with a PathBuf
     mut last_save_loc: ResMut<LastSaveLocation>,
     mut active_character: ResMut<ActiveCharacter>,
@@ -218,7 +220,6 @@ fn process_save_character(
         **last_save_loc = (**evt).clone();
         (**evt).clone()
     } else if !save.is_empty() {
-        // Use last_save_loc if present
         last_save_loc.0.clone()
     } else {
         // Default fallback

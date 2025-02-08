@@ -1,8 +1,9 @@
 use crate::{
     background_services::{active_nodes_changed, clear},
     components::{NodeActive, NodeInactive, NodeMarker},
+    consts::DEFAULT_SAVE_PATH,
     events::{ClearAll, LoadCharacterReq, NodeActivationReq, VirtualPathReq},
-    resources::{ActiveCharacter, PathRepairRequired, RootNode},
+    resources::{ActiveCharacter, LastSaveLocation, PathRepairRequired, RootNode},
 };
 use bevy::{color::Color, prelude::*, utils::HashMap};
 use poe_tree::{character::Character, type_wrappings::NodeId};
@@ -10,6 +11,8 @@ use poe_tree::{character::Character, type_wrappings::NodeId};
 pub struct CharacterPlugin;
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(LastSaveLocation(DEFAULT_SAVE_PATH.into()));
+
         app.add_systems(Startup, setup_character);
 
         app.add_systems(PostStartup, activate_starting_nodes);
