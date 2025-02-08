@@ -7,41 +7,57 @@ const EXPECTED_LENGTH: usize = 31;
 
 fn bench_bfs(c: &mut Criterion) {
     let tree = quick_tree();
-    let path_checks: Vec<(NodeId, NodeId, usize)> = {
-        let flow_ids = tree.fuzzy_search_nodes("flow like water");
-        let chaos_ids = tree.fuzzy_search_nodes("chaos inoculation");
-        vec![(flow_ids[0], chaos_ids[0], EXPECTED_LENGTH)]
-    };
-
     c.bench_function("BFS shortest path", |b| {
         b.iter(|| {
-            for &(start, target, expected) in &path_checks {
-                let path = tree.find_shortest_path(start, target);
-                assert_eq!(path.len(), expected);
-                black_box(&path);
-            }
+            let path = tree.find_shortest_path(STARTING_LOC, DESTINATION);
+            assert_eq!(path.len(), EXPECTED_LENGTH);
+            assert!(path.contains(&DESTINATION) && path.contains(&STARTING_LOC));
+            black_box(&path);
         });
     });
 }
 
 fn bench_dijkstra(c: &mut Criterion) {
     let tree = quick_tree();
-    let path_checks: Vec<(NodeId, NodeId, usize)> = {
-        let flow_ids = tree.fuzzy_search_nodes("flow like water");
-        let chaos_ids = tree.fuzzy_search_nodes("chaos inoculation");
-        vec![(flow_ids[0], chaos_ids[0], EXPECTED_LENGTH)]
-    };
-
     c.bench_function("Dijkstra shortest path", |b| {
         b.iter(|| {
-            for &(start, target, expected) in &path_checks {
-                let path = tree.dijkstra(start, target);
-                assert_eq!(path.len(), expected);
-                black_box(&path);
-            }
+            let path = tree.dijkstra(STARTING_LOC, DESTINATION);
+            assert_eq!(path.len(), EXPECTED_LENGTH);
+            assert!(path.contains(&DESTINATION) && path.contains(&STARTING_LOC));
+            black_box(&path);
         });
     });
 }
 
-criterion_group!(benches, bench_bfs, bench_dijkstra);
+fn bench_bfs_reversed(c: &mut Criterion) {
+    let tree = quick_tree();
+    c.bench_function("BFS shortest path reversed", |b| {
+        b.iter(|| {
+            let path = tree.find_shortest_path(DESTINATION, STARTING_LOC);
+            assert_eq!(path.len(), EXPECTED_LENGTH);
+            assert!(path.contains(&DESTINATION) && path.contains(&STARTING_LOC));
+            black_box(&path);
+        });
+    });
+}
+
+fn bench_dijkstra_reversed(c: &mut Criterion) {
+    let tree = quick_tree();
+    c.bench_function("Dijkstra shortest path reversed", |b| {
+        b.iter(|| {
+            let path = tree.dijkstra(DESTINATION, STARTING_LOC);
+            assert_eq!(path.len(), EXPECTED_LENGTH);
+            assert!(path.contains(&DESTINATION) && path.contains(&STARTING_LOC));
+            black_box(&path);
+        });
+    });
+}
+
+criterion_group!(
+    benches,
+    bench_bfs,
+    bench_dijkstra,
+    bench_bfs_reversed,
+    bench_dijkstra_reversed
+);
 criterion_main!(benches);

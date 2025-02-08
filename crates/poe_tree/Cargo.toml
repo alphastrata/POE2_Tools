@@ -62,6 +62,6 @@ path = "benches/str_vs_enum_match.rs"
 harness = false
 
 [[bench]]
-name = "bfs_vs_dikjstra"
-path = "benches/bfs_vs_dikjstra.rs"
+name = "bfs_vs_dijkstra"
+path = "benches/bfs_vs_dijkstra.rs"
 harness = false
