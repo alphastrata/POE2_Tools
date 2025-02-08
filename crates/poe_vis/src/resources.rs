@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, path::PathBuf};
 
 use bevy::{
     ecs::event::EventId,
@@ -173,6 +173,9 @@ impl VirtualPath {
         // });
     }
 }
+
+#[derive(Resource, Deref, DerefMut)]
+pub struct LastSaveLocation(pub PathBuf);
 
 #[cfg(test)]
 mod tests {

@@ -37,6 +37,9 @@ pub struct LoadCharacterReq(pub PathBuf);
 #[derive(Event)]
 pub struct SaveCharacterReq;
 
+#[derive(Event, Debug, Deref, DerefMut)]
+pub struct SaveCharacterAsReq(pub PathBuf);
+
 #[derive(Event, Deref)]
 pub struct MoveCameraReq(pub Vec3);
 

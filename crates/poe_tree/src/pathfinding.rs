@@ -724,6 +724,12 @@ impl PassiveTree {
     }
 }
 
+impl PassiveTree {
+    pub fn path_with_cost(&self, path: Vec<NodeId>) -> impl Iterator<Item = (usize, NodeId)> {
+        path.into_iter().enumerate().map(|(e, nid)| (e, nid))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::quick_tree;

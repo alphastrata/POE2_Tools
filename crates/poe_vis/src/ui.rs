@@ -1,6 +1,9 @@
 use crate::{
     components::{NodeActive, NodeMarker},
-    events::{ClearAll, LoadCharacterReq, MoveCameraReq, NodeDeactivationReq, SaveCharacterReq},
+    events::{
+        ClearAll, LoadCharacterReq, MoveCameraReq, NodeDeactivationReq, SaveCharacterAsReq,
+        SaveCharacterReq,
+    },
     resources::{ActiveCharacter, CameraSettings, SearchState},
     PassiveTreeWrapper,
 };
@@ -49,6 +52,7 @@ fn egui_ui_system(
     mut clear_all_tx: EventWriter<ClearAll>,
     move_camera_tx: EventWriter<MoveCameraReq>,
     mut save_tx: EventWriter<SaveCharacterReq>,
+    mut save_as_tx: &mut EventWriter<SaveCharacterAsReq>,
     mut load_tx: EventWriter<LoadCharacterReq>,
     tree: Res<PassiveTreeWrapper>,
     character: Res<ActiveCharacter>,
@@ -56,7 +60,13 @@ fn egui_ui_system(
     settings: Res<CameraSettings>,
     searchbox_state: ResMut<SearchState>,
 ) {
-    topbar_menu_system(&mut contexts, &mut save_tx, &mut load_tx, &mut clear_all_tx);
+    topbar_menu_system(
+        &mut contexts,
+        &mut save_tx,
+        &mut save_as_tx,
+        &mut load_tx,
+        &mut clear_all_tx,
+    );
 
     rhs_menu(
         active_nodes,
@@ -170,7 +180,8 @@ fn rhs_menu(
 // Refactor topbar_menu_system to accept an immutable reference to egui::Context.
 fn topbar_menu_system(
     contexts: &mut EguiContexts<'_, '_>,
-    save_tx: &mut EventWriter<SaveCharacterReq>,
+    mut save_tx: &mut EventWriter<SaveCharacterReq>,
+    mut save_as_tx: &mut EventWriter<SaveCharacterAsReq>,
     load_tx: &mut EventWriter<LoadCharacterReq>,
     clear_all_tx: &mut EventWriter<ClearAll>,
 ) {
@@ -214,7 +225,9 @@ fn topbar_menu_system(
                     .on_hover_text("save your current build somewhere")
                     .clicked()
                 {
-                    // TODO: Implement Save As logic here.
+                    if let Some(path) = rfd::FileDialog::new().set_title("Save as...").save_file() {
+                        save_as_tx.send(SaveCharacterAsReq(path));
+                    }
                 }
                 if ui.button("Exit").on_hover_text("quits poe_vis").clicked() {
                     // TODO: Implement Exit logic here.

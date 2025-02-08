@@ -13,7 +13,7 @@ impl Plugin for OverlaysAndPopupsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(VirtualPath::default());
 
-        app.add_systems(Update, show_node_info).add_systems(
+        app.add_systems(
             Startup,
             (
                 spawn_hover_text,
@@ -23,6 +23,7 @@ impl Plugin for OverlaysAndPopupsPlugin {
         app.add_systems(
             Update,
             (
+                show_node_info,
                 debug_num_nodes_in_virt_path,
                 scan_for_hovered.run_if(resource_exists::<ActiveCharacter>),
             ),
@@ -40,6 +41,7 @@ fn show_node_info(
     windows: Query<&Window>,
     hovered: Query<(&Hovered, &NodeMarker, Option<&NodeActive>)>,
     mut hover_text_query: Query<(&mut Node, &mut Text), With<NodeHoverText>>,
+    virt_path: Query<&NodeMarker, With<VirtualPathMember>>,
     tree: Res<PassiveTreeWrapper>,
 ) {
     // Attempt to get the hover text's Node and Text components
@@ -55,7 +57,12 @@ fn show_node_info(
     let mut found_info: Option<String> = None;
     for (_hovered, marker, _maybe_active) in hovered.iter() {
         if let Some(node_info) = tree.tree.nodes.get(&marker.0) {
-            found_info = Some(format!("Node {}:\n{}", node_info.node_id, node_info.name));
+            found_info = Some(format!(
+                "\nNode {}:{}\nCost :{}",
+                node_info.node_id,
+                node_info.name,
+                virt_path.iter().count()
+            ));
             break;
         }
     }
@@ -67,6 +74,7 @@ fn show_node_info(
 
     // Update the node's position in screen space
     if let Some(cursor_pos) = windows.single().cursor_position() {
+        //TODO: get a % of the screen to offset this by, as exactly on the pointer is kinda garbage..
         node.left = Val::Px(cursor_pos.x);
         node.top = Val::Px(cursor_pos.y);
     }

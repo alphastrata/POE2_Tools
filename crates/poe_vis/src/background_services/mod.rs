@@ -22,7 +22,7 @@ use poe_tree::{
 
 use crate::{
     components::*,
-    consts::SEARCH_THRESHOLD,
+    consts::{DEFAULT_SAVE_PATH, SEARCH_THRESHOLD},
     events::{self, ManualHighlightWithColour, NodeActivationReq, *},
     materials::{self, GameMaterials},
     mouse::handle_node_clicks,
@@ -203,18 +203,32 @@ pub fn clear(
 }
 
 fn process_save_character(
-    // save: EventReader<SaveCharacterReq>, // #run_condition
+    save: EventReader<SaveCharacterReq>, // regular save event
+    mut save_as: EventReader<SaveCharacterAsReq>, // "save as" event with a PathBuf
+    mut last_save_loc: ResMut<LastSaveLocation>,
     mut active_character: ResMut<ActiveCharacter>,
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
 ) {
-    //TODO: consider all the ECS -> Character updates be done in a helper function.
-    active_character.activated_node_ids = active_nodes.into_iter().map(|nm| **nm).collect();
+    active_character.activated_node_ids = active_nodes.iter().map(|nm| **nm).collect();
     active_character.level = active_character.activated_node_ids.len() as u8;
 
-    if let Err(e) = (**active_character).save_to_toml(crate::consts::DEFAULT_SAVE_PATH) {
+    // Choose path based on events
+    let path = if let Some(evt) = save_as.read().last() {
+        // "Save as" event overrides last_save_loc
+        **last_save_loc = (**evt).clone();
+        (**evt).clone()
+    } else if !save.is_empty() {
+        // Use last_save_loc if present
+        last_save_loc.0.clone()
+    } else {
+        // Default fallback
+        std::path::PathBuf::from(DEFAULT_SAVE_PATH)
+    };
+
+    if let Err(e) = active_character.save_to_toml(&path) {
         log::error!("{}", e);
     }
-    log::debug!("Character Saved.");
+    log::debug!("Character Saved to {:?}", path);
 }
 
 fn process_load_character(
