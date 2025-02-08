@@ -1,7 +1,7 @@
 use crate::{
-    background_services::active_nodes_changed,
+    background_services::{active_nodes_changed, clear},
     components::{NodeActive, NodeInactive, NodeMarker},
-    events::{LoadCharacterReq, NodeActivationReq, VirtualPathReq},
+    events::{ClearAll, LoadCharacterReq, NodeActivationReq, VirtualPathReq},
     resources::{ActiveCharacter, PathRepairRequired, RootNode},
 };
 use bevy::{color::Color, prelude::*, utils::HashMap};
@@ -12,21 +12,14 @@ impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_character);
 
-        app.add_systems(Startup, activate_starting_nodes);
+        app.add_systems(PostStartup, activate_starting_nodes);
 
         app.add_systems(
             Update,
             activate_starting_nodes.run_if(on_event::<LoadCharacterReq>),
         );
 
-        app.add_systems(
-            PostUpdate,
-            update_active_character.run_if(
-                active_nodes_changed
-                    .or(on_event::<VirtualPathReq>)
-                    .or(on_event::<NodeActivationReq>),
-            ),
-        );
+        app.add_systems(PostUpdate, update_active_character.after(clear));
 
         log::debug!("CharacterPlugin plugin enabled");
     }
@@ -34,15 +27,19 @@ impl Plugin for CharacterPlugin {
 fn activate_starting_nodes(
     mut node_activator: EventWriter<NodeActivationReq>,
     mut path_repair: ResMut<PathRepairRequired>,
-    character: Res<ActiveCharacter>,
+    active_character: ResMut<ActiveCharacter>,
+    mut starting_node: ResMut<RootNode>,
 ) {
-    node_activator.send(NodeActivationReq(character.starting_node));
+    starting_node.0 = Some(active_character.starting_node);
 
-    character.activated_node_ids.iter().for_each(|nid| {
+    node_activator.send(NodeActivationReq(active_character.starting_node));
+
+    active_character.activated_node_ids.iter().for_each(|nid| {
         node_activator.send(NodeActivationReq(*nid));
     });
     path_repair.request_path_repair();
 }
+
 fn update_active_character(
     mut active_character: ResMut<ActiveCharacter>,
     actuals: Query<&NodeMarker, With<NodeActive>>,

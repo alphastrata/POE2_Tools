@@ -83,8 +83,8 @@ impl Plugin for BGServicesPlugin {
 
         app.add_systems(
             PreUpdate,
-            (
-                scan_for_char_updates.run_if(resource_changed::<ActiveCharacter>),
+            ((
+                sync_active_with_character.run_if(active_nodes_changed),
                 /* Only scan for edges when we KNOW the path is valid */
                 scan_edges_for_active_updates.run_if(resource_equals(PathRepairRequired(false))),
                 //deactivations:
@@ -93,26 +93,29 @@ impl Plugin for BGServicesPlugin {
                 scan_edges_for_inactive_updates,
                 /* happening all the time with camera moves. */
                 adjust_node_sizes,
-            ),
+            )
+                .after(clear),),
         );
         app.add_systems(
             Update,
             (
+                //
                 process_load_character.run_if(on_event::<LoadCharacterReq>),
                 process_save_character.run_if(on_event::<SaveCharacterReq>),
                 /* Users need to see paths magically illuminate */
                 //activations:
                 process_node_activations.run_if(on_event::<NodeActivationReq>),
                 process_edge_activations,
-                populate_virtual_path.run_if(on_event::<VirtualPathReq>.and(time_passed(0.025))),
+                // Lock the rate we populate the virtual paths at 50ms
+                populate_virtual_path.run_if(on_event::<VirtualPathReq>.and(time_passed(0.080))),
                 process_virtual_paths
                     .run_if(sufficient_active_nodes)
                     .after(populate_virtual_path),
-                clear_virtual_paths.run_if(on_event::<ClearVirtualPath>),
+                clear_virtual_paths.run_if(on_event::<ClearVirtualPath>.or(on_event::<ClearAll>)),
                 process_manual_highlights.run_if(on_event::<ManualHighlightWithColour>),
                 /* Pretty lightweight, can be spammed.*/
                 process_node_colour_changes.run_if(on_event::<NodeColourReq>),
-                process_edge_colour_changes,
+                process_edge_colour_changes.run_if(on_event::<EdgeColourReq>),
                 /* Runs a BFS so, try not to spam it.*/
                 path_repair
                     .run_if(sufficient_active_nodes)
@@ -120,7 +123,7 @@ impl Plugin for BGServicesPlugin {
             ),
         );
 
-        app.add_systems(PostUpdate, clear.run_if(on_event::<ClearAll>));
+        app.add_systems(Update, clear.run_if(on_event::<ClearAll>));
 
         log::debug!("BGServices plugin enabled");
     }
@@ -140,15 +143,13 @@ fn time_passed(t: f32) -> impl FnMut(Local<f32>, Res<Time>) -> bool {
     }
 }
 
-fn scan_for_char_updates(
+fn sync_active_with_character(
     active_character: Res<ActiveCharacter>,
-    mut starting_node: ResMut<RootNode>,
     mut deactivator: EventWriter<NodeDeactivationReq>,
     mut activator: EventWriter<NodeActivationReq>,
     query: Query<(Entity, &NodeMarker)>,
 ) {
     log::trace!("Updating character.");
-    starting_node.0 = Some(active_character.starting_node);
 
     let active = Arc::new(Mutex::new(&mut activator));
     let deactive = Arc::new(Mutex::new(&mut deactivator));
@@ -166,14 +167,22 @@ fn scan_for_char_updates(
     });
 }
 
-fn clear(
+pub fn clear(
     query: Query<(Entity, &NodeMarker)>,
     // rx: EventReader<ClearAll>, // run_condition
     mut commands: Commands,
     game_materials: Res<GameMaterials>,
     mut colour_events: EventWriter<NodeColourReq>,
+    mut active_character: ResMut<ActiveCharacter>,
 ) {
     log::debug!("Clear command received.");
+    active_character.activated_node_ids.clear();
+    assert_eq!(
+        0,
+        active_character.activated_node_ids.len(),
+        "active character's activated node count should be 0"
+    );
+
     let mat = &game_materials.node_base;
     query.iter().for_each(|(ent, _nid)| {
         commands.entity(ent).remove::<NodeActive>();
@@ -183,6 +192,13 @@ fn clear(
 
         colour_events.send(NodeColourReq(ent, mat.clone_weak()));
     });
+
+    assert_eq!(
+        0,
+        active_character.activated_node_ids.len(),
+        "active character's activated node count should be 0"
+    );
+
     log::debug!("ClearAll executed successfully, NOTHING should be highlighet/coloured etc.");
 }
 
@@ -235,6 +251,7 @@ fn process_load_character(
                     Err(e) => eprintln!("Failed to read {}: {:?}", path.display(), e),
                 }
             }
+            //TODO: throw UI error (There's an event for it ThrowWarning)
             Some(ext) => {
                 log::error!("Unsupported file extension: {}", ext);
             }

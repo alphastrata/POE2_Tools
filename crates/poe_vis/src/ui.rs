@@ -46,7 +46,7 @@ fn update_active_nodecount(
 }
 fn egui_ui_system(
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
-    clear_all_tx: EventWriter<ClearAll>,
+    mut clear_all_tx: EventWriter<ClearAll>,
     move_camera_tx: EventWriter<MoveCameraReq>,
     mut save_tx: EventWriter<SaveCharacterReq>,
     mut load_tx: EventWriter<LoadCharacterReq>,
@@ -194,7 +194,6 @@ fn topbar_menu_system(
                         return;
                     }
                 }
-                //TODO: open for OUR file format.
 
                 if ui
                     .button("Export")

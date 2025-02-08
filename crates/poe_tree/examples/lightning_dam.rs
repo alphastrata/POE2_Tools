@@ -39,7 +39,7 @@ fn main() {
         (44683, "Monk"),
     ]);
 
-    let levels = vec![50, 99, 123];
+    let levels = [50, 99, 123];
     let keyword = "lightning";
     let min_value = 1.0f32;
 
