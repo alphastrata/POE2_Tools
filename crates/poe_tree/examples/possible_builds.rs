@@ -43,7 +43,7 @@ fn main() {
             //NOTE: these numbers are kept low to spare your hardware && to save
             // you life hours of watching the paths... it is rather hypnotic.
             // You're welcome.
-            [40].iter().for_each(|&steps| {
+            [10, 20, 30].iter().for_each(|&steps| {
                 let paths = tree.walk_n_steps(start_node, steps);
                 assert!(
                     !paths.is_empty(),

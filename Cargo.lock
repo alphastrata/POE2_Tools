@@ -4884,6 +4884,7 @@ version = "0.1.0"
 dependencies = [
  "bitset",
  "chrono",
+ "criterion",
  "crossbeam-channel",
  "log",
  "num_cpus",

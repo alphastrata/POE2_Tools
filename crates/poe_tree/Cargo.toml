@@ -48,9 +48,20 @@ quick-xml = { workspace = true, features = ["serialize"] }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
-
+criterion.workspace = true
 
 [build-dependencies]
 serde.workspace = true
 serde_json.workspace = true
 regex.workspace = true
+
+
+[[bench]]
+name = "str_vs_enum_match"
+path = "benches/str_vs_enum_match.rs"
+harness = false
+
+[[bench]]
+name = "bfs_vs_dikjstra"
+path = "benches/bfs_vs_dikjstra.rs"
+harness = false

@@ -18,6 +18,15 @@ pub struct PoeNode {
 }
 
 impl PoeNode {
+    pub fn contains_stat_with_keyword(&self, tree: &PassiveTree, keyword: &str) -> bool {
+        self.as_passive_skill(tree)
+            .stats()
+            .iter()
+            .any(|stat| stat.as_str().contains(keyword))
+    }
+    pub fn contains_keyword(&self, keyword: &str) -> bool {
+        self.skill_id.contains(keyword) || self.name.contains(keyword)
+    }
     pub fn num_points_required_from(&self, other: NodeId, tree: &PassiveTree) -> usize {
         tree.bfs(self.node_id, other).len()
     }

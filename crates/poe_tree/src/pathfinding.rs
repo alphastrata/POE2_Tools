@@ -235,7 +235,7 @@ impl PassiveTree {
         use std::collections::{HashMap, HashSet, VecDeque};
 
         let start_time = std::time::Instant::now();
-        log::debug!(
+        log::trace!(
             "bfs_any: start={:?} targets={:?} (finding the shortest path to any target)",
             start,
             targets
@@ -265,7 +265,7 @@ impl PassiveTree {
                     path.push(step);
                 }
                 path.reverse();
-                log::debug!(
+                log::trace!(
                     "bfs_any: found target {:?} in {} steps (duration={:?}), path={:?}",
                     current,
                     depth,
@@ -294,7 +294,7 @@ impl PassiveTree {
             });
         }
 
-        log::debug!(
+        log::warn!(
             "bfs_any: no path found from {:?} to any of {:?} (elapsed={:?})",
             start,
             targets,

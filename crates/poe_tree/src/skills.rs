@@ -35,4 +35,10 @@ impl PassiveSkill {
     pub fn name(&self) -> String {
         self.name.clone().unwrap()
     }
+
+    pub fn contains_stat_with_keyword(&self, keyword: &str) -> bool {
+        self.stats()
+            .iter()
+            .any(|stat| stat.as_str().contains(keyword))
+    }
 }

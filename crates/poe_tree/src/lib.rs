@@ -146,7 +146,7 @@ impl PassiveTree {
                 obj.iter()
                     .filter_map(|(skill_id, skill_val)| {
                         if skill_val.get("is_just_icon").is_some() {
-                            log::debug!("just an icon!");
+                            log::trace!("just an icon!");
                             return None;
                         }
                         let stats_json = skill_val.get("stats")?;
