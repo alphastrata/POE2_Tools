@@ -12,7 +12,7 @@ fn custom_log_formatting(_app: &mut App) -> Option<Box<dyn Layer<Registry> + Sen
 }
 
 fn main() {
-    let log_filter = { "poe_vis::ui=trace,poe_vis::background_services=debug".to_string() };
+    let log_filter = { "off".to_string() };
 
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))

@@ -3,7 +3,7 @@ use bevy_egui::EguiContexts;
 
 use crate::{
     components::SearchMarker,
-    events::ShowSearch,
+    events::{SaveCharacterReq, ShowSearch},
     resources::{CameraSettings, SearchState, UserConfig},
 };
 
@@ -23,6 +23,7 @@ impl Plugin for HotkeysPlugin {
 fn handle_input(
     mut camera_query: Query<&mut Transform, With<Camera2d>>,
     mut searchbox_toggle: EventWriter<ShowSearch>,
+    mut save_tx: EventWriter<SaveCharacterReq>,
     config: Res<UserConfig>,
     keys: Res<ButtonInput<KeyCode>>,
     searchstate: Res<SearchState>,
@@ -78,6 +79,10 @@ fn handle_input(
                 searchbox_toggle.send(ShowSearch);
             }
         }
+    }
+
+    if check_action_just_pressed(&config, "save_active_charcter", &keys) {
+        save_tx.send(SaveCharacterReq);
     }
 }
 

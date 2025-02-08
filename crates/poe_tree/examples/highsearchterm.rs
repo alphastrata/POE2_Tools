@@ -9,8 +9,43 @@ use std::{
 
 mod common;
 use common::*;
-use poe_tree::consts::LEVEL_ONE_NODES;
-use poe_tree::stats::Stat;
+use poe_tree::{consts::LEVEL_ONE_NODES, type_wrappings::NodeId};
+use poe_tree::{stats::Stat, PassiveTree};
+
+fn maximize_paths<F>(
+    paths: Vec<Vec<NodeId>>,
+    tree: &PassiveTree,
+    stat_selector: F,
+    min_bonus: f32,
+) -> Vec<Vec<NodeId>>
+where
+    F: Fn(&Stat) -> Option<f32>,
+{
+    let mut scored: Vec<(Vec<NodeId>, f32)> = paths
+        .into_iter()
+        .filter_map(|path| {
+            let bonus: f32 = path
+                .iter()
+                .map(|node_id| {
+                    let poe_node = tree.nodes.get(node_id).unwrap();
+                    let skill = poe_node.as_passive_skill(tree);
+                    skill
+                        .stats()
+                        .iter()
+                        .filter_map(|s| stat_selector(s))
+                        .sum::<f32>()
+                })
+                .sum();
+            if bonus >= min_bonus {
+                Some((path, bonus))
+            } else {
+                None
+            }
+        })
+        .collect();
+    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    scored.into_iter().map(|(path, _)| path).collect()
+}
 
 fn main() {
     pretty_env_logger::init();
@@ -31,46 +66,91 @@ fn main() {
         return;
     }
     colours.sort();
+    const LVL_CAP: usize = 33;
+    const MIN_BONUS_VALUE: f32 = 80.0;
+
+    //TODO: benchmark take_while
+    //TODO: benchmark maximise_paths
+    //TODO: implement keystone idea (nodes that are always hit on paths)
+    //TODO: flip the directions on the bfs, go broad first?
+    //TODO: implement deadend nodes (nodes to immediately break from on a proximity keyword search nodes' wx, wy), for example all the chaos nodes are at the top of the board, so heading south is almost always a waste of time.
 
     let t1 = Instant::now();
-    let potential_destinations =
-        tree.take_while(start_node, |s| matches!(s, Stat::ChaosDamage(_)), 23);
-    log::info!("{}ms", t1.elapsed().as_millis());
-
-    potential_destinations
-        .par_iter()
-        .enumerate()
-        .for_each(|(i, path)| {
-            let colour = &colours[i % colours.len()];
-            log::info!(
-                "Path of len:{} ready in {:#?}secs",
-                path.len(),
-                t1.elapsed().as_secs_f64()
-            );
-            if visualiser {
-                // Activate first node.
-                if let Some(&first) = path.first() {
-                    activate_node_with_colour(&client, first, colour);
-                    sleep(Duration::from_millis(15));
-                }
-                // Activate edges and nodes via windows(2).
-                for window in path.windows(2) {
-                    let (from, to) = (window[0], window[1]);
-                    common::activate_edge_with_colour(&client, from, to, colour);
-                    activate_node_with_colour(&client, to, colour);
-                    sleep(Duration::from_millis(15));
-                }
-                sleep(Duration::from_millis(85));
-                // Deactivate edges in reverse.
-                for window in path.windows(2).rev() {
-                    let (from, to) = (window[0], window[1]);
-                    // common::deactivate_edge(&client, from, to);
-                    sleep(Duration::from_millis(10));
-                }
-                // Deactivate the first node.
-                if let Some(&first) = path.first() {
-                    deactivate_node(&client, first);
-                }
+    let filtered: Vec<Vec<NodeId>> = maximize_paths(
+        tree.take_while(start_node, |s| matches!(s, Stat::ChaosDamage(_)), LVL_CAP),
+        &tree,
+        |s| {
+            if let Stat::ChaosDamage(_bp) = s {
+                Some(s.value())
+            } else {
+                None
             }
-        });
+        },
+        MIN_BONUS_VALUE,
+    )
+    .into_iter()
+    .take_while(|p| p.len() == LVL_CAP)
+    .collect();
+
+    println!(
+        "{} after filter. in {}s",
+        filtered.len(),
+        t1.elapsed().as_secs_f64()
+    );
+
+    //65005 w chaosDamage
+    //7526 after filter. in 64.2901842s for  MIN_BONUS_VALUE: f32 = 60.0;
+
+    loop {
+        let f_20 = filtered.par_iter(); //.par_iter();
+        let total_secs = f_20.len() as f64 * 0.035;
+        let hours = (total_secs / 3600.0) as u64;
+        let minutes = ((total_secs % 3600.0) / 60.0) as u64;
+        let seconds = (total_secs % 60.0).round() as u64;
+
+        let mut input = String::new();
+        println!(
+            "Estimated animtaion time is: {:02}:{:02}:{:02}",
+            hours, minutes, seconds
+        );
+
+        println!("Play the animation (Y/N)");
+
+        std::io::stdin().read_line(&mut input).unwrap();
+
+        if input.trim().eq_ignore_ascii_case("Y") {
+            f_20.enumerate().for_each(|(i, path)| {
+                let colour = &colours[i % colours.len()];
+                if path.len() == 33 {
+                    if visualiser {
+                        // Activate first node.
+                        if let Some(&first) = path.first() {
+                            activate_node_with_colour(&client, first, colour);
+                            sleep(Duration::from_millis(5));
+                        }
+                        // Activate edges and nodes via windows(2).
+                        for window in path.windows(2) {
+                            let (from, to) = (window[0], window[1]);
+                            common::activate_edge_with_colour(&client, from, to, colour);
+                            activate_node_with_colour(&client, to, colour);
+                            sleep(Duration::from_millis(5));
+                        }
+                        sleep(Duration::from_millis(30));
+                        // Deactivate edges in reverse.
+                        for window in path.windows(2).rev() {
+                            let (_from, _to) = (window[0], window[1]);
+                            // common::deactivate_edge(&client, from, to);
+                            sleep(Duration::from_millis(5));
+                        }
+                        // Deactivate the first node.
+                        if let Some(&first) = path.first() {
+                            deactivate_node(&client, first);
+                        }
+                    }
+                }
+            });
+        } else {
+            std::process::exit(0);
+        }
+    }
 }

@@ -171,7 +171,9 @@ fn sync_active_with_character(
 }
 
 pub fn clear(
-    query: Query<(Entity, &NodeMarker)>,
+    nodes: Query<(Entity, &NodeMarker)>,
+    edges: Query<(Entity, &EdgeMarker)>,
+
     // rx: EventReader<ClearAll>, // run_condition
     mut commands: Commands,
     game_materials: Res<GameMaterials>,
@@ -187,8 +189,17 @@ pub fn clear(
     );
 
     let mat = &game_materials.node_base;
-    query.iter().for_each(|(ent, _nid)| {
+    nodes.iter().for_each(|(ent, _nid)| {
         commands.entity(ent).remove::<NodeActive>();
+        commands.entity(ent).remove::<ManuallyHighlighted>();
+        commands.entity(ent).remove::<VirtualPathMember>();
+        commands.entity(ent).insert(NodeInactive);
+
+        colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+    });
+
+    edges.iter().for_each(|(ent, _nid)| {
+        commands.entity(ent).remove::<EdgeActive>();
         commands.entity(ent).remove::<ManuallyHighlighted>();
         commands.entity(ent).remove::<VirtualPathMember>();
         commands.entity(ent).insert(NodeInactive);
