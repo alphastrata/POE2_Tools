@@ -9,7 +9,7 @@ fn bench_bfs(c: &mut Criterion) {
     let tree = quick_tree();
     c.bench_function("BFS shortest path", |b| {
         b.iter(|| {
-            let path = tree.find_shortest_path(STARTING_LOC, DESTINATION);
+            let path = tree.bfs(STARTING_LOC, DESTINATION);
             assert_eq!(path.len(), EXPECTED_LENGTH);
             assert!(path.contains(&DESTINATION) && path.contains(&STARTING_LOC));
             black_box(&path);
@@ -33,7 +33,7 @@ fn bench_bfs_reversed(c: &mut Criterion) {
     let tree = quick_tree();
     c.bench_function("BFS shortest path reversed", |b| {
         b.iter(|| {
-            let path = tree.find_shortest_path(DESTINATION, STARTING_LOC);
+            let path = tree.bfs(DESTINATION, STARTING_LOC);
             assert_eq!(path.len(), EXPECTED_LENGTH);
             assert!(path.contains(&DESTINATION) && path.contains(&STARTING_LOC));
             black_box(&path);
