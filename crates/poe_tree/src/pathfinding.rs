@@ -152,9 +152,7 @@ impl PassiveTree {
     pub fn find_path(&self, a: NodeId, b: NodeId) -> Vec<NodeId> {
         self.bfs(a, b)
     }
-}
 
-impl PassiveTree {
     pub fn shortest_to_target_from_any_of(
         &self,
         target: NodeId,

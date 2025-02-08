@@ -87,4 +87,5 @@ rustdocflags = ["-Clinker=rust-lld.exe"]
 debug = 1
 opt-level = 3
 
-
+[build]
+rustc-wrapper = "C:/Users/jer/.cargo/bin/sccache.exe"
