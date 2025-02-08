@@ -70,3 +70,8 @@ harness = false
 name = "bfs_vs_dijkstra"
 path = "benches/bfs_vs_dijkstra.rs"
 harness = false
+
+[[bench]]
+name = "take_while"
+path = "benches/take_while.rs"
+harness = false

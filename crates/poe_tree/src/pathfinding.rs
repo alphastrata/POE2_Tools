@@ -803,9 +803,130 @@ impl PassiveTree {
     }
 }
 
+impl PassiveTree {
+    pub fn par_take_while<F>(&self, start: NodeId, predicate: F, depth: usize) -> Vec<Vec<NodeId>>
+    where
+        F: Fn(&Stat) -> bool + Sync,
+    {
+        let targets = self
+            .nodes
+            .iter()
+            .fold(HashSet::new(), |mut acc, (&nid, node)| {
+                if node
+                    .as_passive_skill(self)
+                    .stats()
+                    .iter()
+                    .any(|s| predicate(s))
+                {
+                    acc.insert(nid);
+                }
+                acc
+            });
+
+        let valid_paths = self.par_explore(vec![start], depth, &targets);
+
+        // Prune paths: remove any path that's a prefix of a longer one.
+        (0..valid_paths.len())
+            .filter(|&i| {
+                !valid_paths.iter().enumerate().any(|(j, q)| {
+                    j != i && q.len() > valid_paths[i].len() && q.starts_with(&valid_paths[i])
+                })
+            })
+            .map(|i| valid_paths[i].clone())
+            .collect()
+    }
+
+    fn par_explore(
+        &self,
+        path: Vec<NodeId>,
+        depth: usize,
+        targets: &HashSet<NodeId>,
+    ) -> Vec<Vec<NodeId>> {
+        let mut valid = Vec::new();
+        if path.iter().any(|nid| targets.contains(nid)) {
+            valid.push(path.clone());
+        }
+        if path.len() - 1 == depth {
+            return valid;
+        }
+        let last = *path.last().unwrap();
+        let neighbours: Vec<_> = self
+            .edges
+            .iter()
+            .filter_map(|edge| {
+                if edge.start == last && !path.contains(&edge.end) {
+                    Some(edge.end)
+                } else if edge.end == last && !path.contains(&edge.start) {
+                    Some(edge.start)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let mut branches: Vec<Vec<Vec<NodeId>>> = neighbours
+            .into_par_iter()
+            .map(|n| {
+                let mut new_path = path.clone();
+                new_path.push(n);
+                self.par_explore(new_path, depth, targets)
+            })
+            .collect();
+        for mut branch in branches.drain(..) {
+            valid.append(&mut branch);
+        }
+        valid
+    }
+
+    pub fn maximize_paths<F>(
+        &self,
+        paths: Vec<Vec<NodeId>>,
+
+        stat_selector: F,
+        min_bonus: f32,
+        max_length: usize,
+    ) -> Vec<Vec<NodeId>>
+    where
+        F: Fn(&Stat) -> Option<f32>,
+    {
+        let mut scored: Vec<(Vec<NodeId>, f32)> = paths
+            .into_iter()
+            .filter_map(|path| {
+                let bonus: f32 = path
+                    .iter()
+                    .map(|node_id| {
+                        let poe_node = self.nodes.get(node_id).unwrap();
+                        let skill = poe_node.as_passive_skill(self);
+                        skill
+                            .stats()
+                            .iter()
+                            .filter_map(|s| stat_selector(s))
+                            .sum::<f32>()
+                    })
+                    .sum();
+
+                if bonus >= min_bonus {
+                    Some((path, bonus))
+                } else {
+                    if bonus >= (min_bonus / 2.0) {
+                        log::trace!("Rejecting path with summed bonus of: {}", bonus);
+                    }
+                    None
+                }
+            })
+            .collect();
+        scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        scored
+            .into_iter()
+            .take_while(|p| p.0.len() <= max_length)
+            .map(|(path, _)| path)
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::quick_tree;
+    use crate::{quick_tree, stats::arithmetic::PlusPercentage};
 
     use super::*;
 
@@ -887,5 +1008,88 @@ mod test {
 
         let expected = [17248, 55342, 10364];
         assert!(expected.into_iter().all(|v| path.contains(&v)))
+    }
+
+    //  For warrior melee @ lvl 11 test
+    const LVL_CAP: usize = 11;
+    const MIN_BONUS_VALUE: f32 = 110.0;
+    #[test]
+    fn test_ten_lvl_warrior_finds_110_percent_melee_dam() {
+        _ = pretty_env_logger::init();
+        let tree = quick_tree();
+
+        const STARTING_LOC: NodeId = 3936; //warrior melee damage.
+
+        let selector = |s: &Stat| matches!(s, Stat::MeleeDamage(_));
+        let ser_res = tree.take_while(STARTING_LOC, selector, LVL_CAP);
+        let par_res = tree.par_take_while(STARTING_LOC, selector, LVL_CAP);
+
+        assert!(!ser_res.is_empty(), "No valid serial paths taken");
+        assert!(!par_res.is_empty(), "No valid parallel paths taken");
+
+        assert_eq!(
+            melee_dam_helper(&tree, ser_res).len(),
+            1,
+            "Found too many paths, only one route is possible on this lvl cap"
+        );
+        assert_eq!(
+            melee_dam_helper(&tree, par_res).len(),
+            1,
+            "Found too many paths, only one route is possible on this lvl cap"
+        );
+    }
+
+    fn melee_dam_helper(tree: &PassiveTree, ser_res: Vec<Vec<u16>>) -> Vec<Vec<NodeId>> {
+        let mut winners: Vec<Vec<NodeId>> = vec![];
+        ser_res
+            .into_iter()
+            .filter(|p| p.len() == LVL_CAP)
+            .map(|path: Vec<u16>| {
+                let path_bonus: f32 = path
+                    .iter()
+                    .flat_map(|nid| tree.nodes.get(&nid))
+                    .flat_map(|pnode| {
+                        let stats = pnode.as_passive_skill(&tree).stats().to_vec();
+                        stats.into_iter().filter_map(move |s| {
+                            //NOTE: leave this in because it shows a nice debugging method when OUR path's aggregated stats
+                            // to not agree with what see see in the visualiser / POB.
+
+                            // let keyword_match = s.as_str().contains(KEYWORD);
+                            // if keyword_match && !melee_match {
+                            //     // Log when it matches keyword but NOT melee
+                            //     println!(
+                            //         "[DEBUG] Node {:?} matches KEYWORD but NOT MeleeDamage: {:?}",
+                            //         &pnode, s
+                            //     );
+                            // }
+                            /* it was Smash.
+                                [DEBUG] Node PoeNode { node_id: 45363, skill_id: "melee55", parent: 315, radius: 3, position: 23, name: "Smash", is_notable: true, wx: -3810.9294, wy: 1066.7999, active: false } matches KEYWORD but NOT MeleeDamage: MeleeDamageVsHeavyStunnedEnemies(Other(40.0))
+                            test pathfinding::test::test_ten_lvl_warrior_finds_120_percent_melee_dam ... ok
+                             */
+
+                            Some(s.value())
+                        })
+                    })
+                    .sum();
+
+                (path_bonus, path)
+            })
+            .filter(|(total, _path)| total >= &MIN_BONUS_VALUE)
+            .for_each(|(total, p)| {
+                println!("len {} has total {}", p.len(), total);
+
+                {
+                    for nid in p.iter() {
+                        let pnode = tree.nodes.get(&nid).unwrap();
+                        let stats = pnode.as_passive_skill(&tree).stats().to_vec();
+                        stats.into_iter().for_each(move |s| {
+                            dbg!(s);
+                        });
+                    }
+                }
+                winners.push(p);
+            });
+
+        return winners;
     }
 }

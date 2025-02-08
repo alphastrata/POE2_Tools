@@ -11,51 +11,6 @@ use std::{
 mod common;
 use common::*;
 use poe_tree::{consts::LEVEL_ONE_NODES, type_wrappings::NodeId};
-use poe_tree::{stats::Stat, PassiveTree};
-
-fn maximize_paths<F>(
-    paths: Vec<Vec<NodeId>>,
-    tree: &PassiveTree,
-    stat_selector: F,
-    min_bonus: f32,
-    max_length: usize,
-) -> Vec<Vec<NodeId>>
-where
-    F: Fn(&Stat) -> Option<f32>,
-{
-    let mut scored: Vec<(Vec<NodeId>, f32)> = paths
-        .into_iter()
-        .filter_map(|path| {
-            let bonus: f32 = path
-                .iter()
-                .map(|node_id| {
-                    let poe_node = tree.nodes.get(node_id).unwrap();
-                    let skill = poe_node.as_passive_skill(tree);
-                    skill
-                        .stats()
-                        .iter()
-                        .filter_map(|s| stat_selector(s))
-                        .sum::<f32>()
-                })
-                .sum();
-
-            if bonus >= min_bonus {
-                Some((path, bonus))
-            } else {
-                if bonus >= (min_bonus / 2.0) {
-                    eprintln!("Rejecting path with {}", bonus);
-                }
-                None
-            }
-        })
-        .collect();
-    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-    scored
-        .into_iter()
-        .take_while(|p| p.0.len() <= max_length)
-        .map(|(path, _)| path)
-        .collect()
-}
 
 fn main() {
     pretty_env_logger::init();
@@ -88,15 +43,15 @@ fn main() {
 
     let keyword = "chaos_damage_+%";
     let t1 = Instant::now();
-    let filtered: Vec<Vec<NodeId>> = maximize_paths(
-        tree.take_while(start_node, |s| s.as_str().contains(keyword), LVL_CAP),
-        &tree,
-        |s| Some(s.value()),
-        MIN_BONUS_VALUE,
-        LVL_CAP,
-    )
-    .into_iter()
-    .collect();
+    let filtered: Vec<Vec<NodeId>> = tree
+        .maximize_paths(
+            tree.take_while(start_node, |s| s.as_str().contains(keyword), LVL_CAP),
+            |s| Some(s.value()),
+            MIN_BONUS_VALUE,
+            LVL_CAP,
+        )
+        .into_iter()
+        .collect();
 
     println!(
         "{} after filter. in {}s",
