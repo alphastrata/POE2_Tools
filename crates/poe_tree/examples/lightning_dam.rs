@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 mod common;
 use common::quick_tree;
-use poe_tree::{nodes::PoeNode, stats::Stat, type_wrappings::NodeId};
+use poe_tree::{stats::Stat, type_wrappings::NodeId};
 
 fn truncate_path(path: &[NodeId]) -> String {
     if path.len() <= 6 {

@@ -1,13 +1,19 @@
 #![allow(dead_code, unused_variables)]
+use std::sync::{Arc, Mutex};
+
 use bevy::prelude::*;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use jsonrpc_core::{IoHandler, Params, Value};
 use jsonrpc_http_server::{Server as RpcServer, ServerBuilder};
-use poe_tree::type_wrappings::{EdgeId, NodeId};
+use poe_tree::{
+    type_wrappings::{EdgeId, NodeId},
+    PassiveTree,
+};
 
 use crate::{
+    components::NodeMarker,
     events::*,
-    // resources, materials, etc...
+    PassiveTreeWrapper, // resources, materials, etc...
 };
 
 pub struct RPCPlugin;
@@ -18,9 +24,9 @@ pub enum Command {
 
     ActivateNodeWithColour(NodeId, String),
 
-    ScaleNode(u32, f32),   // (entity_id, scale)
-    GetNodePos(NodeId),    // returns the node's position
-    GetNodeColour(NodeId), // returns the node's colour
+    ScaleNode(u32, f32),                   // (entity_id, scale)
+    GetNodePos(NodeId, Sender<Transform>), // returns the node's position
+    GetNodeColour(NodeId),                 // returns the node's colour
 
     ActivateEdge(EdgeId, EdgeId),
     DeactivateEdge(EdgeId, EdgeId),
@@ -441,29 +447,33 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
     //     }
     // });
 
-    io.add_sync_method("get_camera_pos", {
-        move |_params: Params| {
-            // Example: return a dummy camera position
-            // Real logic would query from your Bevy camera resource
-            tx.send(Command::GetCameraPos).ok();
-            Ok(Value::String("ok".into()))
-        }
-    });
-
-    // io.add_sync_method("get_node_pos", {
-    //     move |p: Params| {
-    //         let node_id = parse_node_id(&p);
-
+    // io.add_sync_method("get_camera_pos", {
+    //     move |_params: Params| {
+    //         // Example: return a dummy camera position
+    //         // Real logic would query from your Bevy camera resource
     //         tx.send(Command::GetCameraPos).ok();
     //         Ok(Value::String("ok".into()))
-
-    //         Ok(jsonrpc_core::Value::Array(vec![
-    //             node_id.into(),
-    //             1.23.into(),
-    //             4.56.into(),
-    //         ]))
     //     }
     // });
+
+    io.add_sync_method("get_node_pos", {
+        move |p: Params| {
+            let node_id = parse_node_id(&p);
+            let (sender, receiver) = crossbeam_channel::bounded(1);
+            tx.send(Command::GetNodePos(node_id, sender)).ok();
+
+            // Wait for the Transform response.
+            let tf: Transform = receiver.recv().unwrap();
+            let pos = tf.translation;
+
+            // Return JSON array [x, y, z]
+            Ok(Value::Array(vec![
+                Value::Number(serde_json::Number::from_f64(pos.x as f64).unwrap()),
+                Value::Number(serde_json::Number::from_f64(pos.y as f64).unwrap()),
+                Value::Number(serde_json::Number::from_f64(pos.z as f64).unwrap()),
+            ]))
+        }
+    });
 
     // io.add_sync_method("get_node_colour", {
     //     move |p: Params| {
@@ -493,7 +503,8 @@ fn rx_rpx(
     load: EventWriter<LoadCharacterReq>,
     save: EventWriter<SaveCharacterReq>,
     mut cam: EventWriter<MoveCameraReq>,
-    // TODO: additional resources?
+    tree: Res<PassiveTreeWrapper>, // TODO: additional resources?
+    node_positions: Query<(&Transform, &NodeMarker)>,
 ) {
     while let Ok(cmd) = server.rx.try_recv() {
         match cmd {
@@ -521,8 +532,19 @@ fn rx_rpx(
             Command::MoveCamera(x, y, z) => {
                 cam.send(MoveCameraReq(Vec3::new(x, y, z)));
             }
-            Command::GetNodePos(_) => {
-                todo!();
+            Command::GetNodePos(target, oneshot) => {
+                let mut m_tf = Transform::default();
+                let mtx_tf = Arc::new(Mutex::new(&mut m_tf));
+                let loc = node_positions.par_iter().for_each(|(tf, nid)| {
+                    if **nid == target {
+                        if let Err(e) = oneshot.send(*tf) {
+                            log::error!(
+                                "Unable to send the transform for the node {}'s position.\nError msg: {e}",
+                                target
+                            );
+                        }
+                    }
+                });
             }
             Command::GetNodeColour(_) => {
                 todo!();
