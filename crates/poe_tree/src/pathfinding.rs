@@ -1000,7 +1000,9 @@ mod test {
         let tree = quick_tree();
         let candidates = vec![10364, 42857, 20024, 44223, 49220, 58182, 7344, 26931];
         let target = 17248; // 10364 -> 55342 -> 17248
-        let path = tree.shorto_target_from_any_of(target, &candidates).unwrap();
+        let path = tree
+            .shortest_to_target_from_any_of(target, &candidates)
+            .unwrap();
 
         let expected = [17248, 55342, 10364];
         assert!(expected.into_iter().all(|v| path.contains(&v)))
