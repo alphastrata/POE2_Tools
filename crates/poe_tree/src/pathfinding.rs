@@ -67,7 +67,7 @@ impl PassiveTree {
         Ok(path)
     }
     pub fn are_nodes_connected(&self, node_a: NodeId, node_b: NodeId) -> bool {
-        !self.find_shortest_path(node_a, node_b).is_empty()
+        !self.find_shorpath(node_a, node_b).is_empty()
     }
     pub fn find_node_by_name_or_id(&self, identifier: &str) -> Result<NodeId, String> {
         // Try finding by NodeId first
@@ -146,14 +146,14 @@ impl PassiveTree {
         })
     }
 
-    pub fn find_shortest_path(&self, a: NodeId, b: NodeId) -> Vec<NodeId> {
+    pub fn find_shorpath(&self, a: NodeId, b: NodeId) -> Vec<NodeId> {
         self.bfs(a, b)
     }
     pub fn find_path(&self, a: NodeId, b: NodeId) -> Vec<NodeId> {
         self.bfs(a, b)
     }
 
-    pub fn shortest_to_target_from_any_of(
+    pub fn shorto_target_from_any_of(
         &self,
         target: NodeId,
         candidates: &[NodeId],
@@ -948,7 +948,7 @@ mod test {
         let start_id = flow_ids[0];
         let target_id = chaos_ids[0];
 
-        let bfs_path = tree.find_shortest_path(start_id, target_id);
+        let bfs_path = tree.find_shorpath(start_id, target_id);
         if bfs_path.is_empty() {
             panic!("No path found between {} and {}", start_id, target_id);
         }
@@ -959,7 +959,7 @@ mod test {
     }
 
     #[test]
-    fn test_path_avatar_of_fire_to_over_exposure() {
+    fn path_avatar_of_fire_to_over_exposure() {
         let tree = quick_tree();
         let avatar_ids = tree.fuzzy_search_nodes("Avatar of Fire");
         let over_exposure_ids = tree.fuzzy_search_nodes("Overexposure");
@@ -986,25 +986,21 @@ mod test {
 
     #[test]
     #[ignore = "Dunno why this is failing atm, it's like we cannot go backwards or something."]
-    fn test_shortest_path_15957() {
+    fn shorpath_15957() {
         let tree = quick_tree();
         let candidates = vec![10364, 42857, 20024, 44223, 49220, 58182, 7344, 26931];
         let target = 15957; // 15957 -> 48198 -> 26931
-        let path = tree
-            .shortest_to_target_from_any_of(target, &candidates)
-            .unwrap();
+        let path = tree.shorto_target_from_any_of(target, &candidates).unwrap();
 
         assert_eq!(path, vec![15957, 48198, 26931]);
     }
 
     #[test]
-    fn test_shortest_path_17248() {
+    fn shorpath_17248() {
         let tree = quick_tree();
         let candidates = vec![10364, 42857, 20024, 44223, 49220, 58182, 7344, 26931];
         let target = 17248; // 10364 -> 55342 -> 17248
-        let path = tree
-            .shortest_to_target_from_any_of(target, &candidates)
-            .unwrap();
+        let path = tree.shorto_target_from_any_of(target, &candidates).unwrap();
 
         let expected = [17248, 55342, 10364];
         assert!(expected.into_iter().all(|v| path.contains(&v)))
@@ -1014,7 +1010,7 @@ mod test {
     const LVL_CAP: usize = 11;
     const MIN_BONUS_VALUE: f32 = 110.0;
     #[test]
-    fn test_ten_lvl_warrior_finds_110_percent_melee_dam() {
+    fn ten_lvl_warrior_finds_110_percent_melee_dam() {
         _ = pretty_env_logger::init();
         let tree = quick_tree();
 
@@ -1065,7 +1061,7 @@ mod test {
                             // }
                             /* Smash, can throw this out because it has so many additioanl stat buffs that are not the MeleeDamage we're looking for.
                                 [DEBUG] Node PoeNode { node_id: 45363, skill_id: "melee55", parent: 315, radius: 3, position: 23, name: "Smash", is_notable: true, wx: -3810.9294, wy: 1066.7999, active: false } matches KEYWORD but NOT MeleeDamage: MeleeDamageVsHeavyStunnedEnemies(Other(40.0))
-                            test pathfinding::test::test_ten_lvl_warrior_finds_120_percent_melee_dam ... ok
+                            test pathfinding::test::ten_lvl_warrior_finds_120_percent_melee_dam ... ok
                              */
                             // As a .stats() can contain many Stat(s) we have to recheck as our MeleeDamage is likely nested in some of the notable nodes.
                             if matches!(s, Stat::MeleeDamage(_)) {
