@@ -1,11 +1,13 @@
 This is a bit of a sprawl, but my main question should be answerable (trivially) by looking at these two things, assuming you've a rust toolchain installed.
 
 1. `cargo run -r -p poe_tree --bin vis` will run the visualiser.
-2. `➜  poo-tools2 git:(main) `cargo run -r --example -p poe_tree --example possible_builds -- --visualiser`
+2. `cargo run -r --example -p poe_tree --example possible_builds -- --visualiser`
 
 the `--visualiser` arg will plot the nodes from the paths in realtime in the visualiser, running this one without the `--visualiser` has some, if you have `RUST_LOG=debug` set in your shell's env will help us drive down the times.
 
-My goal is very simple, currently I cannot really (in reasonable time) compute the `n` of greater than 50. The upper limit on steps takeable is `123` so we don't have to go far.
+My goal is very simple, currently I cannot really (in reasonable time) compute the `n` of greater than 50. The upper limit on steps walkable is `123` so we don't have to go far.
+
+I believe the solution will be some way to compress the longest runs of NodeIds that are common between paths we're evaluating, perhaps CSR is the way... I dunno..
 
 To get possible start locations:
 
