@@ -1041,6 +1041,7 @@ mod test {
 
     fn melee_dam_helper(tree: &PassiveTree, ser_res: Vec<Vec<u16>>) -> Vec<Vec<NodeId>> {
         let mut winners: Vec<Vec<NodeId>> = vec![];
+        let mut acc = 0.;
         ser_res
             .into_iter()
             .filter(|p| p.len() == LVL_CAP)
@@ -1062,12 +1063,20 @@ mod test {
                             //         &pnode, s
                             //     );
                             // }
-                            /* it was Smash.
+                            /* Smash, can throw this out because it has so many additioanl stat buffs that are not the MeleeDamage we're looking for.
                                 [DEBUG] Node PoeNode { node_id: 45363, skill_id: "melee55", parent: 315, radius: 3, position: 23, name: "Smash", is_notable: true, wx: -3810.9294, wy: 1066.7999, active: false } matches KEYWORD but NOT MeleeDamage: MeleeDamageVsHeavyStunnedEnemies(Other(40.0))
                             test pathfinding::test::test_ten_lvl_warrior_finds_120_percent_melee_dam ... ok
                              */
+                            // As a .stats() can contain many Stat(s) we have to recheck as our MeleeDamage is likely nested in some of the notable nodes.
+                            if matches!(s, Stat::MeleeDamage(_)) {
+                                acc += s.value();
+                                println!("GOT ONE! acc = {}", acc);
 
-                            Some(s.value())
+                                Some(s.value())
+                            } else {
+                                println!("skipping {}", s.as_str());
+                                None
+                            }
                         })
                     })
                     .sum();
@@ -1076,18 +1085,21 @@ mod test {
             })
             .filter(|(total, _path)| total >= &MIN_BONUS_VALUE)
             .for_each(|(total, p)| {
+                println!("{}", "-".repeat(80));
+
                 println!("len {} has total {}", p.len(), total);
 
                 {
-                    for nid in p.iter() {
+                    for (e, nid) in p.iter().enumerate() {
                         let pnode = tree.nodes.get(&nid).unwrap();
                         let stats = pnode.as_passive_skill(&tree).stats().to_vec();
                         stats.into_iter().for_each(move |s| {
-                            dbg!(s);
+                            println!("{} {}:{}", " ".repeat(e), s.as_str(), s.value());
                         });
                     }
                 }
                 winners.push(p);
+                println!("{}", "-".repeat(80));
             });
 
         return winners;
