@@ -990,7 +990,9 @@ mod test {
         let tree = quick_tree();
         let candidates = vec![10364, 42857, 20024, 44223, 49220, 58182, 7344, 26931];
         let target = 15957; // 15957 -> 48198 -> 26931
-        let path = tree.shorto_target_from_any_of(target, &candidates).unwrap();
+        let path = tree
+            .shortest_to_target_from_any_of(target, &candidates)
+            .unwrap();
 
         assert_eq!(path, vec![15957, 48198, 26931]);
     }
