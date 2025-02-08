@@ -32,12 +32,11 @@ fn main() {
                 .stats()
                 .iter()
                 .filter(|s| {
-                    s.name() == keyword
-                    // && s.value == min_value
+                    s.name() == keyword && s.value() == min_value
                     // && matches!(s.operand, Operand::Percentage)
                 })
                 .map(
-                    |s| 0.0, // s.value
+                    |s| s.value(), // s.value
                 )
                 .sum();
 
