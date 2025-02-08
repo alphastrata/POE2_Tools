@@ -61,7 +61,10 @@ pub fn handle_node_clicks(
                     deactivate_events.send(NodeDeactivationReq(marker.0));
                     path_repair.request_path_repair();
                 }
-                _ => unreachable!(),
+                _ => {
+                    log::warn!("Should be unreachable...");
+                    return;
+                }
             }
             last_ten.push_back(marker.0);
         }

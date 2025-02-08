@@ -1,12 +1,34 @@
 // in your src/lib.rs or src/main.rs:
 mod stat;
+use std::collections::HashMap;
+
 pub use stat::Stat;
 
 impl Stat {
     pub fn name(&self) -> &str {
         self.as_str()
     }
+    /// Aggregates stats that are of PlusPercentage/Plus/MinusPercentage etc type into a HashMap where the key is the stat name
+    /// and the value is a tuple of (total value, count of nodes).
+    pub fn aggregate_stats<'t>(
+        stats: impl Iterator<Item = &'t Stat>,
+    ) -> HashMap<String, (f32, usize)> {
+        let mut groups: HashMap<String, (f32, usize)> = HashMap::new();
+        stats.for_each(|stat| {
+            let (name, value) = (stat.as_str(), stat.value());
+
+            groups
+                .entry(name.to_owned())
+                .and_modify(|(sum, count)| {
+                    *sum += value;
+                    *count += 1;
+                })
+                .or_insert((value, 1));
+        });
+        groups
+    }
 }
+
 // In your src/lib.rs:
 pub mod arithmetic {
     #[derive(Debug, Clone, Copy, PartialEq)]
@@ -61,7 +83,9 @@ mod tests {
         tree.remove_hidden();
 
         let stats = tree
-            .nodes.values().map(|pnode| pnode.as_passive_skill(&tree));
+            .nodes
+            .values()
+            .map(|pnode| pnode.as_passive_skill(&tree));
 
         let er_count: usize = stats
             .into_iter()

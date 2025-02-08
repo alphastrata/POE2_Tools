@@ -35,6 +35,7 @@ fn handle_input(
         searchbox_toggle.send(ShowSearch);
         log::trace!("Searchbox toggle sent");
     }
+
     // Camera:
     if let Ok(mut transform) = camera_query.get_single_mut() {
         let mut movement = Vec3::ZERO;

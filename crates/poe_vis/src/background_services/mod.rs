@@ -16,6 +16,7 @@ use bevy::{
     utils::hashbrown::HashSet,
 };
 use poe_tree::{
+    consts::LEVEL_ONE_NODES,
     type_wrappings::{EdgeId, NodeId},
     PassiveTree,
 };
@@ -75,7 +76,6 @@ impl Plugin for BGServicesPlugin {
             .add_event::<NodeScaleReq>()
             .add_event::<SaveCharacterReq>()
             .add_event::<SaveCharacterAsReq>()
-            .add_event::<LoadCharacterReq>()
             .add_event::<ShowSearch>()
             .add_event::<ThrowWarning>()
             //spacing..
@@ -247,6 +247,7 @@ fn process_save_character(
 fn process_load_character(
     mut loader: EventReader<LoadCharacterReq>,
     mut active_character: ResMut<ActiveCharacter>,
+    mut root_node: ResMut<RootNode>,
 ) {
     println!("Load Character requested");
     loader.read().for_each(|req| {
@@ -287,6 +288,15 @@ fn process_load_character(
             }
         }
     });
+
+    LEVEL_ONE_NODES
+        .iter()
+        .flat_map(|v| active_character.activated_node_ids.get(v))
+        .for_each(|v| {
+            log::debug!("Resetting the root node to: {v}");
+
+            **root_node = Some(*v)
+        });
 }
 
 //Activations

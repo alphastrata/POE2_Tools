@@ -269,31 +269,14 @@ fn fmt_for_ui(poe_node: &PoeNode, tree: &PassiveTree, ui: &mut egui::Ui) {
     }
 }
 
-/// Aggregates stats that are of PlusPercentage/Plus/MinusPercentage etc type into a HashMap where the key is the stat name
-/// and the value is a tuple of (total value, count of nodes).
-fn aggregate_stats<'t>(stats: impl Iterator<Item = &'t Stat>) -> HashMap<String, (f32, usize)> {
-    let mut groups: HashMap<String, (f32, usize)> = HashMap::new();
-    stats.for_each(|stat| {
-        let (name, value) = (stat.as_str(), stat.value());
-
-        groups
-            .entry(name.to_owned())
-            .and_modify(|(sum, count)| {
-                *sum += value;
-                *count += 1;
-            })
-            .or_insert((value, 1));
-    });
-    groups
-}
-
 /// In your UI system, call this function to display aggregated stat summaries.
 fn display_aggregated_stats<'t>(
     ui: &mut egui::Ui,
     stats: impl Iterator<Item = &'t Stat>,
     mut searchbox_state: ResMut<SearchState>,
 ) {
-    let groups = aggregate_stats(stats);
+    let groups = Stat::aggregate_stats(stats);
+
     //sort alphabetically
     let mut entries: Vec<_> = groups.into_iter().collect();
     entries.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));

@@ -1,4 +1,5 @@
 // ... (imports remain unchanged)
+use core::panic;
 use rayon::prelude::*;
 use reqwest::blocking::Client;
 use std::{
@@ -17,6 +18,7 @@ fn maximize_paths<F>(
     tree: &PassiveTree,
     stat_selector: F,
     min_bonus: f32,
+    max_length: usize,
 ) -> Vec<Vec<NodeId>>
 where
     F: Fn(&Stat) -> Option<f32>,
@@ -36,15 +38,23 @@ where
                         .sum::<f32>()
                 })
                 .sum();
+
             if bonus >= min_bonus {
                 Some((path, bonus))
             } else {
+                if bonus >= (min_bonus / 2.0) {
+                    eprintln!("Rejecting path with {}", bonus);
+                }
                 None
             }
         })
         .collect();
     scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-    scored.into_iter().map(|(path, _)| path).collect()
+    scored
+        .into_iter()
+        .take_while(|p| p.0.len() <= max_length)
+        .map(|(path, _)| path)
+        .collect()
 }
 
 fn main() {
@@ -66,8 +76,9 @@ fn main() {
         return;
     }
     colours.sort();
-    const LVL_CAP: usize = 33;
-    const MIN_BONUS_VALUE: f32 = 80.0;
+    const LVL_CAP: usize = 35;
+    // 100 should be possible of 31 lvls..
+    const MIN_BONUS_VALUE: f32 = 101.0;
 
     //TODO: benchmark take_while
     //TODO: benchmark maximise_paths
@@ -75,21 +86,16 @@ fn main() {
     //TODO: flip the directions on the bfs, go broad first?
     //TODO: implement deadend nodes (nodes to immediately break from on a proximity keyword search nodes' wx, wy), for example all the chaos nodes are at the top of the board, so heading south is almost always a waste of time.
 
+    let keyword = "chaos_damage_+%";
     let t1 = Instant::now();
     let filtered: Vec<Vec<NodeId>> = maximize_paths(
-        tree.take_while(start_node, |s| matches!(s, Stat::ChaosDamage(_)), LVL_CAP),
+        tree.take_while(start_node, |s| s.as_str().contains(keyword), LVL_CAP),
         &tree,
-        |s| {
-            if let Stat::ChaosDamage(_bp) = s {
-                Some(s.value())
-            } else {
-                None
-            }
-        },
+        |s| Some(s.value()),
         MIN_BONUS_VALUE,
+        LVL_CAP,
     )
     .into_iter()
-    .take_while(|p| p.len() == LVL_CAP)
     .collect();
 
     println!(
@@ -98,59 +104,48 @@ fn main() {
         t1.elapsed().as_secs_f64()
     );
 
-    //65005 w chaosDamage
-    //7526 after filter. in 64.2901842s for  MIN_BONUS_VALUE: f32 = 60.0;
+    // 65_005 w chaosDamage in about a minute... #NEEDS IMPROVEMENT!
+    // 7_526 after filter. in 64.29s for MIN_BONUS_VALUE: f32 = 60.0;
+    // for const MIN_BONUS_VALUE: f32 = 80.0;
+    /*
+        1177 after filter. in 60.0757134s fo 81.0
+    Estimated animtaion time is: 00:00:41
+     */
+    let f_20 = filtered.par_iter();
+    let total_secs = f_20.len() as f64 * 0.035;
+    let hours = (total_secs / 3600.0) as u64;
+    let minutes = ((total_secs % 3600.0) / 60.0) as u64;
+    let seconds = (total_secs % 60.0).round() as u64;
 
-    loop {
-        let f_20 = filtered.par_iter(); //.par_iter();
-        let total_secs = f_20.len() as f64 * 0.035;
-        let hours = (total_secs / 3600.0) as u64;
-        let minutes = ((total_secs % 3600.0) / 60.0) as u64;
-        let seconds = (total_secs % 60.0).round() as u64;
-
-        let mut input = String::new();
-        println!(
-            "Estimated animtaion time is: {:02}:{:02}:{:02}",
-            hours, minutes, seconds
+    println!(
+        "Estimated animtaion time is: {:02}:{:02}:{:02}",
+        hours, minutes, seconds
+    );
+    if filtered.is_empty() {
+        panic!(
+            "Filtering was too strict for {}, try a smaller value or more levels!",
+            MIN_BONUS_VALUE
         );
-
-        println!("Play the animation (Y/N)");
-
-        std::io::stdin().read_line(&mut input).unwrap();
-
-        if input.trim().eq_ignore_ascii_case("Y") {
-            f_20.enumerate().for_each(|(i, path)| {
-                let colour = &colours[i % colours.len()];
-                if path.len() == 33 {
-                    if visualiser {
-                        // Activate first node.
-                        if let Some(&first) = path.first() {
-                            activate_node_with_colour(&client, first, colour);
-                            sleep(Duration::from_millis(5));
-                        }
-                        // Activate edges and nodes via windows(2).
-                        for window in path.windows(2) {
-                            let (from, to) = (window[0], window[1]);
-                            common::activate_edge_with_colour(&client, from, to, colour);
-                            activate_node_with_colour(&client, to, colour);
-                            sleep(Duration::from_millis(5));
-                        }
-                        sleep(Duration::from_millis(30));
-                        // Deactivate edges in reverse.
-                        for window in path.windows(2).rev() {
-                            let (_from, _to) = (window[0], window[1]);
-                            // common::deactivate_edge(&client, from, to);
-                            sleep(Duration::from_millis(5));
-                        }
-                        // Deactivate the first node.
-                        if let Some(&first) = path.first() {
-                            deactivate_node(&client, first);
-                        }
-                    }
-                }
-            });
-        } else {
-            std::process::exit(0);
-        }
     }
+    println!("Play the animation (Y/N)");
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+
+    filtered.par_iter().enumerate().for_each(|(i, path)| {
+        let colour = &colours[i % colours.len()];
+        if visualiser {
+            // Activate first node.
+            if let Some(&first) = path.first() {
+                activate_node_with_colour(&client, first, colour);
+            }
+            // Activate edges and nodes via windows(2).
+            for window in path.windows(2) {
+                let (from, to) = (window[0], window[1]);
+                common::activate_edge_with_colour(&client, from, to, colour);
+                common::activate_node_with_colour(&client, to, colour);
+                sleep(Duration::from_millis(8));
+            }
+            sleep(Duration::from_millis(22));
+        }
+    });
 }
