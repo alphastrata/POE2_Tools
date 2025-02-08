@@ -728,6 +728,79 @@ impl PassiveTree {
     pub fn path_with_cost(&self, path: Vec<NodeId>) -> impl Iterator<Item = (usize, NodeId)> {
         path.into_iter().enumerate()
     }
+
+    ///```rust, ignore
+    /// fn main() {
+    ///     let tree = PassiveTree::from_data(...); // create tree from data
+    ///     let start_node: NodeId = 1;
+    ///     let paths = tree.take_while(start_node, |s| matches!(s, Stat::LightningDamage(_)), 50);
+    ///     println!("{:?}", paths);
+    /// }
+    /// ```
+    pub fn take_while<F>(&self, start: NodeId, predicate: F, depth: usize) -> Vec<Vec<NodeId>>
+    where
+        F: Fn(&Stat) -> bool,
+    {
+        let targets: HashSet<_> = self
+            .nodes
+            .iter()
+            .filter_map(|(&nid, node)| {
+                if node
+                    .as_passive_skill(self)
+                    .stats()
+                    .iter()
+                    .any(|s| predicate(s))
+                {
+                    Some(nid)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        log::trace!("Num targets: {}", targets.len());
+
+        let mut valid_paths = Vec::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(vec![start]);
+
+        while let Some(path) = queue.pop_front() {
+            let last = *path.last().unwrap();
+            if path.len() - 1 == depth {
+                if path.iter().any(|nid| targets.contains(nid)) {
+                    valid_paths.push(path.clone());
+                }
+                continue;
+            }
+            // Extend path.
+            for edge in &self.edges {
+                let (a, b) = (edge.start, edge.end);
+                if a == last && !path.contains(&b) {
+                    let mut new_path = path.clone();
+                    new_path.push(b);
+                    queue.push_back(new_path);
+                } else if b == last && !path.contains(&a) {
+                    let mut new_path = path.clone();
+                    new_path.push(a);
+                    queue.push_back(new_path);
+                }
+            }
+            if path.iter().any(|nid| targets.contains(nid)) {
+                valid_paths.push(path);
+                log::trace!("adding new path...");
+            }
+        }
+        log::trace!("Pruning shorter paths...");
+        // Prune shorter paths that are prefixes of longer ones.
+        valid_paths
+            .iter()
+            .filter(|p| {
+                !valid_paths
+                    .iter()
+                    .any(|q| q.len() > p.len() && q.starts_with(p))
+            })
+            .cloned()
+            .collect()
+    }
 }
 
 #[cfg(test)]

@@ -23,6 +23,7 @@ pub enum Command {
     DeactivateNode(NodeId),
 
     ActivateNodeWithColour(NodeId, String),
+    ActivateEdgeWthColour(NodeId, NodeId, String),
 
     ScaleNode(u32, f32),                   // (entity_id, scale)
     GetNodePos(NodeId, Sender<Transform>), // returns the node's position
@@ -78,6 +79,16 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
         move |p: Params| {
             let (node_id, colour) = parse_node_with_colour(&p);
             tx.send(Command::ActivateNodeWithColour(node_id, colour))
+                .ok();
+            Ok(Value::String("ok".into()))
+        }
+    });
+
+    io.add_sync_method("activate_edge_with_colour", {
+        let tx = tx.clone();
+        move |p: Params| {
+            let (start, end, colour) = parse_edge_with_colour(&p);
+            tx.send(Command::ActivateEdgeWthColour(start, end, colour))
                 .ok();
             Ok(Value::String("ok".into()))
         }
@@ -492,7 +503,8 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
 fn rx_rpx(
     server: Res<Server>,
     mut activation: EventWriter<NodeActivationReq>,
-    mut activate_with_colour: EventWriter<ManualHighlightWithColour>,
+    mut activate_node_with_colour: EventWriter<ManualNodeHighlightWithColour>,
+    mut activate_edge_with_colour: EventWriter<ManualEdgeHighlightWithColour>,
     mut deactivation: EventWriter<NodeDeactivationReq>,
     mut clear: EventWriter<ClearAll>,
     mut scale: EventWriter<NodeScaleReq>,
@@ -512,7 +524,10 @@ fn rx_rpx(
                 clear.send(ClearAll);
             }
             Command::ActivateNodeWithColour(id, col) => {
-                activate_with_colour.send(ManualHighlightWithColour(id, col));
+                activate_node_with_colour.send(ManualNodeHighlightWithColour(id, col));
+            }
+            Command::ActivateEdgeWthColour(start, end, col) => {
+                activate_edge_with_colour.send(ManualEdgeHighlightWithColour(start, end, col));
             }
             Command::ActivateNode(id) => {
                 activation.send(NodeActivationReq(id));
@@ -628,6 +643,17 @@ fn parse_node_with_colour(params: &Params) -> (NodeId, String) {
         Params::Array(arr) if arr.len() >= 2 => (
             arr[0].as_u64().unwrap() as NodeId,
             arr[1].as_str().unwrap().to_string(),
+        ),
+        _ => unimplemented!(),
+    }
+}
+
+fn parse_edge_with_colour(params: &Params) -> (NodeId, NodeId, String) {
+    match params {
+        Params::Array(arr) if arr.len() >= 3 => (
+            arr[0].as_u64().unwrap() as NodeId,
+            arr[1].as_u64().unwrap() as NodeId,
+            arr[2].as_str().unwrap().to_string(),
         ),
         _ => unimplemented!(),
     }

@@ -30,6 +30,11 @@ name = "all2chaos"
 path = "examples/all_starts_to_chaos_inoculation.rs"
 
 
+[[examples]]
+name = "highsearchterm"
+path = "examples/highsearchterm.rs"
+
+
 [dependencies]
 log = { workspace = true }
 pretty_env_logger = { workspace = true }

@@ -23,7 +23,7 @@ use poe_tree::{
 use crate::{
     components::*,
     consts::{DEFAULT_SAVE_PATH, SEARCH_THRESHOLD},
-    events::{self, ManualHighlightWithColour, NodeActivationReq, *},
+    events::{self, ManualNodeHighlightWithColour, NodeActivationReq, *},
     materials::{self, GameMaterials},
     mouse::handle_node_clicks,
     resources::*,
@@ -65,7 +65,8 @@ impl Plugin for BGServicesPlugin {
             .add_event::<EdgeColourReq>()
             .add_event::<EdgeDeactivationReq>()
             .add_event::<LoadCharacterReq>()
-            .add_event::<ManualHighlightWithColour>()
+            .add_event::<ManualNodeHighlightWithColour>()
+            .add_event::<ManualEdgeHighlightWithColour>()
             .add_event::<MoveCameraReq>()
             .add_event::<NodeActivationReq>()
             .add_event::<NodeColourReq>()
@@ -114,7 +115,8 @@ impl Plugin for BGServicesPlugin {
                     .run_if(sufficient_active_nodes)
                     .after(populate_virtual_path),
                 clear_virtual_paths.run_if(on_event::<ClearVirtualPath>.or(on_event::<ClearAll>)),
-                process_manual_highlights.run_if(on_event::<ManualHighlightWithColour>),
+                process_manual_node_highlights.run_if(on_event::<ManualNodeHighlightWithColour>),
+                process_manual_edge_highlights.run_if(on_event::<ManualEdgeHighlightWithColour>),
                 /* Pretty lightweight, can be spammed.*/
                 process_node_colour_changes.run_if(on_event::<NodeColourReq>),
                 process_edge_colour_changes.run_if(on_event::<EdgeColourReq>),
@@ -130,7 +132,6 @@ impl Plugin for BGServicesPlugin {
         log::debug!("BGServices plugin enabled");
     }
 }
-
 // SOURCE: https://github.com/bevyengine/bevy/blob/main/examples/ecs/run_conditions.rs
 /// This is a function that returns a closure which can be used as a run condition.
 ///
@@ -384,8 +385,8 @@ pub fn process_node_deactivations(
 fn process_edge_deactivations(
     mut deactivation_events: EventReader<EdgeDeactivationReq>,
     mut colour_events: EventWriter<EdgeColourReq>,
-    query: Query<(Entity, &EdgeMarker), With<EdgeActive>>,
-    active_nodes: Query<&NodeMarker, With<NodeActive>>,
+    query: Query<(Entity, &EdgeMarker), (With<EdgeActive>, Without<ManuallyHighlighted>)>,
+    active_nodes: Query<&NodeMarker, (With<NodeActive>, Without<ManuallyHighlighted>)>,
     mut commands: Commands,
     game_materials: Res<GameMaterials>,
 ) {
@@ -535,9 +536,53 @@ fn path_repair(
         }
     }
 }
+fn process_manual_edge_highlights(
+    mut events: EventReader<ManualEdgeHighlightWithColour>,
+    mut colour_events: EventWriter<EdgeColourReq>,
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut game_materials: ResMut<GameMaterials>,
+    query: Query<(Entity, &EdgeMarker)>,
+) {
+    events.read().for_each(
+        |ManualEdgeHighlightWithColour(req_start, req_end, colour_str)| {
+            let mat = game_materials
+                .other
+                .entry(colour_str.to_owned())
+                .or_insert_with(|| {
+                    let color = generated::parse_tailwind_color(colour_str);
+                    materials.add(color)
+                })
+                .clone();
 
-fn process_manual_highlights(
-    mut events: EventReader<ManualHighlightWithColour>,
+            query.iter().for_each(|(ent, marker)| {
+                let (e_start, e_end) = marker.as_tuple();
+                let mut go = false;
+                match (e_start == *req_start, e_end == *req_end) {
+                    (true, true) => go = true,
+                    _ => {
+                        // either way is a match...
+                        //TODO: we should try to make this more ergonomic...
+                        if e_start == *req_end && e_end == *req_start {
+                            go = true;
+                        }
+                    }
+                }
+                if go {
+                    log::info!("manual edge highlight action.");
+                    commands.entity(ent).remove::<EdgeInactive>();
+                    commands.entity(ent).remove::<EdgeActive>();
+                    colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
+                    commands.entity(ent).insert(ManuallyHighlighted);
+                    log::info!("manual edge highlight complete.");
+                }
+            });
+        },
+    );
+}
+
+fn process_manual_node_highlights(
+    mut events: EventReader<ManualNodeHighlightWithColour>,
     mut colour_events: EventWriter<NodeColourReq>,
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -546,7 +591,7 @@ fn process_manual_highlights(
 ) {
     events
         .read()
-        .for_each(|ManualHighlightWithColour(node_id, colour_str)| {
+        .for_each(|ManualNodeHighlightWithColour(node_id, colour_str)| {
             let mat = game_materials
                 .other
                 .entry(colour_str.to_owned())
