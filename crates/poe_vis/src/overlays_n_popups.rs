@@ -43,6 +43,7 @@ fn show_node_info(
     mut hover_text_query: Query<(&mut Node, &mut Text), With<NodeHoverText>>,
     virt_path: Query<&NodeMarker, With<VirtualPathMember>>,
     tree: Res<PassiveTreeWrapper>,
+    active_character: Res<ActiveCharacter>,
 ) {
     // Attempt to get the hover text's Node and Text components
     let Ok((mut node, mut text)) = hover_text_query.get_single_mut() else {
@@ -57,11 +58,13 @@ fn show_node_info(
     let mut found_info: Option<String> = None;
     for (_hovered, marker, _maybe_active) in hovered.iter() {
         if let Some(node_info) = tree.tree.nodes.get(&marker.0) {
+            let vp_count = virt_path.iter().count();
             found_info = Some(format!(
-                "\nNode {}:{}\nCost :{}",
+                "\nNode {}:{}\nTotalCost :{}\nDelta: {}",
                 node_info.node_id,
                 node_info.name,
-                virt_path.iter().count()
+                vp_count,
+                (vp_count as isize - active_character.activated_node_ids.len() as isize)
             ));
             break;
         }

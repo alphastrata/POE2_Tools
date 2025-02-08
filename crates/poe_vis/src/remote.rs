@@ -535,7 +535,7 @@ fn rx_rpx(
             Command::GetNodePos(target, oneshot) => {
                 let mut m_tf = Transform::default();
                 let mtx_tf = Arc::new(Mutex::new(&mut m_tf));
-                let loc = node_positions.par_iter().for_each(|(tf, nid)| {
+                node_positions.par_iter().for_each(|(tf, nid)| {
                     if **nid == target {
                         if let Err(e) = oneshot.send(*tf) {
                             log::error!(

@@ -23,7 +23,7 @@ poe_tree = { workspace = true }
 
 bevy = { workspace = true, features = ["file_watcher"] }
 bevy_cosmic_edit.workspace = true
-bevy_egui.workspace = true
+bevy_egui = { workspace = true, features = ["manage_clipboard"] }
 crossbeam = { workspace = true, features = ["crossbeam-channel"] }
 crossbeam-channel.workspace = true
 jsonrpc-core.workspace = true

@@ -10,7 +10,7 @@ use crate::{
 use bevy::{prelude::*, utils::HashMap};
 use bevy_egui::{
     egui::{self, Align, SidePanel},
-    EguiContexts, EguiPlugin,
+    EguiClipboard, EguiContexts, EguiPlugin,
 };
 
 use poe_tree::{
@@ -59,6 +59,7 @@ fn egui_ui_system(
     mut contexts: EguiContexts,
     settings: Res<CameraSettings>,
     searchbox_state: ResMut<SearchState>,
+    clipboard: ResMut<EguiClipboard>,
 ) {
     topbar_menu_system(
         &mut contexts,
@@ -77,6 +78,7 @@ fn egui_ui_system(
         &mut contexts,
         settings,
         searchbox_state,
+        clipboard,
     );
 }
 
@@ -89,6 +91,7 @@ fn rhs_menu(
     contexts: &mut EguiContexts<'_, '_>,
     settings: Res<'_, CameraSettings>,
     searchbox_state: ResMut<SearchState>,
+    mut clipboard: ResMut<EguiClipboard>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
     SidePanel::right("rhs").resizable(true).show(ctx, |ui| {
@@ -171,6 +174,13 @@ fn rhs_menu(
         ui.heading(format!("{} Points Spent", active_nodes.iter().len()));
         ui.separator();
 
+        if ui.button("Copy path to clipboard").clicked() {
+            let path: Vec<_> = active_nodes.iter().map(|nm| **nm).collect();
+            let path_str = format!("{:?}", path); // yields [31765, 722, ...]
+            clipboard.set_contents(&path_str);
+        }
+
+        ui.separator();
         if ui.button("Clear All").clicked() {
             clear_all_tx.send(ClearAll);
         }
@@ -180,8 +190,8 @@ fn rhs_menu(
 // Refactor topbar_menu_system to accept an immutable reference to egui::Context.
 fn topbar_menu_system(
     contexts: &mut EguiContexts<'_, '_>,
-    mut save_tx: &mut EventWriter<SaveCharacterReq>,
-    mut save_as_tx: &mut EventWriter<SaveCharacterAsReq>,
+    save_tx: &mut EventWriter<SaveCharacterReq>,
+    save_as_tx: &mut EventWriter<SaveCharacterAsReq>,
     load_tx: &mut EventWriter<LoadCharacterReq>,
     clear_all_tx: &mut EventWriter<ClearAll>,
 ) {

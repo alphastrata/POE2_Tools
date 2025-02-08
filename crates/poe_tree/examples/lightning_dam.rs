@@ -40,7 +40,7 @@ fn main() {
         .nodes
         .iter()
         .filter(|(_, pnode)| pnode.contains_stat_with_keyword(&tree, keyword))
-        .map(|(nid, _)| nid.clone())
+        .map(|(nid, _)| *nid)
         .collect();
     log::info!("Num nodes with keyword {}", potential_destinations.len());
 
@@ -52,10 +52,10 @@ fn main() {
         .iter()
         .flat_map(|&level| {
             let a_tree = a_tree.clone();
-            let level = level.clone();
+            let level = level;
             let potential_destinations = std::sync::Arc::new(&potential_destinations);
             start_node_ids.iter().map(move |start| {
-                let path = a_tree.bfs_any(start.clone(), &potential_destinations);
+                let path = a_tree.bfs_any(*start, &potential_destinations);
                 let sum: f32 = path.iter().fold(0.0, |acc, &node_id| {
                     if let Some(poe_node) = a_tree.nodes.get(&node_id) {
                         let skill = poe_node.as_passive_skill(&a_tree);
@@ -69,7 +69,7 @@ fn main() {
                         acc
                     }
                 });
-                ((start.clone(), level.clone()), path, sum)
+                ((*start, level), path, sum)
             })
         })
         .collect();
@@ -123,10 +123,10 @@ fn main() {
         .iter()
         .flat_map(|&level| {
             let a_tree = a_tree.clone();
-            let level = level.clone();
+            let level = level;
             let potential_destinations = std::sync::Arc::new(&potential_destinations);
             start_node_ids.iter().map(move |start| {
-                let path = a_tree.bfs_any(start.clone(), &potential_destinations);
+                let path = a_tree.bfs_any(*start, &potential_destinations);
                 let sum: f32 = path.iter().fold(0.0, |acc, &node_id| {
                     if let Some(poe_node) = a_tree.nodes.get(&node_id) {
                         let skill = poe_node.as_passive_skill(&a_tree);
@@ -140,7 +140,7 @@ fn main() {
                         acc
                     }
                 });
-                ((start.clone(), level.clone()), path, sum)
+                ((*start, level), path, sum)
             })
         })
         .collect();
