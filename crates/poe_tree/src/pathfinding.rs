@@ -1011,7 +1011,7 @@ mod test {
     }
 
     //  For warrior melee @ lvl 11 test
-    const LVL_CAP: usize = 11;
+    const LVL_CAP: usize = 10;
     const MIN_BONUS_VALUE: f32 = 110.0;
     #[test]
     fn ten_lvl_warrior_finds_110_percent_melee_dam() {
@@ -1020,12 +1020,45 @@ mod test {
 
         const STARTING_LOC: NodeId = 3936; //warrior melee damage.
 
+        let answer = [
+            STARTING_LOC,
+            55473,
+            46325,
+            33556,
+            43164,
+            58528,
+            19011,
+            5710,
+            45363,
+            64284, // FINISHING LOCATION
+        ];
+
         let selector = |s: &Stat| matches!(s, Stat::MeleeDamage(_));
         let ser_res = tree.take_while(STARTING_LOC, selector, LVL_CAP);
         let par_res = tree.par_take_while(STARTING_LOC, selector, LVL_CAP);
 
         assert!(!ser_res.is_empty(), "No valid serial paths taken");
         assert!(!par_res.is_empty(), "No valid parallel paths taken");
+        assert!(
+            ser_res
+                .iter()
+                .any(|path| answer.iter().all(|&x| path.contains(&x))),
+            "No path in ser_res matches the expected answer"
+        );
+        assert!(
+            par_res
+                .iter()
+                .any(|path| answer.iter().all(|&x| path.contains(&x))),
+            "No path in par_res matches the expected answer"
+        );
+
+        // If you're passed here the pathfinding and take_whiles are GOOD, but the calculations may be bad.
+
+        assert_eq!(
+            ser_res.len(),
+            par_res.len(),
+            "Serial and Paralelle take_while didn't return the same number of results...."
+        );
 
         assert_eq!(
             melee_dam_helper(&tree, ser_res).len(),
@@ -1038,53 +1071,73 @@ mod test {
             "Found too many paths, only one route is possible on this lvl cap"
         );
     }
-    fn melee_dam_helper(tree: &PassiveTree, ser_res: Vec<Vec<u16>>) -> Vec<Vec<NodeId>> {
+    fn melee_dam_helper(tree: &PassiveTree, res: Vec<Vec<u16>>) -> Vec<Vec<NodeId>> {
         let mut winners: Vec<Vec<NodeId>> = vec![];
 
-        ser_res
-            .into_iter()
+        res.into_iter()
             .filter(|p| p.len() == LVL_CAP) // Ensure correct path length
             .map(|path: Vec<u16>| {
                 let path_bonus: f32 = path
                     .iter()
                     .filter_map(|nid| tree.nodes.get(nid)) // Get node from tree
                     .flat_map(|pnode| pnode.as_passive_skill(&tree).stats()) // Get stats
-                    .filter_map(|s| {
-                        if matches!(s, Stat::MeleeDamage(_)) {
-                            Some(s.value()) // Extract and sum values correctly
-                        } else {
-                            None
+                    .map(|s| match s {
+                        Stat::MeleeDamage(pp) => {
+                            log::debug!("Matched Stat::MeleeDamage with value: {:?}", pp.0);
+                            pp.0
+                        }
+                        _ => {
+                            if s.as_str().contains("damage") {
+                                log::debug!(
+                                    "Stat {:#?} did not match, returning default value: 0.0",
+                                    s
+                                );
+                            }
+                            0.0
                         }
                     })
-                    .sum(); // Sum up all the melee damage bonuses in the path
+                    .sum();
 
-                if path_bonus > 70.0 {
+                if path_bonus > 60.0 {
                     println!(
                         "Checking path of length {}: total melee bonus = {}",
                         path.len(),
                         path_bonus
                     );
 
-                    path.iter()
-                        .enumerate()
-                        .map(|(e, nid)| (e, tree.nodes.get(nid).unwrap()))
-                        .map(|(e, pnode)| (e, pnode.as_passive_skill(&tree)))
-                        .for_each(|(_, pnode)| {
-                            for (e, s) in pnode.stats().iter().enumerate() {
-                                println!("{} {} {}", " ".repeat(e + 1), s.as_str(), s.value())
+                    for (depth, nid) in path.iter().enumerate() {
+                        if let Some(pnode) = tree.nodes.get(nid) {
+                            let passive = pnode.as_passive_skill(&tree);
+                            println!(
+                                "{}└─ Node ID: {} | Name: {}",
+                                " ".repeat(depth * 2 + 1),
+                                nid,
+                                passive.name()
+                            );
+
+                            for stat in passive.stats() {
+                                println!(
+                                    "{}   ├─ {}: {}",
+                                    " ".repeat(depth * 2),
+                                    stat.as_str(),
+                                    stat.value()
+                                );
                             }
-                        });
+                        }
+                    }
+                    println!("{:?}", &path);
+                    println!("{}", "-".repeat(80));
                 }
 
                 (path_bonus, path)
             })
-            .filter(|(total, _path)| *total >= MIN_BONUS_VALUE) // Ensure path meets melee bonus requirement
-            .for_each(|(total, p)| {
+            .filter(|(path_bonus, _path)| *path_bonus >= MIN_BONUS_VALUE) // Ensure path meets melee bonus requirement
+            .for_each(|(path_bonus, p)| {
                 println!("{}", "-".repeat(80));
                 println!(
                     "Valid path found! len {} has total melee bonus {}",
                     p.len(),
-                    total
+                    path_bonus
                 );
 
                 for (e, nid) in p.iter().enumerate() {
