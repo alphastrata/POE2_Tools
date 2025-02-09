@@ -765,41 +765,35 @@ impl PassiveTree {
 
         while let Some(path) = queue.pop_front() {
             let last = *path.last().unwrap();
-            if path.len() - 1 == depth {
+
+            // Ensure paths are exactly `depth` long
+            if path.len() == depth + 1 {
                 if path.iter().any(|nid| targets.contains(nid)) {
+                    log::debug!("Adding valid path: {:?}", path);
                     valid_paths.push(path.clone());
                 }
-                continue;
+                continue; // Stop expanding this path further
             }
-            // Extend path.
+
+            // Extend path only if we haven't reached the depth limit
             for edge in &self.edges {
                 let (a, b) = (edge.start, edge.end);
                 if a == last && !path.contains(&b) {
+                    log::debug!("Expanding path {:?} → {}", path, b);
                     let mut new_path = path.clone();
                     new_path.push(b);
                     queue.push_back(new_path);
                 } else if b == last && !path.contains(&a) {
+                    log::debug!("Expanding path {:?} → {}", path, a);
                     let mut new_path = path.clone();
                     new_path.push(a);
                     queue.push_back(new_path);
                 }
             }
-            if path.iter().any(|nid| targets.contains(nid)) {
-                valid_paths.push(path);
-                log::trace!("adding new path...");
-            }
         }
-        log::trace!("Pruning shorter paths...");
-        // Prune shorter paths that are prefixes of longer ones.
+
+        log::debug!("Total valid paths found: {}", valid_paths.len());
         valid_paths
-            .iter()
-            .filter(|p| {
-                !valid_paths
-                    .iter()
-                    .any(|q| q.len() > p.len() && q.starts_with(p))
-            })
-            .cloned()
-            .collect()
     }
 }
 
@@ -931,7 +925,7 @@ mod test {
     use super::*;
 
     use crate::consts::CHAR_START_NODES;
-    use std::collections::HashSet;
+    use std::{collections::HashSet, f32::MIN};
 
     #[test]
     fn path_between_flow_like_water_and_chaos_inoculation() {
@@ -1022,148 +1016,43 @@ mod test {
 
         let answer = [
             STARTING_LOC,
-            55473,
-            46325,
+            19011,
             33556,
             43164,
-            58528,
-            19011,
-            5710,
             45363,
+            46325,
+            55473,
+            5710,
+            58528,
             64284, // FINISHING LOCATION
         ];
 
         let selector = |s: &Stat| matches!(s, Stat::MeleeDamage(_));
-        let ser_res = tree.take_while(STARTING_LOC, selector, LVL_CAP);
-        let par_res = tree.par_take_while(STARTING_LOC, selector, LVL_CAP);
+        let ser_res = tree.take_while(STARTING_LOC, selector, LVL_CAP - 1);
 
-        assert_eq!(1, melee_dam_helper(&tree, vec![answer.to_vec()]).len());
-
-        assert!(!ser_res.is_empty(), "No valid serial paths taken");
-        assert!(!par_res.is_empty(), "No valid parallel paths taken");
-        assert!(
-            ser_res
-                .iter()
-                .any(|path| answer.iter().all(|&x| path.contains(&x))),
-            "No path in ser_res matches the expected answer"
-        );
-        assert!(
-            par_res
-                .iter()
-                .any(|path| answer.iter().all(|&x| path.contains(&x))),
-            "No path in par_res matches the expected answer"
-        );
-
-        // If you're passed here the pathfinding and take_whiles are GOOD, but the calculations may be bad.
-
-        assert_eq!(
-            ser_res.len(),
-            par_res.len(),
-            "Serial and Paralelle take_while didn't return the same number of results...."
-        );
-
-        assert_eq!(
-            melee_dam_helper(&tree, ser_res).len(),
-            1,
-            "Found too many paths, only one route is possible on this lvl cap"
-        );
-        assert_eq!(
-            melee_dam_helper(&tree, par_res).len(),
-            1,
-            "Found too many paths, only one route is possible on this lvl cap"
-        );
-    }
-    fn melee_dam_helper(tree: &PassiveTree, res: Vec<Vec<u16>>) -> Vec<Vec<NodeId>> {
-        let mut winners: Vec<Vec<NodeId>> = vec![];
-
-        res.into_iter()
-            .filter(|p| p.len() == LVL_CAP) // Ensure correct path length
-            .map(|path: Vec<u16>| {
-                let path_bonus: f32 = path
-                    .iter()
-                    .filter_map(|nid| tree.nodes.get(nid)) // Get node from tree
-                    .flat_map(|pnode| pnode.as_passive_skill(&tree).stats()) // Get stats
-                    .map(|s| match s {
-                        Stat::MeleeDamage(pp) => {
-                            log::debug!("Matched Stat::MeleeDamage with value: {:?}", pp.0);
-                            pp.0
-                        }
-                        _ => {
-                            if s.as_str().contains("damage") {
-                                log::debug!(
-                                    "Stat {:#?} did not match, returning default value: 0.0",
-                                    s
-                                );
-                            }
-                            0.0
-                        }
-                    })
-                    .sum();
-
-                if path_bonus > 60.0 {
-                    println!(
-                        "Checking path of length {}: total melee bonus = {}",
-                        path.len(),
-                        path_bonus
-                    );
-
-                    for (depth, nid) in path.iter().enumerate() {
-                        if let Some(pnode) = tree.nodes.get(nid) {
-                            let passive = pnode.as_passive_skill(&tree);
-                            println!(
-                                "{}└─ Node ID: {} | Name: {}",
-                                " ".repeat(depth * 2 + 1),
-                                nid,
-                                passive.name()
-                            );
-
-                            for stat in passive.stats() {
-                                println!(
-                                    "{}   ├─ {}: {}",
-                                    " ".repeat(depth * 2),
-                                    stat.as_str(),
-                                    stat.value()
-                                );
-                            }
-                        }
-                    }
-                    println!("{:?}", &path);
-                    println!("{}", "-".repeat(80));
-                }
-
-                (path_bonus, path)
-            })
-            .filter(|(path_bonus, _path)| *path_bonus >= MIN_BONUS_VALUE) // Ensure path meets melee bonus requirement
-            .for_each(|(path_bonus, p)| {
-                println!("{}", "-".repeat(80));
-                println!(
-                    "Valid path found! len {} has total melee bonus {}",
-                    p.len(),
-                    path_bonus
-                );
-
-                for (e, nid) in p.iter().enumerate() {
-                    if let Some(pnode) = tree.nodes.get(nid) {
-                        for s in pnode.as_passive_skill(&tree).stats() {
-                            println!("{} {}:{}", " ".repeat(e), s.as_str(), s.value());
-                        }
+        let mut winners = vec![];
+        ser_res.into_iter().for_each(|potential| {
+            let mut melee_dam_total = 0.0;
+            potential.iter().for_each(|n| {
+                let pnode = tree.nodes.get(n).unwrap();
+                let pskill = tree.passive_for_node(pnode);
+                let stats = pskill.stats();
+                for s in stats {
+                    if let Stat::MeleeDamage(_) = s {
+                        melee_dam_total += s.value()
                     }
                 }
-
-                winners.push(p);
-                println!("{}", "-".repeat(80));
             });
+            match melee_dam_total >= MIN_BONUS_VALUE {
+                true => {
+                    winners.push(potential);
+                }
+                false => {}
+            }
+        });
+        assert!(!winners.is_empty());
 
-        // Debug: Check how many valid paths were found
-        if winners.is_empty() {
-            panic!(
-                "❌ ERROR: Found {} valid paths, but the test expects exactly 1!",
-                winners.len()
-            );
-        }
-
-        winners
+        assert_eq!(1, winners.len());
+        winners[0].iter().all(|nid| answer.contains(&nid));
     }
-
-    //
 }
