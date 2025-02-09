@@ -5,6 +5,18 @@ use crate::consts::{EDGE_PLACEMENT_Z_IDX, NODE_PLACEMENT_Z_IDX};
 use crate::materials::GameMaterials;
 use crate::{components::*, resources::*, PassiveTreeWrapper};
 
+// Remove once we've found the 'longest' edge we'll ever spawn.
+
+use std::sync::{Arc, Mutex, OnceLock};
+
+static SMALLEST_EDGE: OnceLock<Arc<Mutex<f32>>> = OnceLock::new();
+static LARGEST_EDGE: OnceLock<Arc<Mutex<f32>>> = OnceLock::new();
+
+fn init_globals() {
+    SMALLEST_EDGE.get_or_init(|| Arc::new(Mutex::new(f32::MAX)));
+    LARGEST_EDGE.get_or_init(|| Arc::new(Mutex::new(f32::MIN)));
+}
+
 pub(crate) struct TreeCanvasPlugin;
 
 impl Plugin for TreeCanvasPlugin {
@@ -13,9 +25,10 @@ impl Plugin for TreeCanvasPlugin {
             let file = std::fs::File::open("data/POE2_Tree.json").unwrap();
             let reader = std::io::BufReader::new(file);
             let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
+            #[allow(unusued_mut)]
             let mut tree = poe_tree::PassiveTree::from_value(&tree_data).unwrap();
 
-            tree.remove_hidden();
+            // tree.remove_hidden();
             tree
         }
 
@@ -73,16 +86,34 @@ fn spawn_edges(
     materials: Res<GameMaterials>,
     tree: Res<PassiveTreeWrapper>,
 ) {
-    tree.tree.edges.iter().for_each(|edge| {
-        let (start_node, end_node) = (
-            tree.tree.nodes.get(&edge.start).unwrap(),
-            tree.tree.nodes.get(&edge.end).unwrap(),
-        );
+    init_globals();
 
-        let (start_group, end_group) = (
-            tree.tree.groups.get(&start_node.parent).unwrap(),
-            tree.tree.groups.get(&end_node.parent).unwrap(),
-        );
+    tree.tree.edges.iter().for_each(|edge| {
+        let (start_node, end_node) = match (
+            tree.tree.nodes.get(&edge.start),
+            tree.tree.nodes.get(&edge.end),
+        ) {
+            (Some(start), Some(end)) => (start, end),
+            (start, end) => {
+                log::error!("Failed to fetch nodes, start: {:?}, end: {:?}", start, end);
+                return;
+            }
+        };
+
+        let (start_group, end_group) = match (
+            tree.tree.groups.get(&start_node.parent),
+            tree.tree.groups.get(&end_node.parent),
+        ) {
+            (Some(start_group), Some(end_group)) => (start_group, end_group),
+            (start_group, end_group) => {
+                log::error!(
+                    "Failed to fetch groups, start_group: {:?}, end_group: {:?}",
+                    start_group,
+                    end_group
+                );
+                return;
+            }
+        };
 
         // TODO: work out how to connect the nodes with ArcSegment(s) instead
         // of straight lines, ideally concave/convex as is appropriate from whatever the fuck
@@ -102,6 +133,29 @@ fn spawn_edges(
         let height = 20.0;
         let angle = delta.y.atan2(delta.x);
         let midpoint = start.lerp(end, 0.5);
+
+        // TODO: remove when we know the const.
+        let edge_dist = start.distance(end);
+        if let Some(smallest) = SMALLEST_EDGE.get() {
+            let mut smallest_lock = smallest.lock().unwrap();
+            if edge_dist < *smallest_lock {
+                *smallest_lock = edge_dist;
+                dbg!("Updated smallest:", *smallest_lock);
+            }
+        }
+
+        if let Some(largest) = LARGEST_EDGE.get() {
+            let mut largest_lock = largest.lock().unwrap();
+            if edge_dist > *largest_lock {
+                *largest_lock = edge_dist;
+                dbg!("Updated largest:", *largest_lock);
+            }
+        }
+
+        if edge_dist > 5_000.0 {
+            log::warn!("Edge is so big, it's for an ascendency don't render it.");
+            return;
+        }
 
         commands.spawn((
             Mesh2d(meshes.add(Rectangle::new(width, height))),
