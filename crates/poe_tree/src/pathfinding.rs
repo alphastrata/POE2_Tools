@@ -1037,6 +1037,8 @@ mod test {
         let ser_res = tree.take_while(STARTING_LOC, selector, LVL_CAP);
         let par_res = tree.par_take_while(STARTING_LOC, selector, LVL_CAP);
 
+        assert_eq!(1, melee_dam_helper(&tree, vec![answer.to_vec()]).len());
+
         assert!(!ser_res.is_empty(), "No valid serial paths taken");
         assert!(!par_res.is_empty(), "No valid parallel paths taken");
         assert!(
@@ -1153,8 +1155,8 @@ mod test {
             });
 
         // Debug: Check how many valid paths were found
-        if winners.len() != 1 {
-            println!(
+        if winners.is_empty() {
+            panic!(
                 "❌ ERROR: Found {} valid paths, but the test expects exactly 1!",
                 winners.len()
             );
