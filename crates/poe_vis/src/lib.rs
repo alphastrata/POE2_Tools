@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_imports)]
+#![allow(clippy::type_complexity)]
 use bevy::color::palettes::tailwind;
-#[allow(clippy::type_complexity)]
 use bevy::prelude::*;
 
 use background_services::BGServicesPlugin;
@@ -17,7 +17,6 @@ use remote::RPCPlugin;
 use search::SearchToolsPlugin;
 use ui::UIPlugin;
 
-//  mod shaders;
 mod background_services;
 mod camera;
 mod characters;
@@ -33,9 +32,10 @@ mod mouse;
 mod nodes;
 mod overlays_n_popups;
 mod remote;
-pub mod resources; // Pub because used in benchmarks
+pub mod resources;
 mod search;
-mod ui;
+mod shaders;
+mod ui; // Pub because used in benchmarks
 
 pub struct PoeVis;
 

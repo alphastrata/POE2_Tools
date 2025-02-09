@@ -74,3 +74,8 @@ pub struct ThrowWarning(String);
 #[derive(Event)]
 
 pub struct ClearVirtualPaths;
+
+#[derive(Event, Debug, Deref, DerefMut)]
+pub struct DragNDrop {
+    pub path: PathBuf,
+}
