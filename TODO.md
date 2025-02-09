@@ -29,6 +29,7 @@
 - [ ] Implement `take_while_for_n_steps(predicate, num_steps)` to retrieve paths with at least one evasion_rating buff over N steps.
 
 ### User Interface & Interaction
+
 - [ ] BUG: typing the move keys' bindings will move the canvas around when we're searching.
 - [ ] piggybacking on the SearchState for the hover aggregated stats to show matching nodes is bad, because it encircles nodes that we haven't got inour current active build.
 - [ ] **Configurable Canvas Background:** Make it configurable via egui and a `user_config.toml`.
@@ -57,7 +58,23 @@
 
 ## Tasks to Complete
 
+- [ ] Higlight for `t` time, then revert.
+- [ ] Replace the `Gizmo` hilighting with Glyphs (actual geomtery)
+- [ ] Handle root_node being None -> #DirectionTextPlugin? ThrowWarning?
+- [ ] Replace the 'Attribute Text' with some sorta UI letting em spend
+- [ ] Export complex POB builds for path testing.
+- [ ] 'Keystone' node building UI, place anchors and path between.
+- [ ] take_while_with_minimums<P, R>(....
+- [ ] new filtering code moves to filters.rs
+- [ ] `RPC` Draw a Square, Circle
+- [ ] `ClearAll` needs to handle re-root.
+- [ ] re-add the ascendencies we normally prune with prune.hidden().
+- [ ] implement a draw_node ONLY IF not a spastic length.
+- [ ] right-click dialouge.
+- [ ] `keystone` or `anchor` nodes may be `PermanentlyAssigned` component.
+
 - [ ] **Stats API:** Create a clean API to work with `.stats` that supports math operations (`+`, `-`, `*`, `%`, `/`) on passive_skill data.
+
   - Example data:
 
     ```json
