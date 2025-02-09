@@ -32,7 +32,6 @@
 - [ ] new filtering code moves to filters.rs
 - [ ] `RPC` Draw a Square, Circle
 - [ ] `ClearAll` needs to handle re-root.
-- [ ] re-add the ascendencies we normally prune with prune.hidden().
 - [ ] implement a draw_node ONLY IF not a spastic length.
 - [ ] right-click dialouge.
 - [ ] `keystone` or `anchor` nodes may be `PermanentlyAssigned` component.
@@ -97,3 +96,4 @@
 - [x] Implement the todos.
 - [x] Colour node requests (use all Tailwind colours).
 - [x] `fetch_colours` RPC request.
+- [x] re-add the ascendencies we normally prune with prune.hidden().
