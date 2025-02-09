@@ -1038,70 +1038,77 @@ mod test {
             "Found too many paths, only one route is possible on this lvl cap"
         );
     }
-
     fn melee_dam_helper(tree: &PassiveTree, ser_res: Vec<Vec<u16>>) -> Vec<Vec<NodeId>> {
         let mut winners: Vec<Vec<NodeId>> = vec![];
-        let mut acc = 0.;
+
         ser_res
             .into_iter()
-            .filter(|p| p.len() == LVL_CAP)
+            .filter(|p| p.len() == LVL_CAP) // Ensure correct path length
             .map(|path: Vec<u16>| {
                 let path_bonus: f32 = path
                     .iter()
-                    .flat_map(|nid| tree.nodes.get(&nid))
-                    .flat_map(|pnode| {
-                        let stats = pnode.as_passive_skill(&tree).stats().to_vec();
-                        stats.into_iter().filter_map(move |s| {
-                            //NOTE: leave this in because it shows a nice debugging method when OUR path's aggregated stats
-                            // to not agree with what see see in the visualiser / POB.
-
-                            // let keyword_match = s.as_str().contains(KEYWORD);
-                            // if keyword_match && !melee_match {
-                            //     // Log when it matches keyword but NOT melee
-                            //     println!(
-                            //         "[DEBUG] Node {:?} matches KEYWORD but NOT MeleeDamage: {:?}",
-                            //         &pnode, s
-                            //     );
-                            // }
-                            /* Smash, can throw this out because it has so many additioanl stat buffs that are not the MeleeDamage we're looking for.
-                                [DEBUG] Node PoeNode { node_id: 45363, skill_id: "melee55", parent: 315, radius: 3, position: 23, name: "Smash", is_notable: true, wx: -3810.9294, wy: 1066.7999, active: false } matches KEYWORD but NOT MeleeDamage: MeleeDamageVsHeavyStunnedEnemies(Other(40.0))
-                            test pathfinding::test::ten_lvl_warrior_finds_120_percent_melee_dam ... ok
-                             */
-                            // As a .stats() can contain many Stat(s) we have to recheck as our MeleeDamage is likely nested in some of the notable nodes.
-                            if matches!(s, Stat::MeleeDamage(_)) {
-                                acc += s.value();
-                                println!("GOT ONE! acc = {}", acc);
-
-                                Some(s.value())
-                            } else {
-                                println!("skipping {}", s.as_str());
-                                None
-                            }
-                        })
+                    .filter_map(|nid| tree.nodes.get(nid)) // Get node from tree
+                    .flat_map(|pnode| pnode.as_passive_skill(&tree).stats()) // Get stats
+                    .filter_map(|s| {
+                        if matches!(s, Stat::MeleeDamage(_)) {
+                            Some(s.value()) // Extract and sum values correctly
+                        } else {
+                            None
+                        }
                     })
-                    .sum();
+                    .sum(); // Sum up all the melee damage bonuses in the path
+
+                if path_bonus > 70.0 {
+                    println!(
+                        "Checking path of length {}: total melee bonus = {}",
+                        path.len(),
+                        path_bonus
+                    );
+
+                    path.iter()
+                        .enumerate()
+                        .map(|(e, nid)| (e, tree.nodes.get(nid).unwrap()))
+                        .map(|(e, pnode)| (e, pnode.as_passive_skill(&tree)))
+                        .for_each(|(_, pnode)| {
+                            for (e, s) in pnode.stats().iter().enumerate() {
+                                println!("{} {} {}", " ".repeat(e + 1), s.as_str(), s.value())
+                            }
+                        });
+                }
 
                 (path_bonus, path)
             })
-            .filter(|(total, _path)| total >= &MIN_BONUS_VALUE)
+            .filter(|(total, _path)| *total >= MIN_BONUS_VALUE) // Ensure path meets melee bonus requirement
             .for_each(|(total, p)| {
                 println!("{}", "-".repeat(80));
+                println!(
+                    "Valid path found! len {} has total melee bonus {}",
+                    p.len(),
+                    total
+                );
 
-                println!("len {} has total {}", p.len(), total);
-
-                {
-                    for (e, nid) in p.iter().enumerate() {
-                        let pnode = tree.nodes.get(&nid).unwrap();
-                        let stats = pnode.as_passive_skill(&tree).stats().to_vec();
-                        stats.into_iter().for_each(move |s| {
+                for (e, nid) in p.iter().enumerate() {
+                    if let Some(pnode) = tree.nodes.get(nid) {
+                        for s in pnode.as_passive_skill(&tree).stats() {
                             println!("{} {}:{}", " ".repeat(e), s.as_str(), s.value());
-                        });
+                        }
                     }
                 }
+
                 winners.push(p);
                 println!("{}", "-".repeat(80));
             });
 
-        return winners;
+        // Debug: Check how many valid paths were found
+        if winners.len() != 1 {
+            println!(
+                "❌ ERROR: Found {} valid paths, but the test expects exactly 1!",
+                winners.len()
+            );
+        }
+
+        winners
     }
+
+    //
 }
