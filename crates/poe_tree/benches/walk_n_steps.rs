@@ -14,7 +14,8 @@ fn bench_walk_n_steps(
             let bench_name = format!("walk {} steps for {} starting {}", steps, name, start_node);
             c.bench_function(&bench_name, |b| {
                 b.iter(|| {
-                    let paths = tree.walk_n_steps(start_node, black_box(steps));
+                    //TODO: this will be bad.. we should maybe do a bunch of ranges and then go off that?
+                    let paths = tree.walk_n_steps::<UPPER_LIMIT>(start_node, black_box(steps));
 
                     paths.iter().for_each(|path| {
                         path.windows(2).for_each(|pair| {

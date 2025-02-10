@@ -3,7 +3,7 @@
 //! - examples of abstracting over the RPC interface that `poe_vis` provides
 //! - using rayon with the pathfinding output from methods on PassiveTree
 
-use poe_tree::{consts::get_level_one_nodes, edges::Edge, type_wrappings::NodeId};
+use poe_tree::{consts::get_level_one_nodes, type_wrappings::NodeId};
 use rayon::prelude::*;
 use reqwest::blocking::Client;
 use std::{
@@ -44,34 +44,13 @@ fn main() {
         node_ids.iter().for_each(|&start_node| {
             println!("\tStart node: {}", start_node);
 
-            let paths = tree.walk_n_steps(start_node, STEPS);
+            let paths = tree.walk_n_steps::<STEPS>(start_node, STEPS);
             assert!(
                 !paths.is_empty(),
                 "No paths found for start {} and {} steps",
                 start_node,
                 STEPS
             );
-
-            // Validate edges
-            //TODO: MOVE TO TEST
-            // paths.iter().for_each(|path| {
-            //     path.windows(2).for_each(|pair| {
-            //         let (from, to) = (pair[0], pair[1]);
-            //         let edge = Edge {
-            //             start: from,
-            //             end: to,
-            //         };
-            //         let rev_edge = Edge {
-            //             start: to,
-            //             end: from,
-            //         };
-            //         assert!(
-            //             tree.edges.contains(&edge) || tree.edges.contains(&rev_edge),
-            //             "Invalid edge in path: {:?}",
-            //             path
-            //         );
-            //     });
-            // });
 
             println!(
                 "\t\tLevels {}: {} possible paths for {}",

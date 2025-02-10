@@ -606,157 +606,15 @@ impl PassiveTree {
     //     paths
     // }
 
-    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     let t1 = std::time::Instant::now();
-
-    //     let queue = Arc::new(RwLock::new(VecDeque::new()));
-    //     let depth = AtomicUsize::new(0);
-
-    //     self.walk_recursive(start, steps, vec![start], queue.clone(), &depth);
-
-    //     log::debug!(
-    //         "Walking {} steps took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
-
-    //     let q = queue.read().unwrap().iter().cloned().collect();
-    //     q
-    // }
-
-    // fn walk_recursive(
-    //     &self,
-    //     current: NodeId,
-    //     steps_left: usize,
-    //     path: Vec<NodeId>,
-    //     queue: Arc<RwLock<VecDeque<Vec<NodeId>>>>,
-    //     depth: &AtomicUsize,
-    // ) {
-    //     if steps_left == 0 || depth.load(Ordering::Relaxed) >= 123 {
-    //         queue.write().unwrap().push_back(path.clone());
-    //         return;
-    //     }
-
-    //     depth.fetch_add(1, Ordering::Relaxed); // Increment depth tracking
-
-    //     for neighbor in self.neighbors(&current) {
-    //         if !path.contains(&neighbor) {
-    //             let mut new_path = path.clone();
-    //             new_path.push(neighbor);
-    //             self.walk_recursive(neighbor, steps_left - 1, new_path, queue.clone(), depth);
-    //         }
-    //     }
-
-    //     depth.fetch_sub(1, Ordering::Relaxed); // Decrement depth after returning
-    // }
-
-    //-160-180% WORSE
-    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     let t1 = std::time::Instant::now();
-
-    //     let queue = Arc::new(RwLock::new(VecDeque::new()));
-    //     let depth = AtomicUsize::new(0);
-
-    //     rayon::scope(|s| {
-    //         self.par_walk_recursive(start, steps, vec![start], queue.clone(), &depth, s);
-    //     });
-
-    //     log::debug!(
-    //         "Walking {} steps took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
-
-    //     let x = queue.read().unwrap().iter().cloned().collect();
-    //     x
-    // }
-
-    // fn par_walk_recursive<'scope>(
-    //     &'scope self,
-    //     current: NodeId,
-    //     steps_left: usize,
-    //     path: Vec<NodeId>,
-    //     queue: Arc<RwLock<VecDeque<Vec<NodeId>>>>,
-    //     depth: &'scope AtomicUsize,
-    //     s: &rayon::Scope<'scope>,
-    // ) {
-    //     if steps_left == 0 || depth.load(Ordering::Relaxed) >= 123 {
-    //         queue.write().unwrap().push_back(path.clone());
-    //         return;
-    //     }
-
-    //     depth.fetch_add(1, Ordering::Relaxed);
-
-    //     let neighbors: Vec<NodeId> = self
-    //         .neighbors(&current)
-    //         .into_iter()
-    //         .filter(|n| !path.contains(&n)) // Avoid cycles
-    //         .collect();
-
-    //     for &neighbor in &neighbors {
-    //         let queue_clone = queue.clone();
-    //         let depth_clone = depth;
-    //         let mut new_path = path.clone();
-    //         new_path.push(neighbor);
-
-    //         s.spawn(move |subscope| {
-    //             self.par_walk_recursive(
-    //                 neighbor,
-    //                 steps_left - 1,
-    //                 new_path,
-    //                 queue_clone,
-    //                 depth_clone,
-    //                 subscope,
-    //             );
-    //         });
-    //     }
-
-    //     depth.fetch_sub(1, Ordering::Relaxed);
-    // }
-
-    // CSR attempt:
-    // -5500% WORSE
-    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     let t1 = std::time::Instant::now();
-    //     let csr_graph = CSRGraph::from_tree(self);
-
-    //     let mut paths = Vec::new();
-    //     let mut queue = VecDeque::new();
-
-    //     queue.push_back((start, 0, vec![start]));
-
-    //     while let Some((current, depth, path)) = queue.pop_front() {
-    //         if depth == steps {
-    //             paths.push(path.clone());
-    //             continue;
-    //         }
-
-    //         for &neighbor in csr_graph.get_neighbors(current) {
-    //             if !path.contains(&neighbor) {
-    //                 let mut new_path = path.clone();
-    //                 new_path.push(neighbor);
-    //                 queue.push_back((neighbor, depth + 1, new_path));
-    //             }
-    //         }
-    //     }
-
-    //     log::debug!(
-    //         "Walking {} steps took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
-
-    //     paths
-    // }
-
-    // NOTE: bitset + smallvec
-    pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+    // NOTE: smallvec
+    // TODO: bitset
+    pub fn walk_n_steps<const N: usize>(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
         let t1 = std::time::Instant::now();
         let mut paths = Vec::new();
         let mut queue = VecDeque::new();
 
         // Store full paths, initialized with `start`
-        queue.push_back(SmallVec::<[NodeId; 41]>::from_elem(start, 1));
+        queue.push_back(SmallVec::<[NodeId; N]>::from_elem(start, 1));
 
         while let Some(path) = queue.pop_front() {
             let last_node = *path.last().unwrap();
@@ -945,7 +803,7 @@ impl PassiveTree {
 
 #[cfg(test)]
 mod test {
-    use crate::{quick_tree, stats::arithmetic::PlusPercentage};
+    use crate::{consts::get_level_one_nodes, quick_tree, stats::arithmetic::PlusPercentage};
 
     use super::*;
 
@@ -1079,5 +937,65 @@ mod test {
 
         assert_eq!(1, winners.len());
         winners[0].iter().all(|nid| answer.contains(&nid));
+    }
+
+    #[test]
+    fn walk_15_steps() {
+        const STEPS: usize = 15;
+
+        let mut tree = quick_tree();
+        tree.remove_hidden();
+        let nodes: Vec<(&'static str, &[NodeId; 2])> = get_level_one_nodes()
+            .iter()
+            .map(|(name, ids)| (*name, ids))
+            .collect();
+
+        let expected_lengths: HashMap<NodeId, usize> = HashMap::from([
+            (4739, 4922),
+            (44871, 5289), // Sorcerer/Witch
+            (10364, 3693),
+            (52980, 3721), // Monk
+            (56651, 3250),
+            (13828, 3393), // Ranger
+            (38646, 2404),
+            (3936, 1791), // Warrior
+            (59915, 4055),
+            (59779, 4028), // Mercenary
+            (50084, 2579),
+            (13855, 2924), // Unknown
+        ]);
+
+        nodes.iter().for_each(|(character, node_ids)| {
+            node_ids.iter().for_each(|&start_node| {
+                let paths = tree.walk_n_steps::<STEPS>(start_node, STEPS);
+                let expected = *expected_lengths.get(&start_node).unwrap_or(&0);
+                assert_eq!(
+                    paths.len(),
+                    expected,
+                    "Incorrect path length for {} (Start node: {})",
+                    character,
+                    start_node
+                );
+
+                paths.iter().for_each(|path| {
+                    path.windows(2).for_each(|pair| {
+                        let (from, to) = (pair[0], pair[1]);
+                        let edge = Edge {
+                            start: from,
+                            end: to,
+                        };
+                        let rev_edge = Edge {
+                            start: to,
+                            end: from,
+                        };
+                        assert!(
+                            tree.edges.contains(&edge) || tree.edges.contains(&rev_edge),
+                            "Invalid edge in path: {:?}",
+                            path
+                        );
+                    });
+                });
+            });
+        });
     }
 }
