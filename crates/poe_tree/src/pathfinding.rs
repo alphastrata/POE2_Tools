@@ -102,7 +102,7 @@ impl PassiveTree {
 
         self.edges.iter().filter_map(move |edge| {
             // Determine the neighboring node
-            let (from, to) = (edge.start, edge.end);
+            let (from, to) = edge.as_tuple();
 
             if active_set.contains(&from) && !active_set.contains(&to) && !self.nodes[&to].active {
                 Some(to)
@@ -208,23 +208,12 @@ impl PassiveTree {
             }
 
             // Explore neighbors via edges
-            self.edges
-                .iter()
-                .filter_map(|edge| {
-                    if edge.start == current {
-                        Some(edge.end)
-                    } else if edge.end == current {
-                        Some(edge.start)
-                    } else {
-                        None
-                    }
-                })
-                .for_each(|neighbor| {
-                    if visited.insert(neighbor) {
-                        queue.push_back((neighbor, depth + 1)); // Increment depth
-                        predecessors.insert(neighbor, current);
-                    }
-                });
+            self.neighbors(&current).into_iter().for_each(|neighbor| {
+                if visited.insert(neighbor) {
+                    queue.push_back((neighbor, depth + 1)); // Increment depth
+                    predecessors.insert(neighbor, current);
+                }
+            });
         }
 
         log::warn!("No path found from {} to {}", start, target);

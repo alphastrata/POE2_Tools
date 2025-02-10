@@ -48,6 +48,10 @@ impl Edge {
             }
         }
     }
+
+    pub fn as_tuple(&self) -> (u16, u16) {
+        (self.start, self.end)
+    }
 }
 
 impl PassiveTree {
