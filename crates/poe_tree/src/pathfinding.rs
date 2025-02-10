@@ -1,19 +1,17 @@
 #![allow(unused_imports)]
+use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
+use bit_set::BitSet;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::{unbounded, Receiver, Sender}; // for cloneable receivers
 use rayon::prelude::*;
-use std::cmp::Reverse;
-use std::sync::RwLock;
-use std::time::Duration;
+use smallvec::SmallVec;
 use std::{
-    cmp::Ordering,
+    cmp::Reverse,
     collections::{BinaryHeap, HashMap, HashSet, VecDeque},
-    sync::{Arc, Mutex},
+    sync::{atomic::AtomicUsize, atomic::Ordering, Arc, Mutex, RwLock},
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
-
-use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
 
 impl PassiveTree {
     /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
@@ -293,6 +291,7 @@ impl PassiveTree {
         Vec::new()
     }
 
+    #[inline(always)]
     pub fn neighbors<'t>(&'t self, node: &'t NodeId) -> impl Iterator<Item = NodeId> + 't {
         self.edges.iter().filter_map(|edge| {
             if edge.start == *node {
@@ -532,46 +531,261 @@ impl PassiveTree {
         finished
     }
 
+    //BASELINE
+    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+    //     let t1 = std::time::Instant::now();
+    //     let mut paths = Vec::new();
+    //     let mut queue = VecDeque::new();
+
+    //     // Initialize queue with the starting node in its own path
+    //     queue.push_back(vec![start]);
+
+    //     while let Some(path) = queue.pop_front() {
+    //         let last_node = *path.last().unwrap();
+
+    //         if path.len() - 1 == steps {
+    //             paths.push(path.clone()); // Store paths of exactly `n` steps
+    //             continue;
+    //         }
+
+    //         for edge in &self.edges {
+    //             let (next_node, other_node) = (edge.start, edge.end);
+
+    //             if next_node == last_node && !path.contains(&other_node) {
+    //                 let mut new_path = path.clone();
+    //                 new_path.push(other_node);
+    //                 queue.push_back(new_path);
+    //             } else if other_node == last_node && !path.contains(&next_node) {
+    //                 let mut new_path = path.clone();
+    //                 new_path.push(next_node);
+    //                 queue.push_back(new_path);
+    //             }
+    //         }
+    //     }
+
+    //     log::debug!(
+    //         "Walking {} neighbours took {}ms",
+    //         steps,
+    //         t1.elapsed().as_millis()
+    //     );
+
+    //     paths
+    // }
+
+    //NOTE: just bitset
+    // About 1-3% better
+    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+    //     use bit_set::BitSet;
+
+    //     let t1 = std::time::Instant::now();
+    //     let mut paths = Vec::new();
+    //     let mut queue = VecDeque::new();
+
+    //     queue.push_back((start, 0, BitSet::new())); // (current_node, path_length, visited_nodes)
+
+    //     while let Some((last_node, length, mut visited)) = queue.pop_front() {
+    //         if length == steps {
+    //             paths.push(vec![last_node]); // Store only endpoints to reduce memory usage
+    //             continue;
+    //         }
+
+    //         for next_node in self.neighbors(&last_node) {
+    //             if visited.insert(next_node as usize) {
+    //                 // Avoid cycles
+    //                 queue.push_back((next_node, length + 1, visited.clone()));
+    //             }
+    //         }
+    //     }
+
+    //     log::debug!(
+    //         "Walking {} steps took {}ms",
+    //         steps,
+    //         t1.elapsed().as_millis()
+    //     );
+
+    //     paths
+    // }
+
+    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+    //     let t1 = std::time::Instant::now();
+
+    //     let queue = Arc::new(RwLock::new(VecDeque::new()));
+    //     let depth = AtomicUsize::new(0);
+
+    //     self.walk_recursive(start, steps, vec![start], queue.clone(), &depth);
+
+    //     log::debug!(
+    //         "Walking {} steps took {}ms",
+    //         steps,
+    //         t1.elapsed().as_millis()
+    //     );
+
+    //     let q = queue.read().unwrap().iter().cloned().collect();
+    //     q
+    // }
+
+    // fn walk_recursive(
+    //     &self,
+    //     current: NodeId,
+    //     steps_left: usize,
+    //     path: Vec<NodeId>,
+    //     queue: Arc<RwLock<VecDeque<Vec<NodeId>>>>,
+    //     depth: &AtomicUsize,
+    // ) {
+    //     if steps_left == 0 || depth.load(Ordering::Relaxed) >= 123 {
+    //         queue.write().unwrap().push_back(path.clone());
+    //         return;
+    //     }
+
+    //     depth.fetch_add(1, Ordering::Relaxed); // Increment depth tracking
+
+    //     for neighbor in self.neighbors(&current) {
+    //         if !path.contains(&neighbor) {
+    //             let mut new_path = path.clone();
+    //             new_path.push(neighbor);
+    //             self.walk_recursive(neighbor, steps_left - 1, new_path, queue.clone(), depth);
+    //         }
+    //     }
+
+    //     depth.fetch_sub(1, Ordering::Relaxed); // Decrement depth after returning
+    // }
+
+    //-160-180% WORSE
+    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+    //     let t1 = std::time::Instant::now();
+
+    //     let queue = Arc::new(RwLock::new(VecDeque::new()));
+    //     let depth = AtomicUsize::new(0);
+
+    //     rayon::scope(|s| {
+    //         self.par_walk_recursive(start, steps, vec![start], queue.clone(), &depth, s);
+    //     });
+
+    //     log::debug!(
+    //         "Walking {} steps took {}ms",
+    //         steps,
+    //         t1.elapsed().as_millis()
+    //     );
+
+    //     let x = queue.read().unwrap().iter().cloned().collect();
+    //     x
+    // }
+
+    // fn par_walk_recursive<'scope>(
+    //     &'scope self,
+    //     current: NodeId,
+    //     steps_left: usize,
+    //     path: Vec<NodeId>,
+    //     queue: Arc<RwLock<VecDeque<Vec<NodeId>>>>,
+    //     depth: &'scope AtomicUsize,
+    //     s: &rayon::Scope<'scope>,
+    // ) {
+    //     if steps_left == 0 || depth.load(Ordering::Relaxed) >= 123 {
+    //         queue.write().unwrap().push_back(path.clone());
+    //         return;
+    //     }
+
+    //     depth.fetch_add(1, Ordering::Relaxed);
+
+    //     let neighbors: Vec<NodeId> = self
+    //         .neighbors(&current)
+    //         .into_iter()
+    //         .filter(|n| !path.contains(&n)) // Avoid cycles
+    //         .collect();
+
+    //     for &neighbor in &neighbors {
+    //         let queue_clone = queue.clone();
+    //         let depth_clone = depth;
+    //         let mut new_path = path.clone();
+    //         new_path.push(neighbor);
+
+    //         s.spawn(move |subscope| {
+    //             self.par_walk_recursive(
+    //                 neighbor,
+    //                 steps_left - 1,
+    //                 new_path,
+    //                 queue_clone,
+    //                 depth_clone,
+    //                 subscope,
+    //             );
+    //         });
+    //     }
+
+    //     depth.fetch_sub(1, Ordering::Relaxed);
+    // }
+
+    // CSR attempt:
+    // -5500% WORSE
+    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+    //     let t1 = std::time::Instant::now();
+    //     let csr_graph = CSRGraph::from_tree(self);
+
+    //     let mut paths = Vec::new();
+    //     let mut queue = VecDeque::new();
+
+    //     queue.push_back((start, 0, vec![start]));
+
+    //     while let Some((current, depth, path)) = queue.pop_front() {
+    //         if depth == steps {
+    //             paths.push(path.clone());
+    //             continue;
+    //         }
+
+    //         for &neighbor in csr_graph.get_neighbors(current) {
+    //             if !path.contains(&neighbor) {
+    //                 let mut new_path = path.clone();
+    //                 new_path.push(neighbor);
+    //                 queue.push_back((neighbor, depth + 1, new_path));
+    //             }
+    //         }
+    //     }
+
+    //     log::debug!(
+    //         "Walking {} steps took {}ms",
+    //         steps,
+    //         t1.elapsed().as_millis()
+    //     );
+
+    //     paths
+    // }
+
+    // NOTE: bitset + smallvec
     pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
         let t1 = std::time::Instant::now();
+
         let mut paths = Vec::new();
-        let mut queue = VecDeque::new();
+        let mut queue = VecDeque::with_capacity(Self::STEP_LIMIT as usize + 1); // Reduce reallocations
+        let mut visited = BitSet::with_capacity(self.nodes.len()); // O(1) lookups
 
-        // Initialize queue with the starting node in its own path
-        queue.push_back(vec![start]);
+        queue.push_back((start, 0, SmallVec::<[NodeId; 16]>::from_elem(start, 1)));
 
-        while let Some(path) = queue.pop_front() {
-            let last_node = *path.last().unwrap();
-
-            if path.len() - 1 == steps {
-                paths.push(path.clone()); // Store paths of exactly `n` steps
+        while let Some((current, depth, path)) = queue.pop_front() {
+            if depth == steps {
+                paths.push(path.to_vec());
                 continue;
             }
 
-            for edge in &self.edges {
-                let (next_node, other_node) = (edge.start, edge.end);
-
-                if next_node == last_node && !path.contains(&other_node) {
+            for neighbor in self.neighbors(&current) {
+                if visited.insert(neighbor as usize) {
+                    // Prevents cycles efficiently
                     let mut new_path = path.clone();
-                    new_path.push(other_node);
-                    queue.push_back(new_path);
-                } else if other_node == last_node && !path.contains(&next_node) {
-                    let mut new_path = path.clone();
-                    new_path.push(next_node);
-                    queue.push_back(new_path);
+                    new_path.push(neighbor);
+                    queue.push_back((neighbor, depth + 1, new_path));
                 }
             }
         }
 
         log::debug!(
-            "Walking {} neighbours took {}ms",
+            "Walking {} steps took {}ms",
             steps,
             t1.elapsed().as_millis()
         );
 
         paths
     }
+}
 
+impl PassiveTree {
     pub fn multi_bfs(&self, starts: &[NodeId], targets: &[NodeId]) -> Vec<NodeId> {
         let start_time = std::time::Instant::now();
         log::trace!(

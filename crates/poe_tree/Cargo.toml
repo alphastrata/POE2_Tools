@@ -50,6 +50,8 @@ num_cpus.workspace = true
 crossbeam-channel.workspace = true
 regex.workspace = true
 quick-xml = { workspace = true, features = ["serialize"] }
+bit-set.workspace = true
+smallvec.workspace = true
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
@@ -74,4 +76,9 @@ harness = false
 [[bench]]
 name = "take_while"
 path = "benches/take_while.rs"
+harness = false
+
+[[bench]]
+name = "walk_n_steps"
+path = "benches/walk_n_steps.rs"
 harness = false
