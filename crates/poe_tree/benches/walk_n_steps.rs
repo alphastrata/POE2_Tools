@@ -41,7 +41,7 @@ fn bench_walk_n_steps(
 }
 
 // WARNING DO NOT GO ABOVE 30 UNLESS YOU HAVE THE RAM FOR IT!
-const UPPER_LIMIT: usize = 30;
+const UPPER_LIMIT: usize = 35;
 
 fn bench_all_walks(c: &mut Criterion) {
     let mut tree = quick_tree();

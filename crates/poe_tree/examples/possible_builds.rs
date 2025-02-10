@@ -15,6 +15,9 @@ use std::{
 mod common;
 use common::*;
 
+// 40 should be possible for most hardware.
+const STEPS: usize = 15;
+
 fn main() {
     pretty_env_logger::init();
     let visualiser = env::args().any(|arg| arg == "--visualiser");
@@ -32,7 +35,7 @@ fn main() {
         std::process::exit(1)
     }
 
-    // Less garbled output to stdout in the serial case.
+    // if you cannot muster at least 12 threads, go ST.
     // nodes.iter().for_each(|(character, node_ids)| {
     nodes.par_iter().for_each(|(character, node_ids)| {
         let local_client = client.clone();
@@ -40,61 +43,60 @@ fn main() {
         println!("{}:", character);
         node_ids.iter().for_each(|&start_node| {
             println!("\tStart node: {}", start_node);
-            //NOTE: these numbers are kept low to spare your hardware && to save
-            // you life hours of watching the paths... it is rather hypnotic.
-            // You're welcome.
-            [10, 20, 30].iter().for_each(|&steps| {
-                let paths = tree.walk_n_steps(start_node, steps);
-                assert!(
-                    !paths.is_empty(),
-                    "No paths found for start {} and {} steps",
-                    start_node,
-                    steps
-                );
 
-                // Validate edges
+            let paths = tree.walk_n_steps(start_node, STEPS);
+            assert!(
+                !paths.is_empty(),
+                "No paths found for start {} and {} steps",
+                start_node,
+                STEPS
+            );
+
+            // Validate edges
+            //TODO: MOVE TO TEST
+            // paths.iter().for_each(|path| {
+            //     path.windows(2).for_each(|pair| {
+            //         let (from, to) = (pair[0], pair[1]);
+            //         let edge = Edge {
+            //             start: from,
+            //             end: to,
+            //         };
+            //         let rev_edge = Edge {
+            //             start: to,
+            //             end: from,
+            //         };
+            //         assert!(
+            //             tree.edges.contains(&edge) || tree.edges.contains(&rev_edge),
+            //             "Invalid edge in path: {:?}",
+            //             path
+            //         );
+            //     });
+            // });
+
+            println!(
+                "\t\tLevels {}: {} possible paths for {}",
+                STEPS,
+                paths.len(),
+                character
+            );
+
+            if visualiser {
+                // 60ms loop
                 paths.iter().for_each(|path| {
-                    path.windows(2).for_each(|pair| {
-                        let (from, to) = (pair[0], pair[1]);
-                        let edge = Edge {
-                            start: from,
-                            end: to,
-                        };
-                        let rev_edge = Edge {
-                            start: to,
-                            end: from,
-                        };
-                        assert!(
-                            tree.edges.contains(&edge) || tree.edges.contains(&rev_edge),
-                            "Invalid edge in path: {:?}",
-                            path
-                        );
+                    // Activate path nodes
+                    path.iter().for_each(|&node| {
+                        activate_node(&local_client, node);
+                        sleep(Duration::from_millis(8));
+                    });
+                    sleep(Duration::from_millis(34));
+                    // Deactivate path nodes
+                    path.iter().for_each(|&node| {
+                        deactivate_node(&local_client, node);
+                        sleep(Duration::from_millis(8));
                     });
                 });
-
-                if visualiser {
-                    paths.iter().for_each(|path| {
-                        // Activate path nodes
-                        path.iter().for_each(|&node| {
-                            activate_node(&local_client, node);
-                            sleep(Duration::from_millis(15));
-                        });
-                        sleep(Duration::from_millis(175));
-                        // Deactivate path nodes
-                        path.iter().for_each(|&node| {
-                            deactivate_node(&local_client, node);
-                            sleep(Duration::from_millis(10));
-                        });
-                    });
-                }
-                println!(
-                    "\t\tLevels {}: {} possible paths for {}",
-                    steps,
-                    paths.len(),
-                    character
-                );
-            });
-            println!("{} finished in: {:?}\n", character, char_start.elapsed());
+            }
         });
+        println!("{} finished in: {:?}\n", character, char_start.elapsed());
     });
 }

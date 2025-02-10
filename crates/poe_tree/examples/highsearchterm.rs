@@ -31,9 +31,9 @@ fn main() {
         return;
     }
     colours.sort();
-    const LVL_CAP: usize = 35;
+    const LVL_CAP: usize = 40;
     // 100 should be possible of 31 lvls..
-    const MIN_BONUS_VALUE: f32 = 101.0;
+    const MIN_BONUS_VALUE: f32 = 80.0;
 
     //TODO: benchmark take_while
     //TODO: benchmark maximise_paths
@@ -41,11 +41,14 @@ fn main() {
     //TODO: flip the directions on the bfs, go broad first?
     //TODO: implement deadend nodes (nodes to immediately break from on a proximity keyword search nodes' wx, wy), for example all the chaos nodes are at the top of the board, so heading south is almost always a waste of time.
 
-    let keyword = "chaos_damage_+%";
     let t1 = Instant::now();
     let filtered: Vec<Vec<NodeId>> = tree
         .maximize_paths(
-            tree.take_while(start_node, |s| s.as_str().contains(keyword), LVL_CAP),
+            tree.take_while(
+                start_node,
+                |s| matches!(s, poe_tree::stats::Stat::ChaosDamage(_)),
+                LVL_CAP,
+            ),
             |s| Some(s.value()),
             MIN_BONUS_VALUE,
             LVL_CAP,

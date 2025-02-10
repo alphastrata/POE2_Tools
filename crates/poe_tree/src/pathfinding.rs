@@ -207,7 +207,7 @@ impl PassiveTree {
             }
 
             // Explore neighbors via edges
-            self.neighbors(&current).into_iter().for_each(|neighbor| {
+            self.neighbors(current).into_iter().for_each(|neighbor| {
                 if visited.insert(neighbor) {
                     queue.push_back((neighbor, depth + 1)); // Increment depth
                     predecessors.insert(neighbor, current);
@@ -274,7 +274,7 @@ impl PassiveTree {
             }
 
             // Enqueue neighbors
-            self.neighbors(&current).into_iter().for_each(|neighbor| {
+            self.neighbors(current).into_iter().for_each(|neighbor| {
                 if visited.insert(neighbor) {
                     queue.push_back((neighbor, depth + 1)); // Increment depth
                     predecessors.insert(neighbor, current);
@@ -292,11 +292,11 @@ impl PassiveTree {
     }
 
     #[inline(always)]
-    pub fn neighbors<'t>(&'t self, node: &'t NodeId) -> impl Iterator<Item = NodeId> + 't {
-        self.edges.iter().filter_map(|edge| {
-            if edge.start == *node {
+    pub fn neighbors(&self, node: NodeId) -> impl Iterator<Item = NodeId> + '_ {
+        self.edges.iter().filter_map(move |edge| {
+            if edge.start == node {
                 Some(edge.end)
-            } else if edge.end == *node {
+            } else if edge.end == node {
                 Some(edge.start)
             } else {
                 None
@@ -349,7 +349,7 @@ impl PassiveTree {
             }
 
             // Process neighbors.
-            self.neighbors(&current).into_iter().for_each(|neighbor| {
+            self.neighbors(current).into_iter().for_each(|neighbor| {
                 let next_dist = cur_dist + 1;
                 if let Some((d, preds)) = info.get_mut(&neighbor) {
                     if *d == next_dist {
@@ -752,25 +752,26 @@ impl PassiveTree {
     // NOTE: bitset + smallvec
     pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
         let t1 = std::time::Instant::now();
-
         let mut paths = Vec::new();
-        let mut queue = VecDeque::with_capacity(Self::STEP_LIMIT as usize + 1); // Reduce reallocations
-        let mut visited = BitSet::with_capacity(self.nodes.len()); // O(1) lookups
+        let mut queue = VecDeque::new();
 
-        queue.push_back((start, 0, SmallVec::<[NodeId; 16]>::from_elem(start, 1)));
+        // Store full paths, initialized with `start`
+        queue.push_back(SmallVec::<[NodeId; 41]>::from_elem(start, 1));
 
-        while let Some((current, depth, path)) = queue.pop_front() {
-            if depth == steps {
-                paths.push(path.to_vec());
+        while let Some(path) = queue.pop_front() {
+            let last_node = *path.last().unwrap();
+
+            if path.len() - 1 == steps {
+                paths.push(path.to_vec()); // Store paths of exactly `n` steps
                 continue;
             }
 
-            for neighbor in self.neighbors(&current) {
-                if visited.insert(neighbor as usize) {
-                    // Prevents cycles efficiently
+            for neighbor in self.neighbors(last_node) {
+                if !path.contains(&neighbor) {
+                    // Ensure no cycles in the current path
                     let mut new_path = path.clone();
                     new_path.push(neighbor);
-                    queue.push_back((neighbor, depth + 1, new_path));
+                    queue.push_back(new_path);
                 }
             }
         }
