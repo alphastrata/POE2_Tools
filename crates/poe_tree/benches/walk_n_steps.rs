@@ -16,7 +16,8 @@ fn bench_walk_n_steps(
             c.bench_function(&bench_name, |b| {
                 b.iter(|| {
                     //TODO: this will be bad.. we should maybe do a bunch of ranges and then go off that?
-                    let paths = tree.walk_n_steps::<UPPER_LIMIT>(start_node, black_box(steps));
+                    // let paths = tree.walk_n_steps::<UPPER_LIMIT>(start_node, black_box(steps));
+                    let paths = tree.walk_n_steps(start_node, black_box(steps));
                     black_box(&paths);
                 });
             });
@@ -55,7 +56,9 @@ fn bench_csr_walks(
             c.bench_function(&bench_name, |b| {
                 b.iter(|| {
                     //TODO: this will be bad.. we should maybe do a bunch of ranges and then go off that?
-                    let paths = tree.walk_n_steps::<UPPER_LIMIT>(start_node, black_box(steps));
+                    // let paths = tree.walk_n_steps::<UPPER_LIMIT>(start_node, black_box(steps));
+                    let paths = tree.walk_n_steps_csr::<UPPER_LIMIT>(start_node, black_box(steps));
+
                     black_box(&paths);
                 });
             });

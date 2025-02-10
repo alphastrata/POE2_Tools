@@ -44,7 +44,8 @@ fn main() {
         node_ids.iter().for_each(|&start_node| {
             println!("\tStart node: {}", start_node);
 
-            let paths = tree.walk_n_steps::<STEPS>(start_node, STEPS);
+            // let paths = tree.walk_n_steps::<STEPS>(start_node, STEPS);
+            let paths = tree.walk_n_steps(start_node, STEPS);
             assert!(
                 !paths.is_empty(),
                 "No paths found for start {} and {} steps",

@@ -140,45 +140,45 @@ impl PassiveTree {
     }
 
     //BASELINE
-    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     let t1 = std::time::Instant::now();
-    //     let mut paths = Vec::new();
-    //     let mut queue = VecDeque::new();
+    pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+        let t1 = std::time::Instant::now();
+        let mut paths = Vec::new();
+        let mut queue = VecDeque::new();
 
-    //     // Initialize queue with the starting node in its own path
-    //     queue.push_back(vec![start]);
+        // Initialize queue with the starting node in its own path
+        queue.push_back(vec![start]);
 
-    //     while let Some(path) = queue.pop_front() {
-    //         let last_node = *path.last().unwrap();
+        while let Some(path) = queue.pop_front() {
+            let last_node = *path.last().unwrap();
 
-    //         if path.len() - 1 == steps {
-    //             paths.push(path.clone()); // Store paths of exactly `n` steps
-    //             continue;
-    //         }
+            if path.len() - 1 == steps {
+                paths.push(path.clone()); // Store paths of exactly `n` steps
+                continue;
+            }
 
-    //         for edge in &self.edges {
-    //             let (next_node, other_node) = (edge.start, edge.end);
+            for edge in &self.edges {
+                let (next_node, other_node) = (edge.start, edge.end);
 
-    //             if next_node == last_node && !path.contains(&other_node) {
-    //                 let mut new_path = path.clone();
-    //                 new_path.push(other_node);
-    //                 queue.push_back(new_path);
-    //             } else if other_node == last_node && !path.contains(&next_node) {
-    //                 let mut new_path = path.clone();
-    //                 new_path.push(next_node);
-    //                 queue.push_back(new_path);
-    //             }
-    //         }
-    //     }
+                if next_node == last_node && !path.contains(&other_node) {
+                    let mut new_path = path.clone();
+                    new_path.push(other_node);
+                    queue.push_back(new_path);
+                } else if other_node == last_node && !path.contains(&next_node) {
+                    let mut new_path = path.clone();
+                    new_path.push(next_node);
+                    queue.push_back(new_path);
+                }
+            }
+        }
 
-    //     log::debug!(
-    //         "Walking {} neighbours took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
+        log::debug!(
+            "Walking {} neighbours took {}ms",
+            steps,
+            t1.elapsed().as_millis()
+        );
 
-    //     paths
-    // }
+        paths
+    }
 
     //NOTE: just bitset
     // About 1-3% better
@@ -251,44 +251,44 @@ impl PassiveTree {
     // }
 
     // smallvec and bitset
-    pub fn walk_n_steps<const N: usize>(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-        let t1 = std::time::Instant::now();
-        let mut paths = Vec::new();
-        let mut queue = VecDeque::new();
+    // pub fn walk_n_steps<const N: usize>(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
+    //     let t1 = std::time::Instant::now();
+    //     let mut paths = Vec::new();
+    //     let mut queue = VecDeque::new();
 
-        let visited = BitSet::with_capacity(self.nodes.len()); // O(1) lookups
+    //     let visited = BitSet::with_capacity(self.nodes.len()); // O(1) lookups
 
-        queue.push_back((
-            SmallVec::<[NodeId; N]>::from_elem(start, 1),
-            visited.clone(),
-        ));
+    //     queue.push_back((
+    //         SmallVec::<[NodeId; N]>::from_elem(start, 1),
+    //         visited.clone(),
+    //     ));
 
-        while let Some((path, mut visited)) = queue.pop_front() {
-            let last_node = *path.last().unwrap();
+    //     while let Some((path, mut visited)) = queue.pop_front() {
+    //         let last_node = *path.last().unwrap();
 
-            if path.len() - 1 == steps {
-                paths.push(path.to_vec());
-                continue;
-            }
+    //         if path.len() - 1 == steps {
+    //             paths.push(path.to_vec());
+    //             continue;
+    //         }
 
-            self.neighbors(last_node).for_each(|neighbor| {
-                if visited.insert(neighbor as usize) {
-                    // O(1) cycle check
-                    let mut new_path = path.clone();
-                    new_path.push(neighbor);
-                    queue.push_back((new_path, visited.clone())); // Clone BitSet, but it's efficient
-                }
-            });
-        }
+    //         self.neighbors(last_node).for_each(|neighbor| {
+    //             if visited.insert(neighbor as usize) {
+    //                 // O(1) cycle check
+    //                 let mut new_path = path.clone();
+    //                 new_path.push(neighbor);
+    //                 queue.push_back((new_path, visited.clone())); // Clone BitSet, but it's efficient
+    //             }
+    //         });
+    //     }
 
-        log::debug!(
-            "Walking {} steps took {}ms",
-            steps,
-            t1.elapsed().as_millis()
-        );
+    //     log::debug!(
+    //         "Walking {} steps took {}ms",
+    //         steps,
+    //         t1.elapsed().as_millis()
+    //     );
 
-        paths
-    }
+    //     paths
+    // }
 }
 
 struct CSRGraph {
@@ -406,7 +406,9 @@ mod test {
 
         nodes.par_iter().for_each(|(character, node_ids)| {
             node_ids.iter().for_each(|&start_node| {
-                let paths = tree.walk_n_steps::<STEPS>(start_node, STEPS);
+                // let paths = tree.walk_n_steps::<STEPS>(start_node, STEPS);
+                let paths = tree.walk_n_steps(start_node, STEPS);
+
                 let expected = *expected_lengths.get(&start_node).unwrap_or(&0);
                 assert_eq!(
                     paths.len(),
