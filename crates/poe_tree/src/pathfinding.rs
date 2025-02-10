@@ -399,9 +399,7 @@ impl PassiveTree {
         }
         paths
     }
-}
 
-impl PassiveTree {
     pub fn multi_bfs(&self, starts: &[NodeId], targets: &[NodeId]) -> Vec<NodeId> {
         let start_time = std::time::Instant::now();
         log::trace!(
@@ -488,26 +486,7 @@ impl PassiveTree {
 
         result
     }
-}
-fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<NodeId> {
-    let mut prev_node = 0;
-    data.nodes
-        .iter()
-        .map(|(nid, node)| {
-            log::debug!(
-                "Inspecting {nid}\t{:?} named:{} FROM {prev_node} ",
-                node.skill_id,
-                node.name
-            );
-            prev_node = *nid;
-            (nid, node)
-        })
-        .filter(|(_, node)| node.name.to_lowercase().contains(&query.to_lowercase()))
-        .map(|(id, _)| *id)
-        .collect()
-}
 
-impl PassiveTree {
     pub fn dijkstra(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
         let mut dist: HashMap<NodeId, usize> = HashMap::new();
         let mut prev: HashMap<NodeId, NodeId> = HashMap::new();
@@ -550,14 +529,29 @@ impl PassiveTree {
         }
         vec![]
     }
-}
 
-impl PassiveTree {
     pub fn path_with_cost(&self, path: Vec<NodeId>) -> impl Iterator<Item = (usize, NodeId)> {
         path.into_iter().enumerate()
     }
 }
 
+fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<NodeId> {
+    let mut prev_node = 0;
+    data.nodes
+        .iter()
+        .map(|(nid, node)| {
+            log::debug!(
+                "Inspecting {nid}\t{:?} named:{} FROM {prev_node} ",
+                node.skill_id,
+                node.name
+            );
+            prev_node = *nid;
+            (nid, node)
+        })
+        .filter(|(_, node)| node.name.to_lowercase().contains(&query.to_lowercase()))
+        .map(|(id, _)| *id)
+        .collect()
+}
 #[cfg(test)]
 mod test {
     use crate::{consts::get_level_one_nodes, quick_tree, stats::arithmetic::PlusPercentage};

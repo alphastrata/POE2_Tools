@@ -4882,6 +4882,7 @@ version = "0.1.0"
 name = "poe_tree"
 version = "0.1.0"
 dependencies = [
+ "ahash",
  "bit-set 0.8.0",
  "bitset",
  "chrono",

@@ -52,6 +52,7 @@ regex.workspace = true
 quick-xml = { workspace = true, features = ["serialize"] }
 bit-set.workspace = true
 smallvec.workspace = true
+ahash = "0.8.11"
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
