@@ -35,7 +35,6 @@
 - [ ] implement a draw_node ONLY IF not a spastic length.
 - [ ] right-click dialouge.
 - [ ] `keystone` or `anchor` nodes may be `PermanentlyAssigned` component.
-- [ ] Stats API: Create a clean API to work with `.stats` that supports math operations (`+`, `-`, `*`, `%`, `/`) on passive_skill data.
 
   - Example data:
 
@@ -84,6 +83,7 @@
 
 ## Changelog (Completed Tasks)
 
+- [x] Stats API: Create a clean API to work with `.stats` that supports math operations (`+`, `-`, `*`, `%`, `/`) on passive_skill data.
 - [x] colour node requests... all tailwind colours are available, just provide those?
 - [x] fetch_colours RPC req...
 - [x] prune eh non data-carrying 'is_just_icon' passive_skill items.
