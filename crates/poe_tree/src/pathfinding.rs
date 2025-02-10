@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
+use ahash::{AHashMap, AHashSet, AHasher, RandomState};
 use bit_set::BitSet;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::{unbounded, Receiver, Sender}; // for cloneable receivers
@@ -7,12 +8,11 @@ use rayon::prelude::*;
 use smallvec::SmallVec;
 use std::{
     cmp::Reverse,
-    collections::{BinaryHeap, HashMap, HashSet, VecDeque},
+    collections::{BinaryHeap, VecDeque},
     sync::{atomic::AtomicUsize, atomic::Ordering, Arc, Mutex, RwLock},
     thread,
     time::{Duration, Instant},
 };
-
 impl PassiveTree {
     /// There is a limit on the maximum passive points you can aquire in game, lets take advantage of that to do less work.
     pub const STEP_LIMIT: NodeId = 123;
@@ -30,7 +30,7 @@ impl PassiveTree {
             .collect()
     }
 
-    pub fn fuzzy_search_nodes_and_skills(&self, query: &str) -> HashSet<NodeId> {
+    pub fn fuzzy_search_nodes_and_skills(&self, query: &str) -> AHashSet<NodeId> {
         log::debug!("Performing search Nodes & Skills for query: {}", query);
         let query = query.to_lowercase();
 
@@ -97,7 +97,7 @@ impl PassiveTree {
         &'a self,
         path: &'a [NodeId],
     ) -> impl Iterator<Item = NodeId> + 'a {
-        let active_set: HashSet<NodeId> = path.iter().cloned().collect();
+        let active_set: AHashSet<NodeId> = path.iter().cloned().collect();
 
         self.edges.iter().filter_map(move |edge| {
             // Determine the neighboring node
@@ -179,9 +179,9 @@ impl PassiveTree {
     }
 
     pub fn bfs(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
-        let mut visited = HashSet::new();
+        let mut visited = AHashSet::new();
         let mut queue = VecDeque::new();
-        let mut predecessors = HashMap::new();
+        let mut predecessors = AHashMap::new();
 
         // Push the start node with depth 0
         queue.push_back((start, 0));
@@ -220,8 +220,6 @@ impl PassiveTree {
     }
 
     pub fn bfs_any(&self, start: NodeId, targets: &[NodeId]) -> Vec<NodeId> {
-        use std::collections::{HashMap, HashSet, VecDeque};
-
         let start_time = std::time::Instant::now();
         log::trace!(
             "bfs_any: start={:?} targets={:?} (finding the shortest path to any target)",
@@ -229,15 +227,15 @@ impl PassiveTree {
             targets
         );
 
-        let target_set: HashSet<NodeId> = targets.iter().copied().collect();
+        let target_set: AHashSet<NodeId> = targets.iter().copied().collect();
         if target_set.is_empty() {
             log::warn!("No targets provided to bfs_any()");
             return Vec::new();
         }
 
-        let mut visited = HashSet::new();
+        let mut visited = AHashSet::new();
         let mut queue = VecDeque::new();
-        let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
+        let mut predecessors: AHashMap<NodeId, NodeId> = AHashMap::new();
 
         // Initialize BFS
         queue.push_back((start, 0));
@@ -321,13 +319,12 @@ impl PassiveTree {
     }
 
     pub fn bfs_all_shortest(&self, start: NodeId, targets: &[NodeId]) -> Vec<Vec<NodeId>> {
-        use std::collections::{HashMap, HashSet, VecDeque};
-        let target_set: HashSet<NodeId> = targets.iter().copied().collect();
+        let target_set: AHashSet<NodeId> = targets.iter().copied().collect();
         if target_set.is_empty() {
             return vec![];
         }
 
-        let mut info = HashMap::new();
+        let mut info = AHashMap::new();
         let mut queue = VecDeque::new();
         info.insert(start, (0, Vec::new()));
         queue.push_back(start);
@@ -383,7 +380,7 @@ impl PassiveTree {
     fn reconstruct_paths(
         start: NodeId,
         node: NodeId,
-        info: &HashMap<NodeId, (NodeId, Vec<NodeId>)>,
+        info: &AHashMap<NodeId, (NodeId, Vec<NodeId>)>,
     ) -> Vec<Vec<NodeId>> {
         if node == start {
             return vec![vec![start]];
@@ -488,8 +485,8 @@ impl PassiveTree {
     }
 
     pub fn dijkstra(&self, start: NodeId, target: NodeId) -> Vec<NodeId> {
-        let mut dist: HashMap<NodeId, usize> = HashMap::new();
-        let mut prev: HashMap<NodeId, NodeId> = HashMap::new();
+        let mut dist: AHashMap<NodeId, usize> = AHashMap::new();
+        let mut prev: AHashMap<NodeId, NodeId> = AHashMap::new();
         let mut heap = BinaryHeap::new();
 
         dist.insert(start, 0);
@@ -559,7 +556,7 @@ mod test {
     use super::*;
 
     use crate::consts::CHAR_START_NODES;
-    use std::{collections::HashSet, f32::MIN};
+    use std::f32::MIN;
 
     #[test]
     fn path_between_flow_like_water_and_chaos_inoculation() {

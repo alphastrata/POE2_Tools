@@ -1,18 +1,15 @@
 use crate::{pob_utils, stats::Stat, type_wrappings::NodeId, PassiveTree};
+use ahash::{AHashMap, AHashSet};
 use chrono::{DateTime, Utc};
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{HashMap, HashSet},
-    fs, io,
-    path::Path,
-};
+use std::{fs, io, path::Path};
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Character {
     pub character_class: CharacterClass,
     pub name: String,
-    pub activated_node_ids: HashSet<NodeId>,
+    pub activated_node_ids: AHashSet<NodeId>,
     pub date_created: DateTime<Utc>,
     pub level: u8,
     pub quest_passive_skills: u8,
@@ -195,7 +192,7 @@ pub struct CharacterStats {
     pub difficutly: Difficulty,
 
     // Miscellaneous Stats
-    pub misc: HashMap<String, String>,
+    pub misc: AHashMap<String, String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -249,7 +246,7 @@ impl CharacterStats {
             estimated_chance_to_evade: 6.0,
             mana_recovery_per_second: 2.2,
             mana_recovery_from_regeneration: 2.2,
-            misc: HashMap::new(),
+            misc: AHashMap::new(),
             ..Default::default()
         }
     }

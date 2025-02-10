@@ -1,14 +1,14 @@
-use rayon::prelude::*;
-use std::collections::{HashSet, VecDeque};
-
 use crate::{stats::Stat, type_wrappings::NodeId, PassiveTree};
+use ahash::AHashSet;
+use rayon::prelude::*;
+use std::collections::VecDeque;
 
 impl PassiveTree {
     /*
     NOTE:
         It's interesting, because the &nid is 4 times bigger than a NodeId, and
         hashing isn't free, I'd of thought we'd do better on using a Vec<NodeId>
-        here rather than a HashSet, however in the benchmarks it is CONSISTENTLY
+        here rather than a AHashSet, however in the benchmarks it is CONSISTENTLY
         within the noise threshold, so... maybe it's all for nothing.
     */
 
@@ -24,7 +24,7 @@ impl PassiveTree {
     where
         F: Fn(&Stat) -> bool,
     {
-        let targets: HashSet<_> = self
+        let targets: AHashSet<_> = self
             .nodes
             .iter()
             .filter_map(|(&nid, node)| {
@@ -83,10 +83,10 @@ impl PassiveTree {
     where
         F: Fn(&Stat) -> bool + Sync,
     {
-        let targets: HashSet<NodeId> =
+        let targets: AHashSet<NodeId> =
             self.nodes
                 .iter()
-                .fold(HashSet::new(), |mut acc, (&nid, node)| {
+                .fold(AHashSet::new(), |mut acc, (&nid, node)| {
                     if node
                         .as_passive_skill(self)
                         .stats()
@@ -117,7 +117,7 @@ impl PassiveTree {
         path: Vec<NodeId>,
         depth: usize,
         // targets: &[NodeId]
-        targets: &HashSet<NodeId>,
+        targets: &AHashSet<NodeId>,
     ) -> Vec<Vec<NodeId>> {
         let mut valid = Vec::new();
         if path.iter().any(|nid| targets.contains(nid)) {
@@ -204,7 +204,7 @@ impl PassiveTree {
     where
         F: Fn(&Stat) -> bool,
     {
-        let mut winners = vec![];
+        let winners = vec![];
 
         for potential in ser_res {
             let mut total_bonus = 0.0;

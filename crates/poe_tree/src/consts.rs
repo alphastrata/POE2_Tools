@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::sync::LazyLock;
 
 use crate::type_wrappings::NodeId;
@@ -51,8 +51,8 @@ pub const LEVEL_ONE_NODES: [NodeId; 12] = [
     4739, 44871, // Sorcerer/Witch: Spell Damage, Energy Shield
 ];
 
-static LEVEL_ONE_NODES_MAP: LazyLock<HashMap<&'static str, [NodeId; 2]>> = LazyLock::new(|| {
-    let mut m = HashMap::new();
+static LEVEL_ONE_NODES_MAP: LazyLock<AHashMap<&'static str, [NodeId; 2]>> = LazyLock::new(|| {
+    let mut m = AHashMap::new();
     m.insert("Monk", [10364, 52980]);
     m.insert("Ranger", [56651, 13828]);
     m.insert("Mercenary", [59915, 59779]);
@@ -62,6 +62,6 @@ static LEVEL_ONE_NODES_MAP: LazyLock<HashMap<&'static str, [NodeId; 2]>> = LazyL
     m
 });
 
-pub fn get_level_one_nodes() -> &'static HashMap<&'static str, [NodeId; 2]> {
+pub fn get_level_one_nodes() -> &'static AHashMap<&'static str, [NodeId; 2]> {
     &LEVEL_ONE_NODES_MAP
 }

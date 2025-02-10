@@ -1,17 +1,11 @@
-use super::{edges::Edge, stats::Stat, type_wrappings::NodeId, PassiveTree};
+use super::{type_wrappings::NodeId, PassiveTree};
 
+use ahash::AHashMap;
 use bit_set::BitSet;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::{unbounded, Receiver, Sender}; // for cloneable receivers
-
 use smallvec::SmallVec;
-use std::{
-    cmp::Reverse,
-    collections::{BinaryHeap, HashMap, HashSet, VecDeque},
-    sync::{atomic::AtomicUsize, atomic::Ordering, Arc, Mutex, RwLock},
-    thread,
-    time::{Duration, Instant},
-};
+use std::{collections::VecDeque, sync::Arc, thread, time::Duration};
 
 impl PassiveTree {
     pub fn par_walk_n_steps_use_chains(
@@ -300,12 +294,12 @@ impl PassiveTree {
 struct CSRGraph {
     offsets: Vec<usize>,
     neighbors: Vec<NodeId>,
-    node_map: HashMap<NodeId, usize>,
+    node_map: AHashMap<NodeId, usize>,
 }
 
 impl CSRGraph {
     fn from_tree(tree: &PassiveTree) -> Self {
-        let mut node_map = HashMap::new();
+        let mut node_map = AHashMap::new();
         let mut offsets = Vec::with_capacity(tree.nodes.len() + 1);
         let mut neighbors = Vec::new();
 
@@ -381,12 +375,12 @@ impl PassiveTree {
 #[cfg(test)]
 mod test {
     use crate::{consts::get_level_one_nodes, edges::Edge, quick_tree, type_wrappings::NodeId};
+    use ahash::AHashMap;
     use rayon::prelude::*;
-    use std::collections::HashMap;
 
     #[test]
     fn walk_15_steps() {
-        let expected_lengths: HashMap<NodeId, usize> = HashMap::from([
+        let expected_lengths: AHashMap<NodeId, usize> = AHashMap::from([
             (4739, 4922),
             (44871, 5289), // Sorcerer/Witch
             (10364, 3693),
@@ -445,7 +439,7 @@ mod test {
     }
     #[test]
     fn walk_15_steps_csr() {
-        let expected_lengths: HashMap<NodeId, usize> = HashMap::from([
+        let expected_lengths: AHashMap<NodeId, usize> = AHashMap::from([
             (4739, 4922),
             (44871, 5289), // Sorcerer/Witch
             (10364, 3693),

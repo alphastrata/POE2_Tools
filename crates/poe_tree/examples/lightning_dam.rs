@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use std::collections::HashMap;
+use ahash::AHashMap;
 
 mod common;
 use common::quick_tree;
@@ -29,7 +29,7 @@ fn main() {
     pretty_env_logger::init();
     let tree = quick_tree();
 
-    let char_start_nodes: HashMap<NodeId, &str> = HashMap::from([(54447, "Witch or Sorceress")]);
+    let char_start_nodes: AHashMap<NodeId, &str> = AHashMap::from([(54447, "Witch or Sorceress")]);
 
     let levels: [u16; 1] = [123];
     let keyword = "lightning_damage_+%";

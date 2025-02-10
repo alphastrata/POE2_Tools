@@ -12,31 +12,26 @@ pub mod skills;
 pub mod stats;
 pub mod type_wrappings;
 
+use ahash::{AHashMap, AHashSet};
 use consts::{CHAR_START_NODES, ORBIT_RADII, ORBIT_SLOTS};
 use debug_utils::format_bytes;
 use edges::Edge;
-use exploration::*;
-use filtering::*;
 use nodes::PoeNode;
 use skills::PassiveSkill;
 use stats::Stat;
 use type_wrappings::{GroupId, NodeId};
 
 use serde_json::Value;
-use std::{
-    collections::{HashMap, HashSet},
-    mem::size_of,
-    time::Instant,
-};
+use std::{mem::size_of, time::Instant};
 
 pub mod prelude {}
 
 #[derive(Debug, Clone, Default)]
 pub struct PassiveTree {
-    pub groups: HashMap<GroupId, coordinates::Group>,
-    pub nodes: HashMap<NodeId, PoeNode>,
-    pub edges: HashSet<Edge>,
-    pub passive_skills: HashMap<String, skills::PassiveSkill>,
+    pub groups: AHashMap<GroupId, coordinates::Group>,
+    pub nodes: AHashMap<NodeId, PoeNode>,
+    pub edges: AHashSet<Edge>,
+    pub passive_skills: AHashMap<String, skills::PassiveSkill>,
 }
 pub fn quick_tree() -> PassiveTree {
     let file = std::fs::File::open("../../data/POE2_Tree.json").unwrap();
@@ -56,7 +51,7 @@ impl PassiveTree {
         let start_time = Instant::now();
 
         // Determine retained node IDs
-        let retained_node_ids: std::collections::HashSet<_> = self
+        let retained_node_ids: AHashSet<_> = self
             .nodes
             .iter()
             .filter_map(|(&nid, node)| {
@@ -119,7 +114,7 @@ impl PassiveTree {
     pub fn from_value(val: &Value) -> Result<Self, serde_json::Error> {
         //TODO: this is pretty nasty...
 
-        let groups: HashMap<GroupId, coordinates::Group> = val
+        let groups: AHashMap<GroupId, coordinates::Group> = val
             .get("passive_tree")
             .and_then(|tree| tree.get("groups"))
             .and_then(|groups| groups.as_object())
@@ -143,7 +138,7 @@ impl PassiveTree {
             })
             .unwrap_or_default();
 
-        let passive_skills: HashMap<String, skills::PassiveSkill> = val
+        let passive_skills: AHashMap<String, skills::PassiveSkill> = val
             .get("passive_skills")
             .and_then(|ps| ps.as_object())
             .map(|obj| {
@@ -177,7 +172,7 @@ impl PassiveTree {
             })
             .unwrap_or_default();
 
-        let nodes: HashMap<NodeId, PoeNode> = val
+        let nodes: AHashMap<NodeId, PoeNode> = val
             .get("passive_tree")
             .and_then(|tree| tree.get("nodes"))
             .and_then(|nodes| nodes.as_object())
@@ -229,7 +224,7 @@ impl PassiveTree {
             })
             .unwrap_or_default();
 
-        let edges: HashSet<Edge> = match val.get("passive_tree") {
+        let edges: AHashSet<Edge> = match val.get("passive_tree") {
             Some(tree) => match tree.get("nodes") {
                 Some(nodes) => match nodes.as_object() {
                     Some(obj) => {

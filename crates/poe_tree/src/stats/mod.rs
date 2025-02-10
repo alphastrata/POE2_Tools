@@ -1,6 +1,6 @@
 // in your src/lib.rs or src/main.rs:
 mod stat;
-use std::collections::HashMap;
+use ahash::AHashMap;
 
 pub use stat::Stat;
 
@@ -8,12 +8,12 @@ impl Stat {
     pub fn name(&self) -> &str {
         self.as_str()
     }
-    /// Aggregates stats that are of PlusPercentage/Plus/MinusPercentage etc type into a HashMap where the key is the stat name
+    /// Aggregates stats that are of PlusPercentage/Plus/MinusPercentage etc type into a AHashMap where the key is the stat name
     /// and the value is a tuple of (total value, count of nodes).
     pub fn aggregate_stats<'t>(
         stats: impl Iterator<Item = &'t Stat>,
-    ) -> HashMap<String, (f32, usize)> {
-        let mut groups: HashMap<String, (f32, usize)> = HashMap::new();
+    ) -> AHashMap<String, (f32, usize)> {
+        let mut groups: AHashMap<String, (f32, usize)> = AHashMap::new();
         stats.for_each(|stat| {
             let (name, value) = (stat.as_str(), stat.value());
 
