@@ -3,6 +3,7 @@ use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::{unbounded, Receiver, Sender}; // for cloneable receivers
 use rayon::prelude::*;
 use std::cmp::Reverse;
+use std::sync::RwLock;
 use std::time::Duration;
 use std::{
     cmp::Ordering,
@@ -275,9 +276,9 @@ impl PassiveTree {
             }
 
             // Enqueue neighbors
-            self.neighbors(&current).for_each(|neighbor| {
+            self.neighbors(&current).into_iter().for_each(|neighbor| {
                 if visited.insert(neighbor) {
-                    queue.push_back((neighbor, depth + 1));
+                    queue.push_back((neighbor, depth + 1)); // Increment depth
                     predecessors.insert(neighbor, current);
                 }
             });
@@ -294,6 +295,22 @@ impl PassiveTree {
 
     pub fn neighbors<'t>(&'t self, node: &'t NodeId) -> impl Iterator<Item = NodeId> + 't {
         self.edges.iter().filter_map(|edge| {
+            if edge.start == *node {
+                Some(edge.end)
+            } else if edge.end == *node {
+                Some(edge.start)
+            } else {
+                None
+            }
+        })
+    }
+
+    #[deprecated = "Don't use this it's + 1-2000% WORSE than st."]
+    pub fn par_neighbors<'t>(
+        &'t self,
+        node: &'t NodeId,
+    ) -> impl IntoParallelIterator<Item = NodeId> + 't {
+        self.edges.par_iter().filter_map(|edge| {
             if edge.start == *node {
                 Some(edge.end)
             } else if edge.end == *node {
@@ -331,16 +348,9 @@ impl PassiveTree {
             if cur_dist >= Self::STEP_LIMIT {
                 continue;
             }
+
             // Process neighbors.
-            for neighbor in self.edges.iter().filter_map(|edge| {
-                if edge.start == current {
-                    Some(edge.end)
-                } else if edge.end == current {
-                    Some(edge.start)
-                } else {
-                    None
-                }
-            }) {
+            self.neighbors(&current).into_iter().for_each(|neighbor| {
                 let next_dist = cur_dist + 1;
                 if let Some((d, preds)) = info.get_mut(&neighbor) {
                     if *d == next_dist {
@@ -350,7 +360,7 @@ impl PassiveTree {
                     info.insert(neighbor, (next_dist, vec![current]));
                     queue.push_back(neighbor);
                 }
-            }
+            });
         }
 
         let min_dist = match found_dist {
@@ -365,9 +375,9 @@ impl PassiveTree {
             .collect();
 
         let mut all_paths = Vec::new();
-        for target in reached {
+        reached.into_iter().for_each(|target| {
             all_paths.extend(Self::reconstruct_paths(start, target, &info));
-        }
+        });
         all_paths
     }
 
