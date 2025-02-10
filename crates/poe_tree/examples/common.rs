@@ -1,3 +1,7 @@
+//!
+//!  This is just a place to keep helper functions that hopefully give implementation ideas, whist keeping the source of the actual examples terse and straightforward.
+//!
+#![allow(dead_code)]
 use poe_tree::{type_wrappings::NodeId, PassiveTree};
 use reqwest::blocking::Client;
 use serde_json::Value;
@@ -22,7 +26,7 @@ pub fn ping(
         .send()
 }
 
-fn send_node_command(client: &Client, node: NodeId, method: &str) {
+pub fn send_node_command(client: &Client, node: NodeId, method: &str) {
     let json = format!(
         r#"{{"jsonrpc":"2.0","method":"{}","params":[{}],"id":1}}"#,
         method, node
