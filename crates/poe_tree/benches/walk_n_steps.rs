@@ -1,7 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use poe_tree::{
-    consts::get_level_one_nodes, edges::Edge, quick_tree, type_wrappings::NodeId, PassiveTree,
-};
+use poe_tree::{consts::get_level_one_nodes, quick_tree, type_wrappings::NodeId, PassiveTree};
 
 fn bench_walk_n_steps(
     c: &mut Criterion,
@@ -16,25 +14,7 @@ fn bench_walk_n_steps(
                 b.iter(|| {
                     //TODO: this will be bad.. we should maybe do a bunch of ranges and then go off that?
                     let paths = tree.walk_n_steps::<UPPER_LIMIT>(start_node, black_box(steps));
-
-                    paths.iter().for_each(|path| {
-                        path.windows(2).for_each(|pair| {
-                            let (from, to) = (pair[0], pair[1]);
-                            let edge = Edge {
-                                start: from,
-                                end: to,
-                            };
-                            let rev_edge = Edge {
-                                start: to,
-                                end: from,
-                            };
-                            assert!(
-                                tree.edges.contains(&edge) || tree.edges.contains(&rev_edge),
-                                "Invalid edge in path: {:?}",
-                                path
-                            );
-                        });
-                    });
+                    black_box(&paths);
                 });
             });
         }
@@ -42,7 +22,7 @@ fn bench_walk_n_steps(
 }
 
 // WARNING DO NOT GO ABOVE 30 UNLESS YOU HAVE THE RAM FOR IT!
-const UPPER_LIMIT: usize = 35;
+const UPPER_LIMIT: usize = 22;
 
 fn bench_all_walks(c: &mut Criterion) {
     let mut tree = quick_tree();
