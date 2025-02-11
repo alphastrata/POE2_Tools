@@ -16,14 +16,13 @@ impl EdgeMarker {
     }
 }
 
+/// Use this to pin an entity which will take it OUT
+/// of being influenced by other systems.
+#[derive(Component)]
+pub struct Pinned;
+
 #[derive(Component)]
 pub struct NodeActive;
-
-#[derive(Component)]
-pub struct VirtualPathMember;
-
-#[derive(Component)]
-pub struct ManuallyHighlighted;
 
 #[derive(Component)]
 pub struct EdgeActive;
@@ -58,6 +57,8 @@ pub struct SearchResult;
 #[derive(Component)]
 pub struct ActiveNodeCount;
 
-/// Entities marked with this are part of a 'virtual-path'
 #[derive(Component)]
-pub struct VirtualPath;
+pub struct VirtualPathMember;
+
+#[derive(Component)]
+pub struct ManuallyHighlighted;

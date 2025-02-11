@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::render_resource::ShaderType};
 use std::collections::VecDeque;
 
 use crate::{
@@ -11,11 +11,22 @@ use crate::{
     resources::*,
 };
 
+#[derive(ShaderType, Debug, Clone)]
+pub struct MousePos {
+    pub x: f32,
+    pub y: f32,
+}
+
 pub struct MouseControlsPlugin;
 
 impl Plugin for MouseControlsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(MouseSelecetedNodeHistory(VecDeque::new()));
+        app
+            //
+            .insert_resource(MouseSelecetedNodeHistory(VecDeque::new()))
+            // .insert_resource(resource)
+            //
+            ;
 
         app.add_systems(PostStartup, insert_root_to_history.run_if(RootNode::is_set));
 
@@ -46,28 +57,39 @@ pub fn handle_node_clicks(
     mut activate_events: EventWriter<NodeActivationReq>,
     mut deactivate_events: EventWriter<NodeDeactivationReq>,
 ) {
-    click_events.read().for_each(|event| {
-        if let Ok((_entity, marker, inactive, active)) = nodes_query.get(event.target) {
-            match (inactive, active) {
-                // node is inactive -> activate
-                (Some(_), None) => {
-                    if root.0.is_some() {
-                        activate_events.send(NodeActivationReq(marker.0));
+    click_events.read().for_each(|ptr_down| {
+        //
+        match ptr_down.button {
+            PointerButton::Primary => {
+                if let Ok((_entity, marker, inactive, active)) = nodes_query.get(ptr_down.target) {
+                    match (inactive, active) {
+                        // node is inactive -> activate
+                        (Some(_), None) => {
+                            if root.0.is_some() {
+                                activate_events.send(NodeActivationReq(marker.0));
+                            }
+                            path_repair.request_path_repair();
+                        }
+                        // node is active -> deactivate
+                        (None, Some(_)) => {
+                            deactivate_events.send(NodeDeactivationReq(marker.0));
+                            path_repair.request_path_repair();
+                        }
+                        _ => {
+                            log::warn!("Should be unreachable...");
+                            return;
+                        }
                     }
-                    path_repair.request_path_repair();
-                }
-                // node is active -> deactivate
-                (None, Some(_)) => {
-                    deactivate_events.send(NodeDeactivationReq(marker.0));
-                    path_repair.request_path_repair();
-                }
-                _ => {
-                    log::warn!("Should be unreachable...");
-                    return;
+                    last_ten.push_back(marker.0);
                 }
             }
-            last_ten.push_back(marker.0);
-        }
+            PointerButton::Secondary => {
+                log::info!("Right Click interactions are a TODO!")
+            }
+            PointerButton::Middle => {
+                // used to drag camera, explicitly do nothing.
+            }
+        };
     });
 }
 

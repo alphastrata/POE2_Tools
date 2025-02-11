@@ -4,7 +4,8 @@
 use bevy::{prelude::*, reflect::TypePath, render::render_resource::*, sprite::Material2d};
 use std::path::PathBuf;
 
-/// The 2D shadertoy like shader
+use crate::mouse::MousePos;
+
 #[derive(Asset, AsBindGroup, TypePath, Debug, Clone)]
 pub struct YourShader2D {
     #[uniform(0)]
@@ -13,12 +14,6 @@ pub struct YourShader2D {
     #[texture(1, dimension = "2d")]
     #[sampler(2)]
     pub img: Handle<Image>,
-}
-
-#[derive(ShaderType, Debug, Clone)]
-pub struct MousePos {
-    pub x: f32,
-    pub y: f32,
 }
 
 impl Material2d for YourShader2D {
