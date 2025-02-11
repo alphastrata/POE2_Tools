@@ -4921,6 +4921,7 @@ dependencies = [
  "pretty_env_logger",
  "quick-xml",
  "rand 0.9.0",
+ "rayon",
  "reqwest",
  "rfd",
  "serde",

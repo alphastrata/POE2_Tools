@@ -1,5 +1,8 @@
 # poe_vis
 
+- [ ] Handle no starting node
+- [ ] RPC draw square
+- [ ] RPC draw circle/other shapes
 - [ ] Move potential builds and the paths2chaos-inoculation visualiser examples from poe_tree into poe_vis (poe_tree becomes just data).
 - [ ] Remove permanent starting node—add UI button and RPC command to set it to None.
 - [ ] Arcs not lines: Use arcs (like POE2) instead of straight lines. Calculate start and finish points to form an arc (maybe use `calculate_world_position` info, and compare with PoB assets to work out arc-length and radius).
@@ -12,8 +15,7 @@
   - Consider GPU computation.
 - [ ] Implement `take_while_for_n_steps(predicate, num_steps)` to retrieve paths with at least one evasion_rating buff over N steps.
 - [ ] BUG: typing the move keys' bindings will move the canvas around when we're searching.
-- [ ] piggybacking on the SearchState for the hover aggregated stats to show matching nodes is bad, because it encircles nodes that we haven't got inour current active build.
-- [ ] Configurable Canvas Background: Make it configurable via egui and a `user_config.toml`.
+- [ ] piggybacking on the SearchState for the hover aggregated stats to show matching nodes is bad, because it encircles nodes that we haven't got in our current active build.
 - [ ] Menu Mouse Interaction: Ensure mouse actions over menu elements don’t trigger selection, removal, hover, translation, or zoom.
 - [ ] Camera Home/Reset: Bind `'h'` or `Esc` (configurable) to reset the camera view.
 - [ ] Fuzzy Search Behaviour: Pressing Enter in the fuzzy search field should close it and focus the top search result.
@@ -34,50 +36,7 @@
 - [ ] `ClearAll` needs to handle re-root.
 - [ ] implement a draw_node ONLY IF not a spastic length.
 - [ ] right-click dialouge.
-- [ ] `keystone` or `anchor` nodes may be `PermanentlyAssigned` component.
-
-  - Example data:
-
-    ```json
-    "stun_threshold_if_no_recent_stun1": {
-      "name": "Stun Threshold while on Full Life",
-      "icon": "skillicons/passives/life1",
-      "stats": {
-        "stun_threshold_+%_when_not_stunned_recently": 20
-      }
-    },
-    "dexterity26": {
-      "name": "Attribute",
-      "icon": "skillicons/passives/plusattribute",
-      "stats": {
-        "display_passive_attribute_text": 1
-      }
-    },
-    "strength104": {
-      "name": "Strength",
-      "icon": "skillicons/passives/plusstrength",
-      "stats": {
-        "base_strength": 8
-      }
-    },
-    "flail3": {
-      "name": "Flail Damage",
-      "icon": "skillicons/passives/macedmg",
-      "stats": {
-        "flail_damage_+%": 10
-      }
-    },
-    "melee39": {
-      "name": "Deadly Flourish",
-      "icon": "skillicons/passives/meleeaoenode",
-      "stats": {
-        "melee_critical_strike_chance_+%": 20,
-        "melee_critical_strike_chance_+%_when_on_full_life": 20
-      },
-      "is_notable": true
-    }
-    ```
-
+- [ ] `keystone` or `anchor` nodes may be `PermanentlyAssigned` component. using 'Pinned'
 - [ ] Default Starting Stats: Set up default starting stats for all character classes, build them from POB exports.
 - [ ] Streaming Pathfinding: Create streaming versions of functions in `pathfinding.rs` for animation-friendly pathfinding.
 

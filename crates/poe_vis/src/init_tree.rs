@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use poe_tree::calculate_world_position_with_negative_y;
+use poe_tree::consts::CHAR_START_NODES;
 
 use crate::consts::{EDGE_PLACEMENT_Z_IDX, NODE_PLACEMENT_Z_IDX};
 use crate::materials::GameMaterials;
@@ -14,9 +15,14 @@ impl Plugin for TreeCanvasPlugin {
             let reader = std::io::BufReader::new(file);
             let tree_data: serde_json::Value = serde_json::from_reader(reader).unwrap();
 
-            let tree = poe_tree::PassiveTree::from_value(&tree_data).unwrap();
+            let mut tree = poe_tree::PassiveTree::from_value(&tree_data).unwrap();
             // If you DON'T WANT THE ASCENDENCIES.
-            // tree.remove_hidden();
+            tree.remove_hidden();
+
+            // CHAR_START_NODES.iter().for_each(|nid| {
+            //     _ = tree.nodes.remove(nid);
+            // });
+
             tree
         }
 
