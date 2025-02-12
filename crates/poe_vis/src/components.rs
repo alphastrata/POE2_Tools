@@ -1,4 +1,7 @@
-use bevy::prelude::{Component, Deref, DerefMut};
+use bevy::{
+    prelude::{Component, Deref, DerefMut},
+    time::Timer,
+};
 use poe_tree::{
     skills::PassiveSkill,
     type_wrappings::{GroupId, NodeId},
@@ -62,3 +65,6 @@ pub struct VirtualPathMember;
 
 #[derive(Component)]
 pub struct ManuallyHighlighted;
+
+#[derive(Component, DerefMut, Deref, Copy)]
+pub struct UIGlyph(pub Option<Timer>);

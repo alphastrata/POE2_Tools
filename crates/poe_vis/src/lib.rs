@@ -35,7 +35,7 @@ mod remote;
 pub mod resources;
 mod search;
 mod shaders;
-mod ui; // Pub because used in benchmarks
+mod ui;
 
 pub struct PoeVis;
 

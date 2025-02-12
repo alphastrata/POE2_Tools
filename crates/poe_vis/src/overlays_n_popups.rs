@@ -4,6 +4,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::{
     components::*,
+    events::{DrawCircleReq, DrawRectangleReq},
+    materials::GameMaterials,
     resources::{ActiveCharacter, VirtualPath},
     PassiveTreeWrapper,
 };
@@ -32,7 +34,44 @@ impl Plugin for OverlaysAndPopupsPlugin {
         log::debug!("OverlaysAndPopups plugin enabled.");
     }
 }
+fn draw_rectangles(
+    mut commands: Commands,
+    mut draw: EventReader<DrawRectangleReq>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    materials: Res<GameMaterials>,
+) {
+    draw.read().for_each(|r| {
+        let DrawRectangleReq {
+            half_size,
+            origin,
+            glyph,
+            mat,
+        } = r;
+        commands.spawn((
+            Mesh2d(meshes.add(Rectangle::new(half_size.x * 2.0, half_size.y * 2.0))),
+            MeshMaterial2d(materials.node_base.clone_weak()),
+            Transform::from_translation(*origin),
+            *glyph.clone(),
+        ));
+    });
+}
 
+fn draw_circle(
+    mut commands: Commands,
+    draw: EventReader<DrawCircleReq>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    materials: Res<GameMaterials>,
+) {
+    // commands.spawn((
+    //     Mesh2d(meshes.add(Circle::new(node_radius))),
+    //     MeshMaterial2d(materials.node_base.clone_weak()),
+    //     Transform::from_translation(Vec3::new(x, y, NODE_PLACEMENT_Z_IDX)),
+    //     NodeMarker(node.node_id),
+    //     NodeInactive,
+    //     Skill(node.as_passive_skill(&tree).clone()),
+    // ));
+    todo!()
+}
 fn debug_num_nodes_in_virt_path(query: Query<(Entity, &NodeMarker), With<VirtualPathMember>>) {
     log::debug!("Members in VP: {}", query.iter().count());
 }

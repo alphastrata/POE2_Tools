@@ -6,6 +6,8 @@ use bevy::prelude::*;
 use poe_tree::type_wrappings::*;
 use std::path::PathBuf;
 
+use crate::components::UIGlyph;
+
 #[derive(Event, DerefMut, Deref)]
 pub struct VirtualPathReq(pub NodeId);
 
@@ -78,4 +80,20 @@ pub struct ClearVirtualPaths;
 #[derive(Event, Debug, Deref, DerefMut)]
 pub struct DragNDrop {
     pub path: PathBuf,
+}
+
+// drawing
+#[derive(Event)]
+pub struct DrawRectangleReq {
+    pub half_size: Vec2,
+    pub origin: Vec3,
+    pub mat: Option<ColorMaterial>,
+    pub glyph: UIGlyph,
+}
+#[derive(Event)]
+pub struct DrawCircleReq {
+    pub radius: f32,
+    pub origin: Vec3,
+    pub mat: Option<ColorMaterial>,
+    pub glyph: UIGlyph,
 }
