@@ -32,6 +32,9 @@ pub enum Command {
     ActivateEdge(EdgeId, EdgeId),
     DeactivateEdge(EdgeId, EdgeId),
 
+    DrawCircle(DrawCircleReq),
+    DrawRectangle(DrawRectangleReq),
+
     LoadCharacter,
     SaveCharacter,
 
@@ -502,24 +505,32 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
 
 fn rx_rpx(
     server: Res<Server>,
-    mut activation: EventWriter<NodeActivationReq>,
-    mut activate_node_with_colour: EventWriter<ManualNodeHighlightWithColour>,
+    mut edge_col: EventWriter<EdgeColourReq>,
+    mut load: EventWriter<LoadCharacterReq>,
     mut activate_edge_with_colour: EventWriter<ManualEdgeHighlightWithColour>,
-    mut deactivation: EventWriter<NodeDeactivationReq>,
+    mut activate_node_with_colour: EventWriter<ManualNodeHighlightWithColour>,
+    mut activation: EventWriter<NodeActivationReq>,
+    mut cam: EventWriter<MoveCameraReq>,
     mut clear: EventWriter<ClearAll>,
-    mut scale: EventWriter<NodeScaleReq>,
-    node_col: EventWriter<NodeColourReq>,
-    edge_col: EventWriter<EdgeColourReq>,
+    mut deactivation: EventWriter<NodeDeactivationReq>,
+    mut draw_circle: EventWriter<DrawCircleReq>,
+    mut draw_rect: EventWriter<DrawRectangleReq>,
     mut edge_act: EventWriter<EdgeActivationReq>,
     mut edge_deact: EventWriter<EdgeDeactivationReq>,
-    load: EventWriter<LoadCharacterReq>,
-    save: EventWriter<SaveCharacterReq>,
-    mut cam: EventWriter<MoveCameraReq>,
+    mut scale: EventWriter<NodeScaleReq>,
+    mut node_col: EventWriter<NodeColourReq>,
+    mut save: EventWriter<SaveCharacterReq>,
     tree: Res<PassiveTreeWrapper>, // TODO: additional resources?
     node_positions: Query<(&Transform, &NodeMarker)>,
 ) {
     while let Ok(cmd) = server.rx.try_recv() {
         match cmd {
+            Command::DrawCircle(ev) => {
+                draw_circle.send(ev);
+            }
+            Command::DrawRectangle(ev) => {
+                draw_rect.send(ev);
+            }
             Command::ClearAll => {
                 clear.send(ClearAll);
             }
