@@ -66,5 +66,5 @@ pub struct VirtualPathMember;
 #[derive(Component)]
 pub struct ManuallyHighlighted;
 
-#[derive(Component, DerefMut, Deref, Copy)]
+#[derive(Component, DerefMut, Deref, Clone)]
 pub struct UIGlyph(pub Option<Timer>);

@@ -48,10 +48,11 @@ fn draw_rectangles(
             mat,
         } = r;
         commands.spawn((
+            //
             Mesh2d(meshes.add(Rectangle::new(half_size.x * 2.0, half_size.y * 2.0))),
             MeshMaterial2d(materials.node_base.clone_weak()),
             Transform::from_translation(*origin),
-            *glyph.clone(),
+            glyph.clone(), //
         ));
     });
 }

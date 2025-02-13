@@ -505,8 +505,8 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
 
 fn rx_rpx(
     server: Res<Server>,
-    mut edge_col: EventWriter<EdgeColourReq>,
-    mut load: EventWriter<LoadCharacterReq>,
+    // mut edge_col: EventWriter<EdgeColourReq>,
+    // mut load: EventWriter<LoadCharacterReq>,
     mut activate_edge_with_colour: EventWriter<ManualEdgeHighlightWithColour>,
     mut activate_node_with_colour: EventWriter<ManualNodeHighlightWithColour>,
     mut activation: EventWriter<NodeActivationReq>,
@@ -518,8 +518,8 @@ fn rx_rpx(
     mut edge_act: EventWriter<EdgeActivationReq>,
     mut edge_deact: EventWriter<EdgeDeactivationReq>,
     mut scale: EventWriter<NodeScaleReq>,
-    mut node_col: EventWriter<NodeColourReq>,
-    mut save: EventWriter<SaveCharacterReq>,
+    // mut node_col: EventWriter<NodeColourReq>,
+    // mut save: EventWriter<SaveCharacterReq>,
     tree: Res<PassiveTreeWrapper>, // TODO: additional resources?
     node_positions: Query<(&Transform, &NodeMarker)>,
 ) {
