@@ -11,8 +11,9 @@ use poe_tree::{
 };
 
 use crate::{
-    components::NodeMarker,
+    components::{NodeMarker, UIGlyph},
     events::*,
+    parse_tailwind_color,
     PassiveTreeWrapper, // resources, materials, etc...
 };
 
@@ -83,6 +84,23 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
             let (node_id, colour) = parse_node_with_colour(&p);
             tx.send(Command::ActivateNodeWithColour(node_id, colour))
                 .ok();
+            Ok(Value::String("ok".into()))
+        }
+    });
+
+    io.add_sync_method("draw_circle", {
+        let tx = tx.clone();
+        move |p: Params| {
+            let (req) = parse_draw_circle(&p);
+            tx.send(Command::DrawCircle(req)).ok();
+            Ok(Value::String("ok".into()))
+        }
+    });
+    io.add_sync_method("draw_rect", {
+        let tx = tx.clone();
+        move |p: Params| {
+            let (req) = parse_draw_rect(&p);
+            tx.send(Command::DrawRectangle(req)).ok();
             Ok(Value::String("ok".into()))
         }
     });
@@ -666,6 +684,60 @@ fn parse_edge_with_colour(params: &Params) -> (NodeId, NodeId, String) {
             arr[1].as_u64().unwrap() as NodeId,
             arr[2].as_str().unwrap().to_string(),
         ),
+        _ => unimplemented!(),
+    }
+}
+
+fn parse_origin(val: &Value) -> Vec3 {
+    let arr = val.as_array().unwrap();
+    Vec3::new(
+        arr[0].as_f64().unwrap() as f32,
+        arr[1].as_f64().unwrap() as f32,
+        arr[2].as_f64().unwrap() as f32,
+    )
+}
+
+fn parse_material(val: Option<&Value>) -> String {
+    //TODO We have the tailwind colours here so we should vaildate against them...
+    val.and_then(|v| v.as_str())
+        .map(String::from)
+        .unwrap_or_default()
+}
+
+fn parse_draw_circle(params: &Params) -> DrawCircleReq {
+    match params {
+        Params::Array(arr) if arr.len() >= 3 => {
+            let radius = arr[0].as_f64().unwrap() as f32;
+            let origin = parse_origin(&arr[1]);
+            let mat = parse_material(arr.get(2));
+            DrawCircleReq {
+                radius,
+                origin,
+                mat,
+                glyph: UIGlyph(None),
+            }
+        }
+        _ => unimplemented!(),
+    }
+}
+
+fn parse_draw_rect(params: &Params) -> DrawRectangleReq {
+    match params {
+        Params::Array(arr) if arr.len() >= 3 => {
+            let hs_arr = arr[0].as_array().unwrap();
+            let half_size = Vec2::new(
+                hs_arr[0].as_f64().unwrap() as f32,
+                hs_arr[1].as_f64().unwrap() as f32,
+            );
+            let origin = parse_origin(&arr[1]);
+            let mat = parse_material(arr.get(2));
+            DrawRectangleReq {
+                half_size,
+                origin,
+                mat,
+                glyph: UIGlyph(None),
+            }
+        }
         _ => unimplemented!(),
     }
 }

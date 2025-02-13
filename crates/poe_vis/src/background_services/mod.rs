@@ -1,5 +1,7 @@
 mod generated;
 
+pub use generated::parse_tailwind_color;
+
 use std::{
     ops::ControlFlow,
     sync::{Arc, Mutex},
