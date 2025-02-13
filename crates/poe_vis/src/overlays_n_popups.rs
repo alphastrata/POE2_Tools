@@ -3,6 +3,7 @@ use poe_tree::{character, type_wrappings::NodeId};
 use std::sync::{Arc, Mutex};
 
 use crate::{
+    background_services::parse_tailwind_color,
     components::*,
     events::{DrawCircleReq, DrawRectangleReq},
     materials::GameMaterials,
@@ -27,6 +28,8 @@ impl Plugin for OverlaysAndPopupsPlugin {
             (
                 show_node_info,
                 debug_num_nodes_in_virt_path,
+                draw_circles,
+                draw_rectangles,
                 scan_for_hovered.run_if(resource_exists::<ActiveCharacter>),
             ),
         );
@@ -38,7 +41,8 @@ fn draw_rectangles(
     mut commands: Commands,
     mut draw: EventReader<DrawRectangleReq>,
     mut meshes: ResMut<Assets<Mesh>>,
-    materials: Res<GameMaterials>,
+    game_materials: Res<GameMaterials>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     draw.read().for_each(|r| {
         let DrawRectangleReq {
@@ -47,31 +51,53 @@ fn draw_rectangles(
             glyph,
             mat,
         } = r;
+        let mat = match game_materials.other.get(mat) {
+            Some(mat) => mat.clone_weak(),
+            None => {
+                let mat_from_str = parse_tailwind_color(mat);
+                materials.add(mat_from_str)
+            }
+        };
         commands.spawn((
             //
             Mesh2d(meshes.add(Rectangle::new(half_size.x * 2.0, half_size.y * 2.0))),
-            MeshMaterial2d(materials.node_base.clone_weak()),
+            MeshMaterial2d(mat),
             Transform::from_translation(*origin),
             glyph.clone(), //
         ));
     });
 }
 
-fn draw_circle(
+fn draw_circles(
     mut commands: Commands,
-    draw: EventReader<DrawCircleReq>,
+    mut draw: EventReader<DrawCircleReq>,
     mut meshes: ResMut<Assets<Mesh>>,
-    materials: Res<GameMaterials>,
+    game_materials: Res<GameMaterials>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    // commands.spawn((
-    //     Mesh2d(meshes.add(Circle::new(node_radius))),
-    //     MeshMaterial2d(materials.node_base.clone_weak()),
-    //     Transform::from_translation(Vec3::new(x, y, NODE_PLACEMENT_Z_IDX)),
-    //     NodeMarker(node.node_id),
-    //     NodeInactive,
-    //     Skill(node.as_passive_skill(&tree).clone()),
-    // ));
-    todo!()
+    draw.read().for_each(|r| {
+        let DrawCircleReq {
+            glyph,
+            mat,
+            radius,
+            origin,
+        } = r;
+
+        let mat = match game_materials.other.get(mat) {
+            Some(mat) => mat.clone_weak(),
+            None => {
+                let mat_from_str = parse_tailwind_color(mat);
+                materials.add(mat_from_str)
+            }
+        };
+        commands.spawn((
+            //
+            Mesh2d(meshes.add(Circle::new(*radius))),
+            MeshMaterial2d(mat),
+            Transform::from_translation(*origin),
+            glyph.clone(),
+        ));
+    });
 }
 fn debug_num_nodes_in_virt_path(query: Query<(Entity, &NodeMarker), With<VirtualPathMember>>) {
     log::debug!("Members in VP: {}", query.iter().count());

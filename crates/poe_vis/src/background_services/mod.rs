@@ -64,6 +64,8 @@ impl Plugin for BGServicesPlugin {
             .add_event::<ClearAll>()
             .add_event::<ClearVirtualPath>()
             .add_event::<VirtualPathReq>()
+            .add_event::<DrawCircleReq>()
+            .add_event::<DrawRectangleReq>()
             .add_event::<EdgeActivationReq>()
             .add_event::<EdgeColourReq>()
             .add_event::<EdgeDeactivationReq>()
