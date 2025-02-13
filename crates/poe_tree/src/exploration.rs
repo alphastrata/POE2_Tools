@@ -1,7 +1,6 @@
 use super::{type_wrappings::NodeId, PassiveTree};
 
 use ahash::AHashMap;
-use bit_set::BitSet;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::{unbounded, Receiver, Sender}; // for cloneable receivers
 use smallvec::SmallVec;
@@ -303,15 +302,13 @@ impl CSRGraph {
         let mut offsets = Vec::with_capacity(tree.nodes.len() + 1);
         let mut neighbors = Vec::new();
 
-        let mut index = 0;
-        for &node in tree.nodes.keys() {
+        tree.nodes.keys().enumerate().for_each(|(index, &node)| {
             node_map.insert(node, index);
             offsets.push(neighbors.len());
-            let mut adj: Vec<NodeId> = tree.neighbors(node).into_iter().collect();
+            let mut adj: Vec<NodeId> = tree.neighbors(node).collect();
             adj.sort();
             neighbors.extend(adj);
-            index += 1;
-        }
+        });
         offsets.push(neighbors.len());
 
         CSRGraph {
@@ -320,7 +317,6 @@ impl CSRGraph {
             node_map,
         }
     }
-
     #[inline]
     fn get_neighbors(&self, node: NodeId) -> &[NodeId] {
         if let Some(&idx) = self.node_map.get(&node) {
@@ -330,6 +326,7 @@ impl CSRGraph {
         }
     }
 }
+
 impl PassiveTree {
     pub fn walk_n_steps_csr<const N: usize>(
         &self,

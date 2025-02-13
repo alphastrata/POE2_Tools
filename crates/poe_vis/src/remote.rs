@@ -99,7 +99,7 @@ fn add_rpc_io_methods(tx: Sender<Command>) -> IoHandler {
     io.add_sync_method("draw_rect", {
         let tx = tx.clone();
         move |p: Params| {
-            let (req) = parse_draw_rect(&p);
+            let req = parse_draw_rect(&p);
             tx.send(Command::DrawRectangle(req)).ok();
             Ok(Value::String("ok".into()))
         }

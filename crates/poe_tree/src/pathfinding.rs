@@ -207,7 +207,7 @@ impl PassiveTree {
             }
 
             // Explore neighbors via edges
-            self.neighbors(current).into_iter().for_each(|neighbor| {
+            self.neighbors(current).for_each(|neighbor| {
                 if visited.insert(neighbor) {
                     queue.push_back((neighbor, depth + 1)); // Increment depth
                     predecessors.insert(neighbor, current);
@@ -272,7 +272,7 @@ impl PassiveTree {
             }
 
             // Enqueue neighbors
-            self.neighbors(current).into_iter().for_each(|neighbor| {
+            self.neighbors(current).for_each(|neighbor| {
                 if visited.insert(neighbor) {
                     queue.push_back((neighbor, depth + 1)); // Increment depth
                     predecessors.insert(neighbor, current);
@@ -346,7 +346,7 @@ impl PassiveTree {
             }
 
             // Process neighbors.
-            self.neighbors(current).into_iter().for_each(|neighbor| {
+            self.neighbors(current).for_each(|neighbor| {
                 let next_dist = cur_dist + 1;
                 if let Some((d, preds)) = info.get_mut(&neighbor) {
                     if *d == next_dist {

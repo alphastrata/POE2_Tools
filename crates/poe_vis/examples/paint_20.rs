@@ -1,7 +1,7 @@
 use poe_tree::{consts::get_level_one_nodes, type_wrappings::NodeId};
 use rayon::prelude::*;
 use reqwest::blocking::Client;
-use std::{collections::HashMap, thread::sleep, time::Duration};
+use std::collections::HashMap;
 
 mod common;
 use common::*;
@@ -78,7 +78,7 @@ fn main() {
         // Update node_counts once per character
         seen_nodes.into_iter().for_each(|node| {
             let mut entry = a_node_counts.lock().unwrap();
-            *entry.entry(node.clone()).or_insert(0) += 1;
+            *entry.entry(node).or_insert(0) += 1;
         });
     });
 

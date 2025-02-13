@@ -32,7 +32,7 @@ impl PassiveTree {
                     .as_passive_skill(self)
                     .stats()
                     .iter()
-                    .any(|s| predicate(s))
+                    .any(&predicate)
                 {
                     Some(nid)
                 } else {
@@ -91,7 +91,7 @@ impl PassiveTree {
                         .as_passive_skill(self)
                         .stats()
                         .iter()
-                        .any(|s| predicate(s))
+                        .any(&predicate)
                     {
                         // acc.push(nid);
                         acc.insert(nid);
@@ -177,7 +177,7 @@ impl PassiveTree {
                         skill
                             .stats()
                             .iter()
-                            .filter_map(|s| stat_selector(s))
+                            .filter_map(&stat_selector)
                             .sum::<f32>()
                     })
                     .sum();
