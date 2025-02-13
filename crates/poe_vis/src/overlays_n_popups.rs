@@ -30,11 +30,32 @@ impl Plugin for OverlaysAndPopupsPlugin {
                 debug_num_nodes_in_virt_path,
                 draw_circles,
                 draw_rectangles,
+                cleanup_expired_timers,
+                debug_timers,
                 scan_for_hovered.run_if(resource_exists::<ActiveCharacter>),
             ),
         );
 
         log::debug!("OverlaysAndPopups plugin enabled.");
+    }
+}
+
+fn debug_timers(mut query: Query<(Entity, &mut UIGlyph)>, time: Res<Time>) {
+    for (_ent, mut glyph) in query.iter_mut() {
+        glyph.tick(time.delta());
+
+        if !glyph.finished() {
+            dbg!(glyph);
+        }
+    }
+}
+
+fn cleanup_expired_timers(mut commands: Commands, query: Query<(Entity, &UIGlyph), With<UIGlyph>>) {
+    for (ent, glyph) in query.into_iter() {
+        if glyph.finished() {
+            commands.entity(ent).despawn_recursive();
+            println!("DESPAWNN ENTITY!!");
+        }
     }
 }
 fn draw_rectangles(
@@ -58,12 +79,14 @@ fn draw_rectangles(
                 materials.add(mat_from_str)
             }
         };
-        commands.spawn((
+        let mut g = glyph.clone();
+        g.set(std::time::Duration::from_millis(500));
+
+        commands.spawn(g).with_child((
             //
             Mesh2d(meshes.add(Rectangle::new(half_size.x * 2.0, half_size.y * 2.0))),
             MeshMaterial2d(mat),
             Transform::from_translation(*origin),
-            glyph.clone(), //
         ));
     });
 }
@@ -90,12 +113,12 @@ fn draw_circles(
                 materials.add(mat_from_str)
             }
         };
-        commands.spawn((
-            //
-            Mesh2d(meshes.add(Circle::new(*radius))),
+        let mut g = glyph.clone();
+        g.set(std::time::Duration::from_millis(500));
+        commands.spawn(g).with_child((
+            Mesh2d(meshes.add(Annulus::new(*radius * 0.95, *radius))),
             MeshMaterial2d(mat),
             Transform::from_translation(*origin),
-            glyph.clone(),
         ));
     });
 }

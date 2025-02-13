@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{
     prelude::{Component, Deref, DerefMut},
     time::Timer,
@@ -66,5 +68,14 @@ pub struct VirtualPathMember;
 #[derive(Component)]
 pub struct ManuallyHighlighted;
 
-#[derive(Component, DerefMut, Deref, Clone)]
-pub struct UIGlyph(pub Option<Timer>);
+#[derive(Component, DerefMut, Deref, Clone, Debug)]
+pub struct UIGlyph(pub Timer);
+impl UIGlyph {
+    pub fn set(&mut self, duration: Duration) {
+        self.0 = Timer::new(duration, bevy::time::TimerMode::Once);
+        dbg!(self);
+    }
+    pub fn default() -> Self {
+        Self(Timer::from_seconds(0.5, bevy::time::TimerMode::Once))
+    }
+}
