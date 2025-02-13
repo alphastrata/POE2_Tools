@@ -75,7 +75,9 @@ impl UIGlyph {
         self.0 = Timer::new(duration, bevy::time::TimerMode::Once);
         dbg!(self);
     }
-    pub fn default() -> Self {
-        Self(Timer::from_seconds(0.5, bevy::time::TimerMode::Once))
+}
+impl Default for UIGlyph {
+    fn default() -> Self {
+        Self(Timer::from_seconds(1.5, bevy::time::TimerMode::Once))
     }
 }
