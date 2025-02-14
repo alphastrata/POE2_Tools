@@ -16,6 +16,9 @@ pub struct VirtualPathReq(pub NodeId);
 pub struct ClearVirtualPath;
 
 #[derive(Event)]
+pub struct ClearSearchResults;
+
+#[derive(Event)]
 pub struct NodeScaleReq(pub Entity, pub f32);
 
 #[derive(Event)]

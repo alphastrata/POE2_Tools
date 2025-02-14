@@ -1,8 +1,8 @@
 use crate::{
     components::{NodeActive, NodeMarker},
     events::{
-        ClearAll, LoadCharacterReq, MoveCameraReq, NodeDeactivationReq, SaveCharacterAsReq,
-        SaveCharacterReq,
+        ClearAll, ClearSearchResults, LoadCharacterReq, MoveCameraReq, NodeDeactivationReq,
+        SaveCharacterAsReq, SaveCharacterReq,
     },
     resources::{ActiveCharacter, CameraSettings, SearchState},
     PassiveTreeWrapper,
@@ -50,6 +50,8 @@ fn update_active_nodecount(
 fn egui_ui_system(
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
     mut clear_all_tx: EventWriter<ClearAll>,
+    clear_search_results_tx: EventWriter<ClearSearchResults>,
+
     move_camera_tx: EventWriter<MoveCameraReq>,
     mut save_tx: EventWriter<SaveCharacterReq>,
     mut save_as_tx: EventWriter<SaveCharacterAsReq>,
@@ -72,6 +74,7 @@ fn egui_ui_system(
     rhs_menu(
         active_nodes,
         clear_all_tx,
+        clear_search_results_tx,
         move_camera_tx,
         tree,
         character,
@@ -83,13 +86,14 @@ fn egui_ui_system(
 }
 
 fn rhs_menu(
-    active_nodes: Query<'_, '_, &NodeMarker, With<NodeActive>>,
-    mut clear_all_tx: EventWriter<'_, ClearAll>,
-    mut move_camera_tx: EventWriter<'_, MoveCameraReq>,
-    tree: Res<'_, PassiveTreeWrapper>,
-    character: Res<'_, ActiveCharacter>,
-    contexts: &mut EguiContexts<'_, '_>,
-    settings: Res<'_, CameraSettings>,
+    active_nodes: Query<&NodeMarker, With<NodeActive>>,
+    mut clear_all_tx: EventWriter<ClearAll>,
+    mut clear_search_results_tx: EventWriter<ClearSearchResults>,
+    mut move_camera_tx: EventWriter<MoveCameraReq>,
+    tree: Res<PassiveTreeWrapper>,
+    character: Res<ActiveCharacter>,
+    contexts: &mut EguiContexts,
+    settings: Res<CameraSettings>,
     searchbox_state: ResMut<SearchState>,
     mut clipboard: ResMut<EguiClipboard>,
 ) -> egui::InnerResponse<()> {
@@ -183,6 +187,11 @@ fn rhs_menu(
         ui.separator();
         if ui.button("Clear All").clicked() {
             clear_all_tx.send(ClearAll);
+        }
+
+        ui.separator();
+        if ui.button("Clear All").clicked() {
+            clear_search_results_tx.send(ClearSearchResults);
         }
     })
 }
