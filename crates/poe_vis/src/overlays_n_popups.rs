@@ -44,9 +44,9 @@ fn debug_timers(mut query: Query<(Entity, &mut UIGlyph)>, time: Res<Time>) {
     for (_ent, mut glyph) in query.iter_mut() {
         glyph.tick(time.delta());
 
-        if !glyph.finished() {
-            dbg!(glyph);
-        }
+        // if !glyph.finished() {
+        //     dbg!(glyph);
+        // }
     }
 }
 
@@ -54,7 +54,6 @@ fn cleanup_expired_timers(mut commands: Commands, query: Query<(Entity, &UIGlyph
     for (ent, glyph) in query.into_iter() {
         if glyph.finished() {
             commands.entity(ent).despawn_recursive();
-            println!("DESPAWNN ENTITY!!");
         }
     }
 }
@@ -115,11 +114,12 @@ fn draw_circles(
         };
         let mut g = glyph.clone();
         g.set(std::time::Duration::from_millis(500));
-        commands.spawn(g).with_child((
-            Mesh2d(meshes.add(Annulus::new(*radius * 0.95, *radius))),
-            MeshMaterial2d(mat),
-            Transform::from_translation(*origin),
-        ));
+        commands
+            .spawn((g, Transform::from_translation(*origin)))
+            .with_child((
+                Mesh2d(meshes.add(Annulus::new(*radius * 0.95, *radius))),
+                MeshMaterial2d(mat),
+            ));
     });
 }
 fn debug_num_nodes_in_virt_path(query: Query<(Entity, &NodeMarker), With<VirtualPathMember>>) {

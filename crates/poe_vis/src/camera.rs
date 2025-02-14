@@ -18,7 +18,7 @@ impl Plugin for PoeVisCameraPlugin {
                 Update,
                 (
                     camera_drag_system, // .after(crate::controls::handle_node_clicks)
-                    camera_zoom_system.run_if(CameraSettings::should_zoom),
+                    camera_zoom_system,
                     // debug_camera_info,
                     move_camera_to_target_system.run_if(on_event::<MoveCameraReq>),
                 ),

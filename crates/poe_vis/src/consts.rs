@@ -1,6 +1,13 @@
 /// If you want a default fade time, you can store it here or in NodeScaling
 pub const DEFAULT_HOVER_FADE_TIME: f32 = 0.760;
 
+/// Min values that we use for NodeScaling
+pub const NODE_MIN_SCALE: f32 = 1.0;
+pub const NODE_MAX_SCALE: f32 = 6.0;
+pub const NODE_BASE_RADIUS: f32 = 7.2;
+pub const NODE_HOVER_MULTIPLIER: f32 = 1.06;
+pub const NODE_HOVER_FADE_TIME: f32 = 0.120;
+
 /// In the game you can reach level 99 + 24 skillpoints from quests.
 pub const MAXIMUM_ACTIVATEABLE_NODES: u8 = 123;
 

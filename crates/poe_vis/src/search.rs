@@ -20,9 +20,9 @@ use bevy_egui::{egui, EguiContexts};
 use poe_tree::type_wrappings::NodeId;
 
 use crate::{
-    components::{NodeMarker, SearchMarker, SearchResult, Skill},
-    consts::SEARCH_THRESHOLD,
-    events::{NodeColourReq, ShowSearch},
+    components::{NodeMarker, SearchMarker, SearchResult, Skill, UIGlyph},
+    consts::{self, SEARCH_THRESHOLD},
+    events::{DrawCircleReq, NodeColourReq, ShowSearch},
     materials::{self, GameMaterials},
     resources::SearchState,
     PassiveTreeWrapper,
@@ -50,7 +50,7 @@ impl Plugin for SearchToolsPlugin {
                 (
                     process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
                     cleanup_search_results,
-                    scan_for_and_higlight_results,
+                    scan_for_and_highlight_results,
                     egui_searchbox_system,
                     mark_matches,
                 ),
@@ -111,17 +111,19 @@ fn mark_matches(
     });
 }
 
-fn scan_for_and_higlight_results(
-    mut gizmos: Gizmos,
+fn scan_for_and_highlight_results(
+    mut draw_requests: EventWriter<DrawCircleReq>,
     search_results: Query<(&GlobalTransform, &NodeMarker), With<SearchResult>>,
-    materials: Res<GameMaterials>,
 ) {
-    search_results.iter().for_each(|(transform, _)| {
-        gizmos.circle_2d(
-            transform.translation().truncate(),
-            80.0,
-            tailwind::ORANGE_500,
-        );
+    search_results.iter().for_each(|(tf, _)| {
+        let origin = tf.translation().truncate().extend(0.0);
+        dbg!(origin);
+        draw_requests.send(DrawCircleReq {
+            radius: 80.0,
+            origin,
+            mat: "orange-500".into(),
+            glyph: UIGlyph::default(),
+        });
     });
 }
 

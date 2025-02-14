@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use poe_tree::calculate_world_position_with_negative_y;
 use poe_tree::consts::CHAR_START_NODES;
 
-use crate::consts::{EDGE_PLACEMENT_Z_IDX, NODE_PLACEMENT_Z_IDX};
+use crate::consts::{self, EDGE_PLACEMENT_Z_IDX, NODE_PLACEMENT_Z_IDX};
 use crate::materials::GameMaterials;
 use crate::{components::*, resources::*, PassiveTreeWrapper};
 
@@ -27,11 +27,11 @@ impl Plugin for TreeCanvasPlugin {
         }
 
         app.insert_resource(NodeScaling {
-            min_scale: 1.0,         // Nodes can shrink
-            max_scale: 6.0,         // Nodes can grow
-            base_radius: 7.2,       //
-            hover_multiplier: 1.06, // Nodes that are hovered are increased by %3 of their size
-            hover_fade_time: 0.120,
+            min_scale: consts::NODE_MIN_SCALE,
+            max_scale: consts::NODE_MAX_SCALE,
+            base_radius: consts::NODE_BASE_RADIUS,
+            hover_multiplier: consts::NODE_HOVER_MULTIPLIER,
+            hover_fade_time: consts::NODE_HOVER_FADE_TIME,
         });
 
         let tree = quick_tree();

@@ -15,13 +15,22 @@ fn main() {
     let log_filter = { "error".to_string() };
 
     App::new()
-        .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
+        .insert_resource(ClearColor(Color::srgb(0.1, 0.1, 0.1)))
         .add_plugins((
-            DefaultPlugins.set(bevy::log::LogPlugin {
-                filter: log_filter,
-                custom_layer: custom_log_formatting,
-                ..default()
-            }),
+            DefaultPlugins
+                .set(bevy::log::LogPlugin {
+                    filter: log_filter,
+                    custom_layer: custom_log_formatting,
+                    ..default()
+                })
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        decorations: false,
+                        focused: true,
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
             MeshPickingPlugin,
         ))
         .add_plugins(poe_vis::PoeVis)

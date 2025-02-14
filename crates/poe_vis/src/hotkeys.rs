@@ -35,7 +35,19 @@ fn handle_input(
         searchbox_toggle.send(ShowSearch);
         log::trace!("Searchbox toggle sent");
     }
+    // don't always allow these to be triggered:
+    let ctx = contexts.ctx_mut();
+    match ctx.wants_pointer_input() || ctx.wants_keyboard_input() {
+        true => {
+            settings.egui_has_lock = true;
+            return;
+        }
+        false => {
+            settings.egui_has_lock = false;
+        }
+    }
 
+    // if !settings.egui_has_lock {
     // Camera:
     if let Ok(mut transform) = camera_query.get_single_mut() {
         let mut movement = Vec3::ZERO;
@@ -53,18 +65,7 @@ fn handle_input(
         }
         transform.translation += movement;
     }
-
-    // don't always allow these to be triggered:
-    let ctx = contexts.ctx_mut();
-    match ctx.wants_pointer_input() || ctx.wants_keyboard_input() {
-        true => {
-            settings.egui_has_lock = true;
-            return;
-        }
-        false => {
-            settings.egui_has_lock = false;
-        }
-    }
+    // }
 
     if check_action_just_pressed(&config, "camera_reset_home", &keys) {
         if let Ok(mut transform) = camera_query.get_single_mut() {

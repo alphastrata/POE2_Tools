@@ -43,9 +43,9 @@ impl CameraSettings {
     pub fn egui_has_lock(settings: Res<CameraSettings>) -> bool {
         settings.egui_has_lock
     }
-    pub fn should_zoom(settings: Res<CameraSettings>) -> bool {
-        !settings.egui_has_lock
-    }
+    // pub fn should_zoom(settings: Res<CameraSettings>) -> bool {
+    //     !settings.egui_has_lock
+    // }
 }
 
 // Camera drag state

@@ -73,7 +73,6 @@ pub struct UIGlyph(pub Timer);
 impl UIGlyph {
     pub fn set(&mut self, duration: Duration) {
         self.0 = Timer::new(duration, bevy::time::TimerMode::Once);
-        dbg!(self);
     }
 }
 impl Default for UIGlyph {
