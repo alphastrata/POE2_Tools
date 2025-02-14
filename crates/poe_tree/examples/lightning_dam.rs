@@ -1,5 +1,5 @@
-use rayon::prelude::*;
 use ahash::AHashMap;
+use rayon::prelude::*;
 
 mod common;
 use common::quick_tree;
@@ -16,6 +16,7 @@ fn truncate_path(path: &[NodeId]) -> String {
             .map(|id| id.to_string())
             .collect::<Vec<_>>()
             .join(", ");
+
         let last_str = last
             .iter()
             .map(|id| id.to_string())

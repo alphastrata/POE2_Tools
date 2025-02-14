@@ -115,6 +115,23 @@ pub fn activate_node_with_colour(client: &Client, node: NodeId, colour: &str) {
         );
     }
 }
+pub fn activate_edge_with_colour(client: &Client, from: NodeId, to: NodeId, colour: &str) {
+    let json = format!(
+        r#"{{"jsonrpc":"2.0","method":"activate_node_with_colour","params":[{}, {}, "{}"],"id":1}}"#,
+        from, to, colour
+    );
+    let res = client
+        .post(VIS_URL)
+        .header("Content-Type", "application/json")
+        .body(json)
+        .send();
+    if let Err(e) = res {
+        eprintln!(
+            "Error activating edge [{}..{}] with colour {}: {}",
+            from, to, colour, e
+        );
+    }
+}
 
 pub fn clear(client: &Client) -> Result<reqwest::blocking::Response, reqwest::Error> {
     let json = r#"{"jsonrpc":"2.0","method":"clear","params":[],"id":1}"#;
