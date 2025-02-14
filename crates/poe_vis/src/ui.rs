@@ -90,7 +90,7 @@ fn egui_ui_system(
         character,
         settings,
         draw_circle,
-        searchbox_state,
+        // searchbox_state,
         clipboard,
     );
 }
@@ -106,7 +106,7 @@ fn rhs_menu(
     character: Res<ActiveCharacter>,
     settings: Res<CameraSettings>,
     mut draw_circle: EventWriter<DrawCircleReq>,
-    searchbox_state: ResMut<SearchState>,
+    // searchbox_state: ResMut<SearchState>,
     mut clipboard: ResMut<EguiClipboard>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
@@ -254,21 +254,19 @@ fn draw_optimiser_ui(
 ) {
     ui.heading("Optimiser");
     ui.separator();
-    // Show root node info as an example
+
     if let Some(root) = tree.nodes.get(&character.starting_node) {
         ui.label(format!("Root: {}", root.name));
     }
     ui.separator();
-    // Placeholder for optimiser controls
+
     if ui.button("Optimise Build").clicked() {
-        // Example: focus camera to centre build
         move_camera_tx.send(MoveCameraReq(Vec3::ZERO));
     }
     ui.separator();
     ui.label("Add optimiser controls here...");
 }
 
-// Refactor topbar_menu_system to accept an immutable reference to egui::Context.
 fn topbar_menu_system(
     contexts: &mut EguiContexts<'_, '_>,
     save_tx: &mut EventWriter<SaveCharacterReq>,
