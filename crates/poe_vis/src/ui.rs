@@ -256,8 +256,6 @@ fn rhs_menu(
     })
 }
 
-/// Adjust signature/args/resources as needed (e.g. need active_nodes query for aggregator, node_deactivation_tx etc.).
-/// Example usage of tailwind_to_egui, TAILWIND_COLOURS_AS_STR, plus toggles & par_take_while for new path:
 fn draw_optimiser_ui(
     ui: &mut egui::Ui,
     tree: &Res<PassiveTreeWrapper>,
@@ -265,32 +263,40 @@ fn draw_optimiser_ui(
     mut draw_circle: EventWriter<DrawCircleReq>,
     projection: &OrthographicProjection,
     mut toggles: Local<Toggles>,
-    // e.g. for swapping active nodes:
-    // mut node_deactivation_tx: EventWriter<NodeDeactivationReq>,
-    // mut node_activation_tx: EventWriter<NodeActivationReq>,
-    // for generating egui colors:
-    // tailwind_to_egui_fn: fn(&str) -> egui::Color32,
 ) {
     ui.heading("Optimiser");
     ui.separator();
 
-    // Build aggregated stats from root + active nodes, grouped by name
+    // Build aggregated stats from root + active nodes
     let mut aggregator: Vec<(NodeId, &Stat)> = Vec::new();
+
+    // Add root node stats
     if let Some(root) = tree.nodes.get(&character.starting_node) {
-        for stat in root.as_passive_skill(tree).stats() {
-            aggregator.push((character.starting_node, stat));
-        }
+        aggregator.extend(
+            root.as_passive_skill(tree)
+                .stats()
+                .into_iter()
+                .map(|stat| (character.starting_node, stat)),
+        );
     }
-    character.activated_node_ids.iter().for_each(|nm| {
-        if *nm != character.starting_node {
-            if let Some(node) = tree.nodes.get(&nm) {
-                for stat in node.as_passive_skill(tree).stats() {
-                    aggregator.push((*nm, stat));
-                }
+
+    // Add activated nodes stats
+    character
+        .activated_node_ids
+        .iter()
+        .filter(|&&id| id != character.starting_node)
+        .for_each(|id| {
+            if let Some(node) = tree.nodes.get(id) {
+                aggregator.extend(
+                    node.as_passive_skill(tree)
+                        .stats()
+                        .into_iter()
+                        .map(|stat| (*id, stat)),
+                );
             }
-        }
-    });
-    // Distinct stat names
+        });
+
+    // Get distinct sorted stats
     let mut distinct_stats: Vec<String> = aggregator
         .iter()
         .map(|(_, s)| s.name().to_string())
@@ -298,99 +304,90 @@ fn draw_optimiser_ui(
     distinct_stats.sort();
     distinct_stats.dedup();
 
+    // UI: Display root node
     ui.label(format!(
         "Root: {}",
         tree.nodes[&character.starting_node].name
     ));
     ui.separator();
 
+    // Display stat toggles
     let palette = TAILWIND_COLOURS_AS_STR;
-    for (i, stat_name) in distinct_stats.iter().enumerate() {
-        // pick color
-        let color_str = palette[i % palette.len()];
-        let egui_col = tailwind_to_egui(color_str);
+    distinct_stats
+        .iter()
+        .enumerate()
+        .for_each(|(i, stat_name)| {
+            let color_str = palette[i % palette.len()];
+            let egui_col = tailwind_to_egui(color_str);
+            let mut is_toggled = toggles.0.get(stat_name).copied().unwrap_or(false);
 
-        // current toggle state
-        let mut is_toggled = toggles.0.get(stat_name).copied().unwrap_or(false);
+            ui.horizontal(|ui| {
+                ui.label(" ");
+                let response = ui.colored_label(egui_col, stat_name);
+                ui.checkbox(&mut is_toggled, "");
 
-        ui.horizontal(|ui| {
-            ui.label(" "); // just a spacer
-            let response = ui.colored_label(egui_col, stat_name);
-            ui.checkbox(&mut is_toggled, "");
+                if is_toggled != *toggles.0.get(stat_name).unwrap_or(&false) {
+                    toggles.0.insert(stat_name.clone(), is_toggled);
+                }
 
-            // if updated, store it
-            if Some(&is_toggled) != toggles.0.get(stat_name) {
-                toggles.0.insert(stat_name.clone(), is_toggled);
-            }
-
-            if response.hovered() {
-                let radius = 20.0 * projection.scale;
-                aggregator
-                    .iter()
-                    .filter(|(_, s)| s.name() == stat_name)
-                    .for_each(|(node_id, _)| {
-                        if let Some(node) = tree.nodes.get(node_id) {
-                            let origin = Vec3::new(node.wx, -node.wy, 0.0);
+                // Hover preview
+                if response.hovered() {
+                    let radius = 20.0 * projection.scale;
+                    aggregator
+                        .iter()
+                        .filter(|(_, s)| s.name() == stat_name)
+                        .filter_map(|(id, _)| tree.nodes.get(id))
+                        .for_each(|node| {
                             draw_circle.send(DrawCircleReq {
                                 radius,
-                                origin,
+                                origin: Vec3::new(node.wx, -node.wy, 0.0),
                                 mat: color_str.into(),
                                 glyph: UIGlyph::from_millis(500),
                             });
-                        }
-                    });
-            }
+                        });
+                }
+            });
         });
-    }
+
     ui.separator();
 
-    // For each toggled stat, create a list of candidate paths
-    for stat_name in &distinct_stats {
-        let Some(true) = toggles.get(stat_name) else {
-            return;
-        };
-
-        let candidate = Stat::from_key_value(stat_name, 0.0);
-        // NOTE: why no good way to discard the float... hmmm, and match on our stricter types..
-        let selector = move |s: &Stat| s.name() == candidate.name();
-
-        let candidate_paths = tree.take_while(
-            character.starting_node,
-            selector,
-            character.activated_node_ids.len(),
-        );
-
-        candidate_paths
+    // Optimise button - only show paths when clicked
+    if ui.button("Optimise").clicked() {
+        distinct_stats
             .iter()
-            .enumerate()
-            // Create buttons and track interaction states
-            .map(|(idx, path)| {
-                let label = format!("Path #{} for {}", idx + 1, stat_name);
-                let button = ui.button(label);
-                (idx, path, button)
-            })
-            // Process paths with hovered buttons
-            .filter(|(_, _, button)| button.hovered())
-            // Draw preview for hovered paths
-            .for_each(|(_, path, button)| {
-                // Draw path preview
-                path.iter()
-                    .filter_map(|node_id| tree.nodes.get(node_id))
-                    .for_each(|node| {
-                        draw_circle.send(DrawCircleReq {
-                            radius: 20.0,
-                            origin: Vec3::new(node.wx, -node.wy, 0.0),
-                            mat: "sky-400".into(),
-                            glyph: UIGlyph::from_millis(25),
-                        });
-                    });
+            .filter(|stat| toggles.0.get(*stat) == Some(&true))
+            .for_each(|stat_name| {
+                let selector = |s: &Stat| s.name() == stat_name.as_str();
+                let paths = tree.take_while(
+                    character.starting_node,
+                    selector,
+                    character.activated_node_ids.len(),
+                );
 
-                // Handle click events
-                if button.clicked() {
-                    println!("Clicked");
-                    character.activated_node_ids.clear();
-                    character.activated_node_ids.extend(path.iter().copied());
-                }
+                // Display each path with hover/click functionality
+                paths.iter().enumerate().for_each(|(idx, path)| {
+                    let button = ui.button(format!("Path #{} for {}", idx + 1, stat_name));
+
+                    // Hover preview
+                    if button.hovered() {
+                        path.iter()
+                            .filter_map(|id| tree.nodes.get(id))
+                            .for_each(|node| {
+                                draw_circle.send(DrawCircleReq {
+                                    radius: 20.0,
+                                    origin: Vec3::new(node.wx, -node.wy, 0.0),
+                                    mat: "sky-400".into(),
+                                    glyph: UIGlyph::from_millis(25),
+                                });
+                            });
+                    }
+
+                    // Click handling
+                    if button.clicked() {
+                        character.activated_node_ids.clear();
+                        character.activated_node_ids.extend(path.iter().copied());
+                    }
+                });
             });
     }
 
