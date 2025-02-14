@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+use bevy::math::{Vec2, Vec3};
 use poe_tree::{type_wrappings::NodeId, PassiveTree};
 use reqwest::blocking::Client;
 use serde_json::Value;
@@ -90,6 +92,36 @@ pub fn clear(client: &Client) -> Result<reqwest::blocking::Response, reqwest::Er
         .header("Content-Type", "application/json")
         .body(json)
         .send()
+}
+
+pub fn draw_circle(client: &Client, radius: f32, origin: Vec3, mat: &str) {
+    let json = format!(
+        r#"{{"jsonrpc":"2.0","method":"draw_circle","params":[{}, [{}, {}, {}], "{}"],"id":1}}"#,
+        radius, origin.x, origin.y, origin.z, mat
+    );
+    let res = client
+        .post(VIS_URL)
+        .header("Content-Type", "application/json")
+        .body(json)
+        .send();
+    if let Err(e) = res {
+        eprintln!("Error drawing circle: {}", e);
+    }
+}
+
+pub fn draw_rect(client: &Client, half_size: Vec2, origin: Vec3, mat: &str) {
+    let json = format!(
+        r#"{{"jsonrpc":"2.0","method":"draw_rect","params":[[{}, {}], [{}, {}, {}], "{}"],"id":1}}"#,
+        half_size.x, half_size.y, origin.x, origin.y, origin.z, mat
+    );
+    let res = client
+        .post(VIS_URL)
+        .header("Content-Type", "application/json")
+        .body(json)
+        .send();
+    if let Err(e) = res {
+        eprintln!("Error drawing rectangle: {}", e);
+    }
 }
 
 fn main() {}
