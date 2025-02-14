@@ -350,7 +350,9 @@ fn draw_optimiser_ui(
             return;
         };
 
-        let selector = move |s: &Stat| matches!(s, Stat::from_key_value(stat_name, 0.0));
+        let candidate = Stat::from_key_value(stat_name, 0.0);
+        // NOTE: why no good way to discard the float... hmmm, and match on our stricter types..
+        let selector = move |s: &Stat| s.name() == candidate.name();
 
         let candidate_paths = tree.take_while(
             character.starting_node,
@@ -358,32 +360,38 @@ fn draw_optimiser_ui(
             character.activated_node_ids.len(),
         );
 
-        for (idx, path) in candidate_paths.iter().enumerate() {
-            let label = format!("Path #{} for {}", idx + 1, stat_name);
-            //TODO: add the 'total' of the accumulated stat as a synopsis of the new potential path
-            let path_btn = ui.button(label);
-
-            if path_btn.hovered() {
-                for node_id in path {
-                    if let Some(node) = tree.nodes.get(node_id) {
+        candidate_paths
+            .iter()
+            .enumerate()
+            // Create buttons and track interaction states
+            .map(|(idx, path)| {
+                let label = format!("Path #{} for {}", idx + 1, stat_name);
+                let button = ui.button(label);
+                (idx, path, button)
+            })
+            // Process paths with hovered buttons
+            .filter(|(_, _, button)| button.hovered())
+            // Draw preview for hovered paths
+            .for_each(|(_, path, button)| {
+                // Draw path preview
+                path.iter()
+                    .filter_map(|node_id| tree.nodes.get(node_id))
+                    .for_each(|node| {
                         draw_circle.send(DrawCircleReq {
                             radius: 20.0,
                             origin: Vec3::new(node.wx, -node.wy, 0.0),
                             mat: "sky-400".into(),
                             glyph: UIGlyph::from_millis(25),
                         });
-                    }
-                }
-            }
+                    });
 
-            // Click: replace character's path with this new one
-            if path_btn.clicked() {
-                // e.g.:
-                character.activated_node_ids.clear();
-                character.activated_node_ids.extend(path.iter().copied());
-                // or do custom node swap logic...
-            }
-        }
+                // Handle click events
+                if button.clicked() {
+                    println!("Clicked");
+                    character.activated_node_ids.clear();
+                    character.activated_node_ids.extend(path.iter().copied());
+                }
+            });
     }
 
     ui.separator();
