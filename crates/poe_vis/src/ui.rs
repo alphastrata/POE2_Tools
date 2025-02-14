@@ -329,32 +329,35 @@ fn display_aggregated_stats<'t>(
     draw_circle: &mut EventWriter<DrawCircleReq>,
     projection_scale: f32,
 ) {
-    let mut groups: HashMap<String, (f32, usize, NodeId)> = HashMap::new();
+    let mut groups: HashMap<String, (f32, usize, Vec<NodeId>)> = HashMap::new();
     for (node_id, stat) in stats {
         let name = stat.name();
         let value = stat.value();
         groups
             .entry(name.to_string())
-            .and_modify(|(sum, count, _)| {
+            .and_modify(|(sum, count, node_ids)| {
                 *sum += value;
                 *count += 1;
+                node_ids.push(node_id);
             })
-            .or_insert((value, 1, node_id));
+            .or_insert((value, 1, vec![node_id]));
     }
     let mut entries: Vec<_> = groups.into_iter().collect();
     entries.sort_by(|(a, _), (b, _)| a.cmp(b));
-    for (name, (sum, count, rep_node_id)) in entries {
+    for (name, (sum, count, node_ids)) in entries {
         let response = ui.label(format!("{}: {} ({} nodes)", name, sum, count));
         if response.hovered() {
-            if let Some(node) = tree.nodes.get(&rep_node_id) {
-                let scaled_radius = (20.0 * projection_scale).abs();
-                let origin = Vec3::new(node.wx, -node.wy, 0.0);
-                draw_circle.send(DrawCircleReq {
-                    radius: scaled_radius,
-                    origin,
-                    mat: "amber-500".into(),
-                    glyph: UIGlyph::from_millis(500),
-                });
+            let scaled_radius = (20.0 * projection_scale).abs();
+            for node_id in node_ids {
+                if let Some(node) = tree.nodes.get(&node_id) {
+                    let origin = Vec3::new(node.wx, -node.wy, 0.0);
+                    draw_circle.send(DrawCircleReq {
+                        radius: scaled_radius,
+                        origin,
+                        mat: "amber-500".into(),
+                        glyph: UIGlyph::from_millis(500),
+                    });
+                }
             }
         }
     }
