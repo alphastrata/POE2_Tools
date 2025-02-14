@@ -116,10 +116,11 @@ impl Plugin for BGServicesPlugin {
                 process_edge_activations,
                 // Lock the rate we populate the virtual paths at 50ms
                 populate_virtual_path.run_if(on_event::<VirtualPathReq>.and(time_passed(0.080))),
-                process_virtual_paths
-                    .run_if(sufficient_active_nodes)
-                    .after(populate_virtual_path),
-                clear_virtual_paths.run_if(on_event::<ClearVirtualPath>.or(on_event::<ClearAll>)),
+                process_virtual_paths.after(populate_virtual_path),
+                clear_virtual_paths.run_if(
+                    on_event::<ClearVirtualPath>
+                        .or(on_event::<ClearAll>.or(CameraSettings::is_moving)),
+                ),
                 process_manual_node_highlights.run_if(on_event::<ManualNodeHighlightWithColour>),
                 process_manual_edge_highlights.run_if(on_event::<ManualEdgeHighlightWithColour>),
                 /* Pretty lightweight, can be spammed.*/
@@ -184,6 +185,7 @@ pub fn clear(
     game_materials: Res<GameMaterials>,
     mut colour_events: EventWriter<NodeColourReq>,
     mut active_character: ResMut<ActiveCharacter>,
+    mut path_repair: ResMut<PathRepairRequired>,
 ) {
     log::debug!("Clear command received.");
     active_character.activated_node_ids.clear();
@@ -221,6 +223,8 @@ pub fn clear(
         "active character's activated node count should be 0"
     );
 
+    // JIC we always require path repair after a Clear
+    path_repair.request_path_repair();
     log::debug!("ClearAll executed successfully, NOTHING should be highlighet/coloured etc.");
 }
 
