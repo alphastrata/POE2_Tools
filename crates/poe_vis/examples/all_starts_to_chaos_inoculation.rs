@@ -8,7 +8,8 @@ use rayon::prelude::*;
 use reqwest::blocking::Client;
 use std::{env, thread::sleep, time::Duration};
 
-const VIS_URL: &str = "http://0.0.0.0:6004";
+mod common;
+use common::*;
 
 fn quick_tree() -> PassiveTree {
     let file = std::fs::File::open("data/POE2_Tree.json").unwrap();
@@ -17,37 +18,6 @@ fn quick_tree() -> PassiveTree {
     PassiveTree::from_value(&tree_data).unwrap()
 }
 
-fn send_node_command(client: &Client, node: NodeId, method: &str) {
-    let json = format!(
-        r#"{{"jsonrpc":"2.0","method":"{}","params":[{}],"id":1}}"#,
-        method, node
-    );
-    let res = client
-        .post(VIS_URL)
-        .header("Content-Type", "application/json")
-        .body(json)
-        .send();
-    if let Err(e) = res {
-        eprintln!("Error sending {} for node {}: {}", method, node, e);
-    }
-}
-
-fn activate_node(client: &Client, node: NodeId) {
-    send_node_command(client, node, "activate_node");
-}
-
-fn deactivate_node(client: &Client, node: NodeId) {
-    send_node_command(client, node, "deactivate_node");
-}
-
-fn ping(client: &reqwest::blocking::Client) -> Result<reqwest::blocking::Response, reqwest::Error> {
-    let json = r#"{"jsonrpc":"2.0","method":"ping","params":[],"id":1}"#;
-    client
-        .post(VIS_URL)
-        .header("Content-Type", "application/json")
-        .body(json)
-        .send()
-}
 fn main() {
     pretty_env_logger::init();
     let visualiser = env::args().any(|arg| arg == "--visualiser");

@@ -62,13 +62,6 @@ fn main() {
         t1.elapsed().as_secs_f64()
     );
 
-    // 65_005 w chaosDamage in about a minute... #NEEDS IMPROVEMENT!
-    // 7_526 after filter. in 64.29s for MIN_BONUS_VALUE: f32 = 60.0;
-    // for const MIN_BONUS_VALUE: f32 = 80.0;
-    /*
-        1177 after filter. in 60.0757134s fo 81.0
-    Estimated animtaion time is: 00:00:41
-     */
     let f_20 = filtered.par_iter();
     let total_secs = f_20.len() as f64 * 0.035;
     let hours = (total_secs / 3600.0) as u64;
@@ -92,17 +85,16 @@ fn main() {
     filtered.par_iter().enumerate().for_each(|(i, path)| {
         let colour = &colours[i % colours.len()];
         if visualiser {
-            // Activate first node.
             if let Some(&first) = path.first() {
                 activate_node_with_colour(&client, first, colour);
             }
-            // Activate edges and nodes via windows(2).
-            for window in path.windows(2) {
+
+            path.windows(2).for_each(|window| {
                 let (from, to) = (window[0], window[1]);
                 common::activate_edge_with_colour(&client, from, to, colour);
                 common::activate_node_with_colour(&client, to, colour);
                 sleep(Duration::from_millis(8));
-            }
+            });
             sleep(Duration::from_millis(22));
         }
     });
