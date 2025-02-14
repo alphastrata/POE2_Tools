@@ -37,13 +37,7 @@ fn main() {
         node_ids.iter().for_each(|&start_node| {
             println!("\tStart node: {}", start_node);
 
-            let paths = tree.walk_n_steps(start_node, STEPS);
-            assert!(
-                !paths.is_empty(),
-                "No paths found for start {} and {} steps",
-                start_node,
-                STEPS
-            );
+            let paths: Vec<Vec<NodeId>> = tree.walk_n_steps(start_node, STEPS);
 
             println!(
                 "\t\tLevels {}: {} possible paths for {}",
@@ -58,8 +52,8 @@ fn main() {
                         let first_pos = common::get_node_position(&client, *first);
                         let last_pos = common::get_node_position(&client, *last);
 
-                        common::draw_circle(&local_client, 80.0, first_pos, "orange-500", 500);
-                        common::draw_circle(&local_client, 80.0, last_pos, "orange-500", 500);
+                        common::draw_circle(&local_client, 200.0, first_pos, "pink-500", 3000);
+                        common::draw_circle(&local_client, 200.0, last_pos, "amber-700", 3000);
                     }
 
                     // Activate path nodes

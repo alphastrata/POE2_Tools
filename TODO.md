@@ -6,10 +6,6 @@
 - [ ] Pruned Node Handling: When a pruned path disconnects downstream nodes:
   - Turn them red for two seconds.
   - Remove them from both `PassiveTree.active` and `.highlighted_nodes`.
-- [ ] Virtual Path for Hovered Nodes: If `.hovered_node` isn’t connected to the starting node, display a 'virtual path' indicating the potential route (like maxroll.gg).
-- [ ] Improve performance of `walk_n_steps` (it's too slow):
-  - Try a CSR `impl`.
-  - Consider GPU computation.
 - [ ] Camera Home/Reset: Bind `'h'` or `Esc` (configurable) to reset the camera view.
 - [ ] Fuzzy Search Behaviour: Pressing Enter in the fuzzy search field should close it and focus the top search result.
 - [ ] Tab Navigation: Implement tabs.
@@ -30,6 +26,10 @@
 
 ## Changelog (Completed Tasks)
 
+- [x] Virtual Path for Hovered Nodes: If `.hovered_node` isn’t connected to the starting node, display a 'virtual path' indicating the potential route (like maxroll.gg).
+- [x] Improve performance of `walk_n_steps` (it's too slow):
+- [x] Try a CSR `impl`.
+  - Consider GPU computation. NO!
 - [x] implement a draw_node ONLY IF not a spastic length.
 - [x] Higlight for `t` time, then revert.
 - [x] Replace the `Gizmo` hilighting with Glyphs (actual geomtery)

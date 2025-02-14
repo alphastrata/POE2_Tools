@@ -194,14 +194,17 @@ pub fn clear(
     );
 
     let mat = &game_materials.node_base;
-    nodes.iter().for_each(|(ent, _nid)| {
-        commands.entity(ent).remove::<NodeActive>();
-        commands.entity(ent).remove::<ManuallyHighlighted>();
-        commands.entity(ent).remove::<VirtualPathMember>();
-        commands.entity(ent).insert(NodeInactive);
+    nodes
+        .iter()
+        .filter(|(_ent, nid)| nid.0 != active_character.starting_node)
+        .for_each(|(ent, _nid)| {
+            commands.entity(ent).remove::<NodeActive>();
+            commands.entity(ent).remove::<ManuallyHighlighted>();
+            commands.entity(ent).remove::<VirtualPathMember>();
+            commands.entity(ent).insert(NodeInactive);
 
-        colour_events.send(NodeColourReq(ent, mat.clone_weak()));
-    });
+            colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+        });
 
     edges.iter().for_each(|(ent, _nid)| {
         commands.entity(ent).remove::<EdgeActive>();
@@ -489,10 +492,10 @@ fn adjust_node_sizes(
         let clamped_scale = zoom_scale.clamp(scaling.min_scale, scaling.max_scale);
 
         // Apply scale adjustment to all nodes.
-        for mut transform in &mut node_query {
+        node_query.iter_mut().for_each(|mut transform| {
             // Combine base scale with zoom scale.
             transform.scale = Vec3::splat(scaling.base_radius * clamped_scale);
-        }
+        });
     }
 }
 
