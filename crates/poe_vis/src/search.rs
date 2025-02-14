@@ -119,7 +119,7 @@ fn scan_for_and_highlight_results(
     search_results.iter().for_each(|(tf, _)| {
         let origin = tf.translation().truncate().extend(0.0);
         draw_requests.send(DrawCircleReq {
-            radius: 80.0,
+            radius: 88.0,
             origin,
             mat: "orange-500".into(),
             glyph: UIGlyph::new_with_duration(DEFAULT_SEARCH_HIGHLIGHT_DURATION),

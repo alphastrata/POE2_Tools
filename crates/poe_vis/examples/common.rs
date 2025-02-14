@@ -24,6 +24,37 @@ pub fn ping(
         .send()
 }
 
+pub fn get_node_position(client: &Client, node: NodeId) -> Vec3 {
+    let json = format!(
+        r#"{{"jsonrpc":"2.0","method":"get_node_pos","params":[{}],"id":1}}"#,
+        node
+    );
+
+    let res = client
+        .post(VIS_URL)
+        .header("Content-Type", "application/json")
+        .body(json)
+        .send();
+
+    match res {
+        Ok(response) => {
+            if let Ok(json) = response.json::<Value>() {
+                if let Some(coords) = json.get("result").and_then(|v| v.as_array()) {
+                    if coords.len() == 3 {
+                        let x = coords[0].as_f64().unwrap_or(0.0) as f32;
+                        let y = coords[1].as_f64().unwrap_or(0.0) as f32;
+                        let z = coords[2].as_f64().unwrap_or(0.0) as f32;
+                        return Vec3::new(x, y, z);
+                    }
+                }
+            }
+        }
+        Err(e) => eprintln!("Error fetching position for node {}: {}", node, e),
+    }
+
+    Vec3::ZERO // Default to (0,0,0) on failure
+}
+
 fn send_node_command(client: &Client, node: NodeId, method: &str) {
     let json = format!(
         r#"{{"jsonrpc":"2.0","method":"{}","params":[{}],"id":1}}"#,

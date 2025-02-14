@@ -77,7 +77,6 @@ fn draw_rectangles(
         let g = glyph.clone();
 
         commands.spawn(g).with_child((
-            //
             Mesh2d(meshes.add(Rectangle::new(half_size.x * 2.0, half_size.y * 2.0))),
             MeshMaterial2d(mat),
             Transform::from_translation(*origin),
@@ -116,6 +115,7 @@ fn draw_circles(
             ));
     });
 }
+
 fn debug_num_nodes_in_virt_path(query: Query<(Entity, &NodeMarker), With<VirtualPathMember>>) {
     log::debug!("Members in VP: {}", query.iter().count());
 }

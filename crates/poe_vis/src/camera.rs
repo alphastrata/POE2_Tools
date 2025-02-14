@@ -55,6 +55,7 @@ pub fn setup_camera(mut commands: Commands) {
             scaling_mode: ScalingMode::WindowSize,
             area: Rect::from_center_size(Vec2::ZERO, Vec2::new(1.0, 1.0)),
         },
+        Msaa::Sample8,
     ));
 }
 // Zoom system implementation
