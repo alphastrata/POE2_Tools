@@ -94,10 +94,10 @@ pub fn clear(client: &Client) -> Result<reqwest::blocking::Response, reqwest::Er
         .send()
 }
 
-pub fn draw_circle(client: &Client, radius: f32, origin: Vec3, mat: &str) {
+pub fn draw_circle(client: &Client, radius: f32, origin: Vec3, mat: &str, glyph_duration: u64) {
     let json = format!(
-        r#"{{"jsonrpc":"2.0","method":"draw_circle","params":[{}, [{}, {}, {}], "{}"],"id":1}}"#,
-        radius, origin.x, origin.y, origin.z, mat
+        r#"{{"jsonrpc":"2.0","method":"draw_circle","params":[{}, [{}, {}, {}], "{}", {}],"id":1}}"#,
+        radius, origin.x, origin.y, origin.z, mat, glyph_duration
     );
     let res = client
         .post(VIS_URL)
@@ -109,10 +109,10 @@ pub fn draw_circle(client: &Client, radius: f32, origin: Vec3, mat: &str) {
     }
 }
 
-pub fn draw_rect(client: &Client, half_size: Vec2, origin: Vec3, mat: &str) {
+pub fn draw_rect(client: &Client, half_size: Vec2, origin: Vec3, mat: &str, glyph_duration: u64) {
     let json = format!(
-        r#"{{"jsonrpc":"2.0","method":"draw_rect","params":[[{}, {}], [{}, {}, {}], "{}"],"id":1}}"#,
-        half_size.x, half_size.y, origin.x, origin.y, origin.z, mat
+        r#"{{"jsonrpc":"2.0","method":"draw_rect","params":[[{}, {}], [{}, {}, {}], "{}", {}],"id":1}}"#,
+        half_size.x, half_size.y, origin.x, origin.y, origin.z, mat, glyph_duration
     );
     let res = client
         .post(VIS_URL)

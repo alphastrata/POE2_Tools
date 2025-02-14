@@ -78,6 +78,11 @@ impl UIGlyph {
     pub fn new_with_duration(duration: f32) -> Self {
         Self(Timer::from_seconds(duration, bevy::time::TimerMode::Once))
     }
+
+    pub fn from_millis(millis: u64) -> Self {
+        let duration = Duration::from_millis(millis);
+        Self(Timer::new(duration, bevy::time::TimerMode::Once))
+    }
 }
 
 impl Default for UIGlyph {

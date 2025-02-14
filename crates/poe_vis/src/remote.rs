@@ -466,11 +466,15 @@ fn parse_draw_circle(params: &Params) -> DrawCircleReq {
             let radius = arr[0].as_f64().unwrap() as f32;
             let origin = parse_origin(&arr[1]);
             let mat = parse_material(arr.get(2));
+
+            let glyph_duration = arr.get(3).and_then(|v| v.as_f64()).unwrap_or(1500.0) as u64;
+            let glyph = UIGlyph::from_millis(glyph_duration);
+
             DrawCircleReq {
                 radius,
                 origin,
                 mat,
-                glyph: UIGlyph::default(),
+                glyph,
             }
         }
         _ => unimplemented!(),
@@ -486,13 +490,16 @@ fn parse_draw_rect(params: &Params) -> DrawRectangleReq {
                 hs_arr[1].as_f64().unwrap() as f32,
             );
             let origin = parse_origin(&arr[1]);
-
             let mat = parse_material(arr.get(2));
+
+            let glyph_duration = arr.get(3).and_then(|v| v.as_f64()).unwrap_or(1500.0) as u64;
+            let glyph = UIGlyph::from_millis(glyph_duration);
+
             DrawRectangleReq {
                 half_size,
                 origin,
                 mat,
-                glyph: UIGlyph::default(),
+                glyph,
             }
         }
         _ => unimplemented!(),
