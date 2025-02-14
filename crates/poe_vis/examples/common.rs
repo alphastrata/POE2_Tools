@@ -13,6 +13,19 @@ pub fn quick_tree() -> PassiveTree {
     PassiveTree::from_value(&tree_data).unwrap()
 }
 
+use std::mem;
+
+pub fn bytes_to_human(bytes: usize) -> String {
+    let units = ["B", "KB", "MB", "GB", "TB"];
+    let mut size = bytes as f64;
+    let mut unit = 0;
+    while size >= 1024.0 && unit < units.len() - 1 {
+        size /= 1024.0;
+        unit += 1;
+    }
+    format!("{:.2} {}", size, units[unit])
+}
+
 pub fn ping(
     client: &reqwest::blocking::Client,
 ) -> Result<reqwest::blocking::Response, reqwest::Error> {

@@ -2,7 +2,7 @@ use poe_tree::{consts::get_level_one_nodes, type_wrappings::NodeId};
 use rayon::prelude::*;
 use reqwest::blocking::Client;
 use std::{
-    env,
+    env, mem,
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -45,9 +45,11 @@ fn main() {
                 paths.len(),
                 character
             );
+            let size_bytes = mem::size_of_val(&paths);
+            println!("\t\t{} = {})", character, bytes_to_human(size_bytes));
 
-            if visualiser {
-                paths.iter().for_each(|path| {
+            paths.iter().for_each(|path| {
+                if visualiser {
                     if let (Some(first), Some(last)) = (path.first(), path.last()) {
                         let first_pos = common::get_node_position(&client, *first);
                         let last_pos = common::get_node_position(&client, *last);
@@ -69,8 +71,8 @@ fn main() {
                         deactivate_node(&local_client, node);
                         sleep(Duration::from_millis(8));
                     });
-                });
-            }
+                }
+            });
         });
         println!("{} finished in: {:?}\n", character, char_start.elapsed());
     });
