@@ -41,21 +41,17 @@ impl Plugin for OverlaysAndPopupsPlugin {
 }
 
 fn debug_timers(mut query: Query<(Entity, &mut UIGlyph)>, time: Res<Time>) {
-    for (_ent, mut glyph) in query.iter_mut() {
+    query.iter_mut().for_each(|(_ent, mut glyph)| {
         glyph.tick(time.delta());
-
-        // if !glyph.finished() {
-        //     dbg!(glyph);
-        // }
-    }
+    });
 }
 
 fn cleanup_expired_timers(mut commands: Commands, query: Query<(Entity, &UIGlyph), With<UIGlyph>>) {
-    for (ent, glyph) in query.into_iter() {
+    query.into_iter().for_each(|(ent, glyph)| {
         if glyph.finished() {
             commands.entity(ent).despawn_recursive();
         }
-    }
+    });
 }
 fn draw_rectangles(
     mut commands: Commands,
@@ -78,8 +74,7 @@ fn draw_rectangles(
                 materials.add(mat_from_str)
             }
         };
-        let mut g = glyph.clone();
-        g.set(std::time::Duration::from_millis(500));
+        let g = glyph.clone();
 
         commands.spawn(g).with_child((
             //
@@ -112,8 +107,7 @@ fn draw_circles(
                 materials.add(mat_from_str)
             }
         };
-        let mut g = glyph.clone();
-        g.set(std::time::Duration::from_millis(500));
+        let g = glyph.clone();
         commands
             .spawn((g, Transform::from_translation(*origin)))
             .with_child((

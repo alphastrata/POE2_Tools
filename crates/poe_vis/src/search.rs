@@ -21,10 +21,10 @@ use poe_tree::type_wrappings::NodeId;
 
 use crate::{
     components::{NodeMarker, SearchMarker, SearchResult, Skill, UIGlyph},
-    consts::{self, SEARCH_THRESHOLD},
-    events::{DrawCircleReq, NodeColourReq, ShowSearch},
+    consts::{self, DEFAULT_SEARCH_HIGHLIGHT_DURATION, SEARCH_THRESHOLD},
+    events::{ClearSearchResults, DrawCircleReq, NodeColourReq, ShowSearch},
     materials::{self, GameMaterials},
-    resources::SearchState,
+    resources::{CameraSettings, SearchState},
     PassiveTreeWrapper,
 };
 
@@ -49,10 +49,13 @@ impl Plugin for SearchToolsPlugin {
                 Update,
                 (
                     process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
-                    cleanup_search_results,
-                    scan_for_and_highlight_results,
-                    egui_searchbox_system,
-                    mark_matches,
+                    cleanup_search_results.run_if(on_event::<ClearSearchResults>),
+                    (
+                        scan_for_and_highlight_results,
+                        egui_searchbox_system,
+                        mark_matches,
+                    )
+                        .run_if(SearchState::is_open),
                 ),
             );
 
@@ -67,13 +70,11 @@ fn process_searchbox_visibility_toggle(mut search_state: ResMut<SearchState>) {
 
 // simple egui window with a text field
 fn egui_searchbox_system(mut search_state: ResMut<SearchState>, mut contexts: EguiContexts) {
-    if search_state.open {
-        egui::Window::new("Search").show(contexts.ctx_mut(), |ui| {
-            let field = egui::TextEdit::singleline(&mut search_state.search_query)
-                .hint_text("start typing...");
-            ui.add(field).request_focus();
-        });
-    }
+    egui::Window::new("Search").show(contexts.ctx_mut(), |ui| {
+        let field =
+            egui::TextEdit::singleline(&mut search_state.search_query).hint_text("start typing...");
+        ui.add(field).request_focus();
+    });
 }
 
 fn mark_matches(
@@ -117,12 +118,11 @@ fn scan_for_and_highlight_results(
 ) {
     search_results.iter().for_each(|(tf, _)| {
         let origin = tf.translation().truncate().extend(0.0);
-        dbg!(origin);
         draw_requests.send(DrawCircleReq {
             radius: 80.0,
             origin,
             mat: "orange-500".into(),
-            glyph: UIGlyph::default(),
+            glyph: UIGlyph::new_with_duration(DEFAULT_SEARCH_HIGHLIGHT_DURATION),
         });
     });
 }
@@ -134,8 +134,8 @@ fn cleanup_search_results(
 ) {
     if !searchbox_state.open || searchbox_state.search_query.is_empty() {
         searchbox_state.search_query.clear();
-        for (ent, _) in &query {
+        query.iter().for_each(|(ent, _)| {
             commands.entity(ent).remove::<SearchResult>();
-        }
+        });
     }
 }

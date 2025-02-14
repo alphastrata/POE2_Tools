@@ -1,7 +1,7 @@
 /// If you want a default fade time, you can store it here or in NodeScaling
 pub const DEFAULT_HOVER_FADE_TIME: f32 = 0.760;
 
-/// Min values that we use for NodeScaling
+// Min values that we use for NodeScaling
 pub const NODE_MIN_SCALE: f32 = 1.0;
 pub const NODE_MAX_SCALE: f32 = 6.0;
 pub const NODE_BASE_RADIUS: f32 = 7.2;
@@ -17,6 +17,8 @@ pub const EDGE_PLACEMENT_Z_IDX: f32 = -10.0;
 
 /// The length a query MUST be in the searchbox before we allow the searching to begin...
 pub const SEARCH_THRESHOLD: usize = 5;
+
+pub const DEFAULT_SEARCH_HIGHLIGHT_DURATION: f32 = 60.0; //seconds
 
 /// Default path to which we'll save a character.
 pub const DEFAULT_SAVE_PATH: &str = "data/character.toml";

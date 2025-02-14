@@ -74,7 +74,12 @@ impl UIGlyph {
     pub fn set(&mut self, duration: Duration) {
         self.0 = Timer::new(duration, bevy::time::TimerMode::Once);
     }
+
+    pub fn new_with_duration(duration: f32) -> Self {
+        Self(Timer::from_seconds(duration, bevy::time::TimerMode::Once))
+    }
 }
+
 impl Default for UIGlyph {
     fn default() -> Self {
         Self(Timer::from_seconds(1.5, bevy::time::TimerMode::Once))

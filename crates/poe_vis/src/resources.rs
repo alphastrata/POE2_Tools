@@ -107,8 +107,11 @@ impl SearchState {
         state.search_query.len() >= SEARCH_THRESHOLD
     }
 
-    /// Don't capture hotkey shortcuts etc when the UI for search is open.
-    pub(crate) fn lock_shortcuts(state: Res<SearchState>) -> bool {
+    pub(crate) fn is_open(state: Res<SearchState>) -> bool {
+        state.open
+    }
+
+    pub(crate) fn is_closed(state: Res<SearchState>) -> bool {
         !state.open
     }
 }

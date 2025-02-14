@@ -190,7 +190,7 @@ fn rhs_menu(
         }
 
         ui.separator();
-        if ui.button("Clear All").clicked() {
+        if ui.button("Clear Search Results").clicked() {
             clear_search_results_tx.send(ClearSearchResults);
         }
     })

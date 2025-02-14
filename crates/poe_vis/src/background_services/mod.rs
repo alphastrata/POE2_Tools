@@ -62,26 +62,27 @@ impl Plugin for BGServicesPlugin {
         app
             // Spacing..
             .add_event::<ClearAll>()
+            .add_event::<ClearSearchResults>()
             .add_event::<ClearVirtualPath>()
-            .add_event::<VirtualPathReq>()
             .add_event::<DrawCircleReq>()
             .add_event::<DrawRectangleReq>()
             .add_event::<EdgeActivationReq>()
             .add_event::<EdgeColourReq>()
             .add_event::<EdgeDeactivationReq>()
             .add_event::<LoadCharacterReq>()
-            .add_event::<ManualNodeHighlightWithColour>()
             .add_event::<ManualEdgeHighlightWithColour>()
+            .add_event::<ManualNodeHighlightWithColour>()
             .add_event::<MoveCameraReq>()
             .add_event::<NodeActivationReq>()
             .add_event::<NodeColourReq>()
             .add_event::<NodeDeactivationReq>()
             .add_event::<NodeDeactivationReq>()
             .add_event::<NodeScaleReq>()
-            .add_event::<SaveCharacterReq>()
             .add_event::<SaveCharacterAsReq>()
+            .add_event::<SaveCharacterReq>()
             .add_event::<ShowSearch>()
             .add_event::<ThrowWarning>()
+            .add_event::<VirtualPathReq>()
             //spacing..
             ;
 
