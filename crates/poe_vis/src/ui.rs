@@ -1,8 +1,8 @@
 use crate::{
-    components::{NodeActive, NodeMarker},
+    components::{NodeActive, NodeMarker, UIGlyph},
     events::{
-        ClearAll, ClearSearchResults, LoadCharacterReq, MoveCameraReq, NodeDeactivationReq,
-        SaveCharacterAsReq, SaveCharacterReq,
+        ClearAll, ClearSearchResults, DrawCircleReq, LoadCharacterReq, MoveCameraReq,
+        NodeDeactivationReq, SaveCharacterAsReq, SaveCharacterReq,
     },
     resources::{ActiveCharacter, CameraSettings, SearchState},
     PassiveTreeWrapper,
@@ -48,6 +48,7 @@ fn update_active_nodecount(
     counter.0 = active_nodes.iter().count();
 }
 fn egui_ui_system(
+    mut camera_query: Query<&mut OrthographicProjection, With<Camera2d>>,
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
     mut clear_all_tx: EventWriter<ClearAll>,
     clear_search_results_tx: EventWriter<ClearSearchResults>,
@@ -56,6 +57,8 @@ fn egui_ui_system(
     mut save_tx: EventWriter<SaveCharacterReq>,
     mut save_as_tx: EventWriter<SaveCharacterAsReq>,
     mut load_tx: EventWriter<LoadCharacterReq>,
+    draw_circle: EventWriter<DrawCircleReq>,
+
     tree: Res<PassiveTreeWrapper>,
     character: Res<ActiveCharacter>,
     mut contexts: EguiContexts,
@@ -72,6 +75,7 @@ fn egui_ui_system(
     );
 
     rhs_menu(
+        camera_query,
         active_nodes,
         clear_all_tx,
         clear_search_results_tx,
@@ -80,12 +84,14 @@ fn egui_ui_system(
         character,
         &mut contexts,
         settings,
+        draw_circle,
         searchbox_state,
         clipboard,
     );
 }
 
 fn rhs_menu(
+    mut camera_query: Query<&mut OrthographicProjection, With<Camera2d>>,
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
     mut clear_all_tx: EventWriter<ClearAll>,
     mut clear_search_results_tx: EventWriter<ClearSearchResults>,
@@ -94,10 +100,15 @@ fn rhs_menu(
     character: Res<ActiveCharacter>,
     contexts: &mut EguiContexts,
     settings: Res<CameraSettings>,
+    mut draw_circle: EventWriter<DrawCircleReq>,
     searchbox_state: ResMut<SearchState>,
     mut clipboard: ResMut<EguiClipboard>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
+
+    let projection = camera_query.single(); // Get current zoom level
+
+    const UI_HOVER_BASE_RADIUS: f32 = 20.0;
     SidePanel::right("rhs").resizable(true).show(ctx, |ui| {
         ui.heading("Active Nodes");
         ui.separator();
@@ -114,11 +125,11 @@ fn rhs_menu(
                     ui.horizontal(|ui| {
                         fmt_for_ui(root, &tree, ui);
                         ui.with_layout(egui::Layout::right_to_left(Align::RIGHT), |ui| {
-                            if ui
+                            let button = ui
                                 .small_button("🏠")
-                                .on_hover_text(format!("{:?}", root_stats))
-                                .clicked()
-                            {
+                                .on_hover_text(format!("{:?}", root_stats));
+
+                            if button.clicked() {
                                 move_camera_tx.send(MoveCameraReq(Vec3::new(
                                     root.wx,
                                     -root.wy,
@@ -126,24 +137,37 @@ fn rhs_menu(
                                 )));
                                 log::trace!("Move2Node triggered...");
                             }
+
+                            if button.hovered() {
+                                let scaled_radius = (UI_HOVER_BASE_RADIUS * projection.scale).abs();
+                                let origin = Vec3::new(root.wx, -root.wy, 0.0);
+                                draw_circle.send(DrawCircleReq {
+                                    radius: scaled_radius,
+                                    origin,
+                                    mat: "pink-500".into(),
+                                    glyph: UIGlyph::from_millis(500),
+                                });
+                            }
                         });
                     });
                 }
+
                 let active_nodes: Vec<&NodeMarker> = active_nodes
                     .into_iter()
                     .filter(|nm| nm.0 != character.starting_node)
                     .collect();
+
                 active_nodes.iter().for_each(|nm| {
                     if let Some(poe_node) = tree.nodes.get(&nm.0) {
                         let stats = poe_node.as_passive_skill(&tree).stats();
                         ui.horizontal(|ui| {
                             fmt_for_ui(poe_node, &tree, ui);
                             ui.with_layout(egui::Layout::right_to_left(Align::RIGHT), |ui| {
-                                if ui
+                                let button = ui
                                     .small_button(format!("{}", nm.0))
-                                    .on_hover_text(format!("{:?}", stats))
-                                    .clicked()
-                                {
+                                    .on_hover_text(format!("{:?}", stats));
+
+                                if button.clicked() {
                                     move_camera_tx.send(MoveCameraReq(Vec3::new(
                                         poe_node.wx,
                                         -poe_node.wy,
@@ -151,13 +175,24 @@ fn rhs_menu(
                                     )));
                                     log::trace!("Move2Node triggered...");
                                 }
+
+                                if button.hovered() {
+                                    let scaled_radius =
+                                        (UI_HOVER_BASE_RADIUS * projection.scale).abs();
+                                    let origin = Vec3::new(poe_node.wx, -poe_node.wy, 0.0);
+                                    draw_circle.send(DrawCircleReq {
+                                        radius: scaled_radius,
+                                        origin,
+                                        mat: "pink-500".into(),
+                                        glyph: UIGlyph::from_millis(500),
+                                    });
+                                }
                             });
                         });
                     }
                 });
             });
         });
-
         // Now, aggregate stats from all nodes (root + active) and display a summary.
         let mut all_stats: Vec<&Stat> = Vec::new();
         if let Some(root) = tree.nodes.get(&character.starting_node) {
