@@ -1,9 +1,6 @@
 # poe_vis
-
-- [ ] Handle no starting node
-- [ ] RPC draw square
-- [ ] RPC draw circle/other shapes
-- [ ] Move potential builds and the paths2chaos-inoculation visualiser examples from poe_tree into poe_vis (poe_tree becomes just data).
+- [ ] BUG: sometimes active nodes' connecting edge doesn't highlight.
+- [ ] RPC circle and rect are kinda shit, replace both with a quad and let's do a custom shader, the aliasing is fucking abhorent.
 - [ ] Remove permanent starting node—add UI button and RPC command to set it to None.
 - [ ] Arcs not lines: Use arcs (like POE2) instead of straight lines. Calculate start and finish points to form an arc (maybe use `calculate_world_position` info, and compare with PoB assets to work out arc-length and radius).
 - [ ] Pruned Node Handling: When a pruned path disconnects downstream nodes:
@@ -13,10 +10,6 @@
 - [ ] Improve performance of `walk_n_steps` (it's too slow):
   - Try a CSR `impl`.
   - Consider GPU computation.
-- [ ] Implement `take_while_for_n_steps(predicate, num_steps)` to retrieve paths with at least one evasion_rating buff over N steps.
-- [ ] BUG: typing the move keys' bindings will move the canvas around when we're searching.
-- [ ] piggybacking on the SearchState for the hover aggregated stats to show matching nodes is bad, because it encircles nodes that we haven't got in our current active build.
-- [ ] Menu Mouse Interaction: Ensure mouse actions over menu elements don’t trigger selection, removal, hover, translation, or zoom.
 - [ ] Camera Home/Reset: Bind `'h'` or `Esc` (configurable) to reset the camera view.
 - [ ] Fuzzy Search Behaviour: Pressing Enter in the fuzzy search field should close it and focus the top search result.
 - [ ] Tab Navigation: Implement tabs.
@@ -24,17 +17,12 @@
 - [ ] Expanded Colour Palette: Expand the colour choices in `user_config.toml` (currently around eight or nine colours).
 - [ ] Use arcs with PNGs—choose the right arc once determined.
 - [ ] Develop a screenspace shader that tints the background circle in six 60° wedges, blending colours from int → dex → str (and intermediate values).
-- [ ] Higlight for `t` time, then revert.
-- [ ] Replace the `Gizmo` hilighting with Glyphs (actual geomtery)
 - [ ] Handle root_node being None -> #DirectionTextPlugin? ThrowWarning?
+- [ ] Handle no starting node
 - [ ] Replace the 'Attribute Text' with some sorta UI letting em spend
 - [ ] Export complex POB builds for path testing.
 - [ ] 'Keystone' node building UI, place anchors and path between.
-- [ ] take_while_with_minimums<P, R>(....
-- [ ] new filtering code moves to filters.rs
-- [ ] `RPC` Draw a Square, Circle
 - [ ] `ClearAll` needs to handle re-root.
-- [ ] implement a draw_node ONLY IF not a spastic length.
 - [ ] right-click dialouge.
 - [ ] `keystone` or `anchor` nodes may be `PermanentlyAssigned` component. using 'Pinned'
 - [ ] Default Starting Stats: Set up default starting stats for all character classes, build them from POB exports.
@@ -42,6 +30,12 @@
 
 ## Changelog (Completed Tasks)
 
+- [x] implement a draw_node ONLY IF not a spastic length.
+- [x] Higlight for `t` time, then revert.
+- [x] Replace the `Gizmo` hilighting with Glyphs (actual geomtery)
+- [x] take_while_with_minimums<P, R>(....
+- [x] new filtering code moves to filters.rs
+- [x] `RPC` Draw a Square, Circle
 - [x] Stats API: Create a clean API to work with `.stats` that supports math operations (`+`, `-`, `*`, `%`, `/`) on passive_skill data.
 - [x] colour node requests... all tailwind colours are available, just provide those?
 - [x] fetch_colours RPC req...
@@ -56,3 +50,12 @@
 - [x] Colour node requests (use all Tailwind colours).
 - [x] `fetch_colours` RPC request.
 - [x] re-add the ascendencies we normally prune with prune.hidden().
+- [x] RPC draw square
+- [x] RPC draw circle/other shapes
+- [x] Move potential builds and the paths2chaos-inoculation visualiser examples from poe_tree into poe_vis (poe_tree becomes just data).
+- [x] Implement `take_while_for_n_steps(predicate, num_steps)` to retrieve paths with at least one evasion_rating buff over N steps.
+- [x] BUG: typing the move keys' bindings will move the canvas around when we're searching.
+- [x] piggybacking on the SearchState for the hover aggregated stats to show matching nodes is bad, because it encircles nodes that we haven't got in our current active build.
+- [x] Menu Mouse Interaction: Ensure mouse actions over menu elements don’t trigger selection, removal, hover, translation, or zoom.
+
+
