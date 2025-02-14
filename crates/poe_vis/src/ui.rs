@@ -16,6 +16,7 @@ use bevy_egui::{
 use poe_tree::{
     nodes::PoeNode,
     stats::{arithmetic::PlusPercentage, Stat},
+    type_wrappings::NodeId,
     PassiveTree,
 };
 
@@ -193,20 +194,28 @@ fn rhs_menu(
                 });
             });
         });
-        // Now, aggregate stats from all nodes (root + active) and display a summary.
-        let mut all_stats: Vec<&Stat> = Vec::new();
+        // In rhs_menu, build aggregated stats with (NodeId, &Stat) instead of using search_query.
+        let mut all_stats: Vec<(NodeId, &Stat)> = Vec::new();
         if let Some(root) = tree.nodes.get(&character.starting_node) {
-            all_stats.extend(root.as_passive_skill(&tree).stats());
+            for stat in root.as_passive_skill(&tree).stats() {
+                all_stats.push((character.starting_node, stat));
+            }
         }
-
         active_nodes.iter().for_each(|nm| {
             if let Some(poe_node) = tree.nodes.get(&nm.0) {
-                all_stats.extend(poe_node.as_passive_skill(&tree).stats());
+                for stat in poe_node.as_passive_skill(&tree).stats() {
+                    all_stats.push((nm.0, stat));
+                }
             }
         });
         ui.collapsing("Aggregated Stats", |ui| {
-            // TODO: We are FAR from displaying all that can be displayed here!
-            display_aggregated_stats(ui, all_stats.into_iter(), searchbox_state);
+            display_aggregated_stats(
+                ui,
+                all_stats.into_iter(),
+                &tree,
+                &mut draw_circle,
+                projection.scale,
+            );
         });
         ui.separator();
 
@@ -313,22 +322,40 @@ fn fmt_for_ui(poe_node: &PoeNode, tree: &PassiveTree, ui: &mut egui::Ui) {
     }
 }
 
-/// In your UI system, call this function to display aggregated stat summaries.
 fn display_aggregated_stats<'t>(
     ui: &mut egui::Ui,
-    stats: impl Iterator<Item = &'t Stat>,
-    mut searchbox_state: ResMut<SearchState>,
+    stats: impl Iterator<Item = (NodeId, &'t Stat)>,
+    tree: &PassiveTreeWrapper,
+    draw_circle: &mut EventWriter<DrawCircleReq>,
+    projection_scale: f32,
 ) {
-    let groups = Stat::aggregate_stats(stats);
-
-    //sort alphabetically
+    let mut groups: HashMap<String, (f32, usize, NodeId)> = HashMap::new();
+    for (node_id, stat) in stats {
+        let name = stat.name();
+        let value = stat.value();
+        groups
+            .entry(name.to_string())
+            .and_modify(|(sum, count, _)| {
+                *sum += value;
+                *count += 1;
+            })
+            .or_insert((value, 1, node_id));
+    }
     let mut entries: Vec<_> = groups.into_iter().collect();
-    entries.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
-    entries.into_iter().for_each(|(name, (sum, count))| {
+    entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+    for (name, (sum, count, rep_node_id)) in entries {
         let response = ui.label(format!("{}: {} ({} nodes)", name, sum, count));
         if response.hovered() {
-            // NOTE: bastardise the search system to get circling going on...
-            searchbox_state.search_query = name;
+            if let Some(node) = tree.nodes.get(&rep_node_id) {
+                let scaled_radius = (20.0 * projection_scale).abs();
+                let origin = Vec3::new(node.wx, -node.wy, 0.0);
+                draw_circle.send(DrawCircleReq {
+                    radius: scaled_radius,
+                    origin,
+                    mat: "amber-500".into(),
+                    glyph: UIGlyph::from_millis(500),
+                });
+            }
         }
-    });
+    }
 }

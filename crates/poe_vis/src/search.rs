@@ -50,12 +50,9 @@ impl Plugin for SearchToolsPlugin {
                 (
                     process_searchbox_visibility_toggle.run_if(on_event::<ShowSearch>),
                     cleanup_search_results.run_if(on_event::<ClearSearchResults>),
-                    (
-                        scan_for_and_highlight_results,
-                        egui_searchbox_system,
-                        mark_matches,
-                    )
-                        .run_if(SearchState::is_open),
+                    (scan_for_and_highlight_results, mark_matches)
+                        .run_if(SearchState::should_search),
+                    egui_searchbox_system.run_if(SearchState::is_open),
                 ),
             );
 
