@@ -1,3 +1,5 @@
+use std::borrow::BorrowMut;
+
 use crate::{
     components::{NodeActive, NodeMarker, UIGlyph},
     events::{
@@ -9,8 +11,8 @@ use crate::{
 };
 use bevy::{prelude::*, utils::HashMap};
 use bevy_egui::{
-    egui::{self, Align, SidePanel},
-    EguiClipboard, EguiContexts, EguiPlugin,
+    egui::{self, Align, Context, SidePanel},
+    EguiClipboard, EguiContext, EguiContexts, EguiPlugin,
 };
 
 use poe_tree::{
@@ -49,12 +51,15 @@ fn update_active_nodecount(
     counter.0 = active_nodes.iter().count();
 }
 fn egui_ui_system(
-    mut camera_query: Query<&mut OrthographicProjection, With<Camera2d>>,
+    mut contexts: EguiContexts,
+
+    camera_query: Query<&mut OrthographicProjection, With<Camera2d>>,
+    move_camera_tx: EventWriter<MoveCameraReq>,
+
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
     mut clear_all_tx: EventWriter<ClearAll>,
     clear_search_results_tx: EventWriter<ClearSearchResults>,
 
-    move_camera_tx: EventWriter<MoveCameraReq>,
     mut save_tx: EventWriter<SaveCharacterReq>,
     mut save_as_tx: EventWriter<SaveCharacterAsReq>,
     mut load_tx: EventWriter<LoadCharacterReq>,
@@ -62,7 +67,6 @@ fn egui_ui_system(
 
     tree: Res<PassiveTreeWrapper>,
     character: Res<ActiveCharacter>,
-    mut contexts: EguiContexts,
     settings: Res<CameraSettings>,
     searchbox_state: ResMut<SearchState>,
     clipboard: ResMut<EguiClipboard>,
@@ -76,6 +80,7 @@ fn egui_ui_system(
     );
 
     rhs_menu(
+        &mut contexts,
         camera_query,
         active_nodes,
         clear_all_tx,
@@ -83,7 +88,6 @@ fn egui_ui_system(
         move_camera_tx,
         tree,
         character,
-        &mut contexts,
         settings,
         draw_circle,
         searchbox_state,
@@ -92,14 +96,14 @@ fn egui_ui_system(
 }
 
 fn rhs_menu(
-    mut camera_query: Query<&mut OrthographicProjection, With<Camera2d>>,
+    contexts: &mut EguiContexts,
+    camera_query: Query<&mut OrthographicProjection, With<Camera2d>>,
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
     mut clear_all_tx: EventWriter<ClearAll>,
     mut clear_search_results_tx: EventWriter<ClearSearchResults>,
     mut move_camera_tx: EventWriter<MoveCameraReq>,
     tree: Res<PassiveTreeWrapper>,
     character: Res<ActiveCharacter>,
-    contexts: &mut EguiContexts,
     settings: Res<CameraSettings>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     searchbox_state: ResMut<SearchState>,
@@ -237,7 +241,31 @@ fn rhs_menu(
         if ui.button("Clear Search Results").clicked() {
             clear_search_results_tx.send(ClearSearchResults);
         }
+
+        draw_optimiser_ui(ui, tree, character, move_camera_tx);
     })
+}
+
+fn draw_optimiser_ui(
+    ui: &mut egui::Ui,
+    tree: Res<PassiveTreeWrapper>,
+    character: Res<ActiveCharacter>,
+    mut move_camera_tx: EventWriter<MoveCameraReq>,
+) {
+    ui.heading("Optimiser");
+    ui.separator();
+    // Show root node info as an example
+    if let Some(root) = tree.nodes.get(&character.starting_node) {
+        ui.label(format!("Root: {}", root.name));
+    }
+    ui.separator();
+    // Placeholder for optimiser controls
+    if ui.button("Optimise Build").clicked() {
+        // Example: focus camera to centre build
+        move_camera_tx.send(MoveCameraReq(Vec3::ZERO));
+    }
+    ui.separator();
+    ui.label("Add optimiser controls here...");
 }
 
 // Refactor topbar_menu_system to accept an immutable reference to egui::Context.
