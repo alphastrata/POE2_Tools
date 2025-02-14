@@ -1,7 +1,9 @@
 use std::borrow::BorrowMut;
 
 use crate::{
+    background_services::tailwind_to_egui,
     components::{NodeActive, NodeMarker, UIGlyph},
+    consts::TAILWIND_COLOURS_AS_STR,
     events::{
         ClearAll, ClearSearchResults, DrawCircleReq, LoadCharacterReq, MoveCameraReq,
         NodeDeactivationReq, SaveCharacterAsReq, SaveCharacterReq,
@@ -27,12 +29,16 @@ pub struct UIPlugin;
 #[derive(Resource, Default)]
 struct UICapturesInput(pub bool);
 
+#[derive(Deref, DerefMut, Resource, Default)]
+struct Toggles(HashMap<String, bool>);
+
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
             // space
             .init_resource::<UICapturesInput>()
             .init_resource::<ActiveNodeCounter>() // store node count
+            .init_resource::<Toggles>()
             // space
             .add_plugins(EguiPlugin)
             .add_systems(Update, update_active_nodecount) // track how many are active
@@ -66,10 +72,12 @@ fn egui_ui_system(
     draw_circle: EventWriter<DrawCircleReq>,
 
     tree: Res<PassiveTreeWrapper>,
-    character: Res<ActiveCharacter>,
+    character: ResMut<ActiveCharacter>,
     settings: Res<CameraSettings>,
     searchbox_state: ResMut<SearchState>,
     clipboard: ResMut<EguiClipboard>,
+
+    toggles: Local<Toggles>,
 ) {
     topbar_menu_system(
         &mut contexts,
@@ -92,6 +100,7 @@ fn egui_ui_system(
         draw_circle,
         // searchbox_state,
         clipboard,
+        toggles,
     );
 }
 
@@ -103,11 +112,12 @@ fn rhs_menu(
     mut clear_search_results_tx: EventWriter<ClearSearchResults>,
     mut move_camera_tx: EventWriter<MoveCameraReq>,
     tree: Res<PassiveTreeWrapper>,
-    character: Res<ActiveCharacter>,
+    mut character: ResMut<ActiveCharacter>,
     settings: Res<CameraSettings>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     // searchbox_state: ResMut<SearchState>,
     mut clipboard: ResMut<EguiClipboard>,
+    toggles: Local<Toggles>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
 
@@ -242,29 +252,142 @@ fn rhs_menu(
             clear_search_results_tx.send(ClearSearchResults);
         }
 
-        draw_optimiser_ui(ui, tree, character, move_camera_tx);
+        draw_optimiser_ui(ui, &tree, character, draw_circle, projection, toggles);
     })
 }
 
+/// Adjust signature/args/resources as needed (e.g. need active_nodes query for aggregator, node_deactivation_tx etc.).
+/// Example usage of tailwind_to_egui, TAILWIND_COLOURS_AS_STR, plus toggles & par_take_while for new path:
 fn draw_optimiser_ui(
     ui: &mut egui::Ui,
-    tree: Res<PassiveTreeWrapper>,
-    character: Res<ActiveCharacter>,
-    mut move_camera_tx: EventWriter<MoveCameraReq>,
+    tree: &Res<PassiveTreeWrapper>,
+    mut character: ResMut<ActiveCharacter>,
+    mut draw_circle: EventWriter<DrawCircleReq>,
+    projection: &OrthographicProjection,
+    mut toggles: Local<Toggles>,
+    // e.g. for swapping active nodes:
+    // mut node_deactivation_tx: EventWriter<NodeDeactivationReq>,
+    // mut node_activation_tx: EventWriter<NodeActivationReq>,
+    // for generating egui colors:
+    // tailwind_to_egui_fn: fn(&str) -> egui::Color32,
 ) {
     ui.heading("Optimiser");
     ui.separator();
 
+    // Build aggregated stats from root + active nodes, grouped by name
+    let mut aggregator: Vec<(NodeId, &Stat)> = Vec::new();
     if let Some(root) = tree.nodes.get(&character.starting_node) {
-        ui.label(format!("Root: {}", root.name));
+        for stat in root.as_passive_skill(tree).stats() {
+            aggregator.push((character.starting_node, stat));
+        }
+    }
+    character.activated_node_ids.iter().for_each(|nm| {
+        if *nm != character.starting_node {
+            if let Some(node) = tree.nodes.get(&nm) {
+                for stat in node.as_passive_skill(tree).stats() {
+                    aggregator.push((*nm, stat));
+                }
+            }
+        }
+    });
+    // Distinct stat names
+    let mut distinct_stats: Vec<String> = aggregator
+        .iter()
+        .map(|(_, s)| s.name().to_string())
+        .collect();
+    distinct_stats.sort();
+    distinct_stats.dedup();
+
+    ui.label(format!(
+        "Root: {}",
+        tree.nodes[&character.starting_node].name
+    ));
+    ui.separator();
+
+    let palette = TAILWIND_COLOURS_AS_STR;
+    for (i, stat_name) in distinct_stats.iter().enumerate() {
+        // pick color
+        let color_str = palette[i % palette.len()];
+        let egui_col = tailwind_to_egui(color_str);
+
+        // current toggle state
+        let mut is_toggled = toggles.0.get(stat_name).copied().unwrap_or(false);
+
+        ui.horizontal(|ui| {
+            ui.label(" "); // just a spacer
+            let response = ui.colored_label(egui_col, stat_name);
+            ui.checkbox(&mut is_toggled, "");
+
+            // if updated, store it
+            if Some(&is_toggled) != toggles.0.get(stat_name) {
+                toggles.0.insert(stat_name.clone(), is_toggled);
+            }
+
+            if response.hovered() {
+                let radius = 20.0 * projection.scale;
+                aggregator
+                    .iter()
+                    .filter(|(_, s)| s.name() == stat_name)
+                    .for_each(|(node_id, _)| {
+                        if let Some(node) = tree.nodes.get(node_id) {
+                            let origin = Vec3::new(node.wx, -node.wy, 0.0);
+                            draw_circle.send(DrawCircleReq {
+                                radius,
+                                origin,
+                                mat: color_str.into(),
+                                glyph: UIGlyph::from_millis(500),
+                            });
+                        }
+                    });
+            }
+        });
     }
     ui.separator();
 
-    if ui.button("Optimise Build").clicked() {
-        move_camera_tx.send(MoveCameraReq(Vec3::ZERO));
+    // For each toggled stat, create a list of candidate paths
+    for stat_name in &distinct_stats {
+        let Some(true) = toggles.get(stat_name) else {
+            return;
+        };
+
+        let selector = move |s: &Stat| matches!(s, Stat::from_key_value(stat_name, 0.0));
+
+        let candidate_paths = tree.take_while(
+            character.starting_node,
+            selector,
+            character.activated_node_ids.len(),
+        );
+
+        for (idx, path) in candidate_paths.iter().enumerate() {
+            let label = format!("Path #{} for {}", idx + 1, stat_name);
+            //TODO: add the 'total' of the accumulated stat as a synopsis of the new potential path
+            let path_btn = ui.button(label);
+
+            if path_btn.hovered() {
+                for node_id in path {
+                    if let Some(node) = tree.nodes.get(node_id) {
+                        draw_circle.send(DrawCircleReq {
+                            radius: 20.0,
+                            origin: Vec3::new(node.wx, -node.wy, 0.0),
+                            mat: "sky-400".into(),
+                            glyph: UIGlyph::from_millis(25),
+                        });
+                    }
+                }
+            }
+
+            // Click: replace character's path with this new one
+            if path_btn.clicked() {
+                // e.g.:
+                character.activated_node_ids.clear();
+                character.activated_node_ids.extend(path.iter().copied());
+                // or do custom node swap logic...
+            }
+        }
     }
+
     ui.separator();
-    ui.label("Add optimiser controls here...");
+    ui.label("Optimiser controls go here...");
 }
 
 fn topbar_menu_system(

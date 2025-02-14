@@ -1,4 +1,14 @@
 use bevy::color::{palettes::tailwind, Color};
+use bevy_egui::egui::Color32;
+
+pub fn tailwind_to_egui(name: &str) -> Color32 {
+    let col = parse_tailwind_color(name).to_srgba();
+    Color32::from_rgb(
+        (col.red * 256.0).floor() as u8,
+        (col.green * 256.0).floor() as u8,
+        (col.blue * 256.0).floor() as u8,
+    )
+}
 
 pub fn parse_tailwind_color(name: &str) -> Color {
     match name.to_lowercase().as_str() {
