@@ -46,6 +46,9 @@ pub fn quick_tree() -> PassiveTree {
 impl PassiveTree {
     const CULL_NODES_AFTER_THIS: f32 = 12_400.0;
 
+    /// 1 connection is a leaf
+    /// 2 connections is almost all nodes, and 'in' and an 'out'
+    /// >3 is a branch point.
     pub fn branches<N>(&self, active_nodes: N) -> HashSet<NodeId>
     where
         N: IntoIterator<Item = NodeId>,
@@ -53,11 +56,12 @@ impl PassiveTree {
         let active_nodes: HashSet<NodeId> = active_nodes.into_iter().collect();
         let mut branch_nodes = HashSet::new();
 
-        for &node in &active_nodes {
-            if self.neighbors(node).count() >= 3 {
-                branch_nodes.insert(node);
-            }
-        }
+        active_nodes
+            .iter()
+            .filter(|node| self.neighbors(**node).count() >= 3)
+            .for_each(|node| {
+                branch_nodes.insert(*node);
+            });
 
         branch_nodes
     }
@@ -127,7 +131,7 @@ impl PassiveTree {
     }
 
     /// The main parser for the POE2_Tree.json we found...
-    /// NOTE this panics! intentionally, if there's a problem parsing I want to know and be pointed to the place we need to fixs
+    /// NOTE this panics! intentionally, if there's a problem parsing I want to know and be pointed to the place we need to fix
     pub fn from_value(val: &Value) -> Result<Self, serde_json::Error> {
         //TODO: this is pretty nasty...
 
@@ -393,54 +397,9 @@ pub fn calculate_world_position_with_negative_y(
     radius: u8,
     position: NodeId,
 ) -> (f32, f32) {
-    let r = radius as usize;
-    let position = position as usize;
-    let radius_value = ORBIT_RADII.get(r).unwrap_or_else(|| {
-        panic!(
-            "Failed to retrieve radius for r={} with position={} and group coordinates=({}, {})",
-            r, position, group.x, group.y
-        )
-    });
-
-    let slots = ORBIT_SLOTS.get(r).copied().unwrap_or_else(|| {
-        eprintln!(
-            "Failed to retrieve slots for r={} with position={} and group coordinates=({}, {})",
-            radius, position, group.x, group.y
-        );
-        eprintln!("Defaulting to 60 slots.");
-        60
-    }) as f32;
-
-    let angle = match slots as NodeId {
-        16 => {
-            // Use predefined angles for 16-slot orbits
-            const PREDEFINED_16: [f32; 16] = [
-                0.0, 30.0, 45.0, 60.0, 90.0, 120.0, 135.0, 150.0, 180.0, 210.0, 225.0, 240.0,
-                270.0, 300.0, 315.0, 330.0,
-            ];
-            PREDEFINED_16[position % 16].to_radians()
-        }
-        40 => {
-            // Use predefined angles for 40-slot orbits
-            const PREDEFINED_40: [f32; 40] = [
-                0.0, 10.0, 20.0, 30.0, 40.0, 45.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0,
-                120.0, 130.0, 135.0, 140.0, 150.0, 160.0, 170.0, 180.0, 190.0, 200.0, 210.0, 220.0,
-                225.0, 230.0, 240.0, 250.0, 260.0, 270.0, 280.0, 290.0, 300.0, 310.0, 315.0, 320.0,
-                330.0, 340.0, 350.0,
-            ];
-            PREDEFINED_40[position % 40].to_radians()
-        }
-        _ => {
-            // Uniform angle division for ALL other cases
-            (2.0 * std::f32::consts::PI * position as f32 / slots) - (std::f32::consts::PI / 2.0)
-        }
-    };
-
-    //polar-to-Cartesian
-    (
-        group.x + radius_value * angle.cos(),
-        -(group.y + radius_value * angle.sin()),
-    )
+    let (wx, mut wy) = calculate_world_position(group, radius, position);
+    wy *= -1.0;
+    (wx, wy)
 }
 
 #[cfg(test)]
