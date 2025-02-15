@@ -1,7 +1,9 @@
 use std::borrow::BorrowMut;
 
 use crate::{
+    background_services::tailwind_to_egui,
     components::{NodeActive, NodeMarker, UIGlyph},
+    consts::TAILWIND_COLOURS_AS_STR,
     events::{
         ClearAll, ClearSearchResults, DrawCircleReq, LoadCharacterReq, MoveCameraReq,
         NodeDeactivationReq, SaveCharacterAsReq, SaveCharacterReq,
@@ -27,12 +29,16 @@ pub struct UIPlugin;
 #[derive(Resource, Default)]
 struct UICapturesInput(pub bool);
 
+#[derive(Deref, DerefMut, Resource, Default)]
+struct Toggles(HashMap<String, bool>);
+
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
             // space
             .init_resource::<UICapturesInput>()
             .init_resource::<ActiveNodeCounter>() // store node count
+            .init_resource::<Toggles>()
             // space
             .add_plugins(EguiPlugin)
             .add_systems(Update, update_active_nodecount) // track how many are active
@@ -66,10 +72,12 @@ fn egui_ui_system(
     draw_circle: EventWriter<DrawCircleReq>,
 
     tree: Res<PassiveTreeWrapper>,
-    character: Res<ActiveCharacter>,
+    character: ResMut<ActiveCharacter>,
     settings: Res<CameraSettings>,
     searchbox_state: ResMut<SearchState>,
     clipboard: ResMut<EguiClipboard>,
+
+    toggles: Local<Toggles>,
 ) {
     topbar_menu_system(
         &mut contexts,
@@ -92,6 +100,7 @@ fn egui_ui_system(
         draw_circle,
         // searchbox_state,
         clipboard,
+        toggles,
     );
 }
 
@@ -103,11 +112,12 @@ fn rhs_menu(
     mut clear_search_results_tx: EventWriter<ClearSearchResults>,
     mut move_camera_tx: EventWriter<MoveCameraReq>,
     tree: Res<PassiveTreeWrapper>,
-    character: Res<ActiveCharacter>,
+    mut character: ResMut<ActiveCharacter>,
     settings: Res<CameraSettings>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     // searchbox_state: ResMut<SearchState>,
     mut clipboard: ResMut<EguiClipboard>,
+    toggles: Local<Toggles>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
 
@@ -242,29 +252,147 @@ fn rhs_menu(
             clear_search_results_tx.send(ClearSearchResults);
         }
 
-        draw_optimiser_ui(ui, tree, character, move_camera_tx);
+        draw_optimiser_ui(ui, &tree, character, draw_circle, projection, toggles);
     })
 }
 
 fn draw_optimiser_ui(
     ui: &mut egui::Ui,
-    tree: Res<PassiveTreeWrapper>,
-    character: Res<ActiveCharacter>,
-    mut move_camera_tx: EventWriter<MoveCameraReq>,
+    tree: &Res<PassiveTreeWrapper>,
+    mut character: ResMut<ActiveCharacter>,
+    mut draw_circle: EventWriter<DrawCircleReq>,
+    projection: &OrthographicProjection,
+    mut toggles: Local<Toggles>,
 ) {
     ui.heading("Optimiser");
     ui.separator();
 
+    // Build aggregated stats from root + active nodes
+    let mut aggregator: Vec<(NodeId, &Stat)> = Vec::new();
+
+    // Add root node stats
     if let Some(root) = tree.nodes.get(&character.starting_node) {
-        ui.label(format!("Root: {}", root.name));
+        aggregator.extend(
+            root.as_passive_skill(tree)
+                .stats()
+                .into_iter()
+                .map(|stat| (character.starting_node, stat)),
+        );
     }
+
+    // Add activated nodes stats
+    character
+        .activated_node_ids
+        .iter()
+        .filter(|&&id| id != character.starting_node)
+        .for_each(|id| {
+            if let Some(node) = tree.nodes.get(id) {
+                aggregator.extend(
+                    node.as_passive_skill(tree)
+                        .stats()
+                        .into_iter()
+                        .map(|stat| (*id, stat)),
+                );
+            }
+        });
+
+    // Get distinct sorted stats
+    let mut distinct_stats: Vec<String> = aggregator
+        .iter()
+        .map(|(_, s)| s.name().to_string())
+        .collect();
+    distinct_stats.sort();
+    distinct_stats.dedup();
+
+    // UI: Display root node
+    ui.label(format!(
+        "Root: {}",
+        tree.nodes[&character.starting_node].name
+    ));
     ui.separator();
 
-    if ui.button("Optimise Build").clicked() {
-        move_camera_tx.send(MoveCameraReq(Vec3::ZERO));
-    }
+    // Display stat toggles
+    let palette = TAILWIND_COLOURS_AS_STR;
+    distinct_stats
+        .iter()
+        .enumerate()
+        .for_each(|(i, stat_name)| {
+            let color_str = palette[i % palette.len()];
+            let egui_col = tailwind_to_egui(color_str);
+            let mut is_toggled = toggles.0.get(stat_name).copied().unwrap_or(false);
+
+            ui.horizontal(|ui| {
+                ui.label(" ");
+                let response = ui.colored_label(egui_col, stat_name);
+                ui.checkbox(&mut is_toggled, "");
+
+                if is_toggled != *toggles.0.get(stat_name).unwrap_or(&false) {
+                    toggles.0.insert(stat_name.clone(), is_toggled);
+                }
+
+                // Hover preview
+                if response.hovered() {
+                    let radius = 20.0 * projection.scale;
+                    aggregator
+                        .iter()
+                        .filter(|(_, s)| s.name() == stat_name)
+                        .filter_map(|(id, _)| tree.nodes.get(id))
+                        .for_each(|node| {
+                            draw_circle.send(DrawCircleReq {
+                                radius,
+                                origin: Vec3::new(node.wx, -node.wy, 0.0),
+                                mat: color_str.into(),
+                                glyph: UIGlyph::from_millis(500),
+                            });
+                        });
+                }
+            });
+        });
+
     ui.separator();
-    ui.label("Add optimiser controls here...");
+
+    // Optimise button - only show paths when clicked
+    if ui.button("Optimise").clicked() {
+        distinct_stats
+            .iter()
+            .filter(|stat| toggles.0.get(*stat) == Some(&true))
+            .for_each(|stat_name| {
+                let selector = |s: &Stat| s.name() == stat_name.as_str();
+                let paths = tree.take_while(
+                    character.starting_node,
+                    selector,
+                    character.activated_node_ids.len(),
+                );
+
+                // Display each path with hover/click functionality
+                paths.iter().enumerate().for_each(|(idx, path)| {
+                    let button = ui.button(format!("Path #{} for {}", idx + 1, stat_name));
+
+                    // Hover preview
+                    if button.hovered() {
+                        path.iter()
+                            .filter_map(|id| tree.nodes.get(id))
+                            .for_each(|node| {
+                                draw_circle.send(DrawCircleReq {
+                                    radius: 20.0,
+                                    origin: Vec3::new(node.wx, -node.wy, 0.0),
+                                    mat: "sky-400".into(),
+                                    glyph: UIGlyph::from_millis(25),
+                                });
+                            });
+                    }
+
+                    // Click handling
+                    if button.clicked() {
+                        character.activated_node_ids.clear();
+                        character.activated_node_ids.extend(path.iter().copied());
+                    }
+                });
+            });
+    }
+
+    ui.separator();
+    ui.label("Optimiser controls go here...");
 }
 
 fn topbar_menu_system(

@@ -30,7 +30,10 @@ impl Plugin for MouseControlsPlugin {
 
         app.add_systems(PostStartup, insert_root_to_history.run_if(RootNode::is_set));
 
-        app.add_systems(Update, (handle_node_clicks, hover_started, hover_ended));
+        app.add_systems(
+            Update,
+            (hover_ticker, handle_node_clicks, hover_started, hover_ended),
+        );
     }
 }
 fn insert_root_to_history(
@@ -38,6 +41,12 @@ fn insert_root_to_history(
     mut last_ten: ResMut<MouseSelecetedNodeHistory>,
 ) {
     last_ten.push_back(root.0.expect("Protected by run conditions."));
+}
+
+pub fn hover_ticker(time: Res<Time>, mut query_hovz: Query<(Entity, &mut Hovered)>) {
+    query_hovz.iter_mut().for_each(|(_ent, mut hov)| {
+        hov.timer.tick(time.delta());
+    })
 }
 
 pub fn handle_node_clicks(
@@ -98,6 +107,7 @@ pub fn hover_started(
     mut over_events: EventReader<Pointer<Over>>,
     mut colour_events: EventWriter<NodeColourReq>,
     mut virt_path_starter: EventWriter<VirtualPathReq>,
+    mut clear_virt_path: EventWriter<ClearVirtualPath>,
     query_nodes: Query<(
         Entity,
         &NodeMarker,
@@ -124,6 +134,10 @@ pub fn hover_started(
                 colour_events.send(NodeColourReq(entity, material));
                 virt_path_starter.send(VirtualPathReq(**nm));
             }
+        }
+        // we didn't pikup a hover.
+        else {
+            clear_virt_path.send(ClearVirtualPath);
         }
     });
 }

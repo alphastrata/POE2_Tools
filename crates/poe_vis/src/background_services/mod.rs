@@ -1,6 +1,6 @@
 mod generated;
 
-pub use generated::parse_tailwind_color;
+pub use generated::{parse_tailwind_color, tailwind_to_egui};
 
 use std::{
     ops::ControlFlow,
