@@ -1,8 +1,36 @@
 //!$ crates/poe_tree/src/edges.rs
 use std::hash::{Hash, Hasher};
 
+use ahash::AHashSet;
+
+use crate::stats::Stat;
+
 use super::type_wrappings::NodeId;
 use super::PassiveTree;
+
+//TODO: many pathfinding algos would benefit from a weighted graph,
+// and we could weight ours rather trivially with the Stat type
+// being embedded in the edge, because for example if you were
+// doing an A* or a Dijkstra whilst adjusting the weightnig such that
+// evasion nodes were weighted lighter... and so on...
+#[derive(Debug, Clone, Default)]
+pub struct Edge2 {
+    pub start: NodeId,
+    pub end: NodeId,
+    pub stat: Vec<Stat>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct PassiveTree2 {
+    base: PassiveTree,
+    enriched_edges: AHashSet<Edge2>,
+}
+
+impl PassiveTree2 {
+    fn enrich_edges_with_stats(&mut self) {
+        todo!()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Edge {
@@ -51,6 +79,10 @@ impl Edge {
 
     pub fn as_tuple(&self) -> (u16, u16) {
         (self.start, self.end)
+    }
+    /// Just an alias for `[Self::as_tuple()]`
+    pub fn nodes(&self) -> (u16, u16) {
+        self.as_tuple()
     }
 }
 

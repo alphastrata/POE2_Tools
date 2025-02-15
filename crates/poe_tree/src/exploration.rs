@@ -178,116 +178,6 @@ impl PassiveTree {
 
         paths
     }
-
-    //NOTE: just bitset
-    // About 1-3% better
-    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     use bit_set::BitSet;
-
-    //     let t1 = std::time::Instant::now();
-    //     let mut paths = Vec::new();
-    //     let mut queue = VecDeque::new();
-
-    //     queue.push_back((start, 0, BitSet::new())); // (current_node, path_length, visited_nodes)
-
-    //     while let Some((last_node, length, mut visited)) = queue.pop_front() {
-    //         if length == steps {
-    //             paths.push(vec![last_node]); // Store only endpoints to reduce memory usage
-    //             continue;
-    //         }
-
-    //         for next_node in self.neighbors(&last_node) {
-    //             if visited.insert(next_node as usize) {
-    //                 // Avoid cycles
-    //                 queue.push_back((next_node, length + 1, visited.clone()));
-    //             }
-    //         }
-    //     }
-
-    //     log::debug!(
-    //         "Walking {} steps took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
-
-    //     paths
-    // }
-
-    // NOTE: smallvec
-    // pub fn walk_n_steps<const N: usize>(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     let t1 = std::time::Instant::now();
-    //     let mut paths = Vec::new();
-    //     let mut queue = VecDeque::new();
-
-    //     // Store full paths, initialized with `start`
-    //     queue.push_back(SmallVec::<[NodeId; N]>::from_elem(start, 1));
-
-    //     while let Some(path) = queue.pop_front() {
-    //         let last_node = *path.last().unwrap();
-
-    //         if path.len() - 1 == steps {
-    //             paths.push(path.to_vec()); // Store paths of exactly `n` steps
-    //             continue;
-    //         }
-
-    //         for neighbor in self.neighbors(last_node) {
-    //             if !path.contains(&neighbor) {
-    //                 // Ensure no cycles in the current path
-    //                 let mut new_path = path.clone();
-    //                 new_path.push(neighbor);
-    //                 queue.push_back(new_path);
-    //             }
-    //         }
-    //     }
-
-    //     log::debug!(
-    //         "Walking {} steps took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
-
-    //     paths
-    // }
-
-    // smallvec and bitset
-    // pub fn walk_n_steps<const N: usize>(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     let t1 = std::time::Instant::now();
-    //     let mut paths = Vec::new();
-    //     let mut queue = VecDeque::new();
-
-    //     let visited = BitSet::with_capacity(self.nodes.len()); // O(1) lookups
-
-    //     queue.push_back((
-    //         SmallVec::<[NodeId; N]>::from_elem(start, 1),
-    //         visited.clone(),
-    //     ));
-
-    //     while let Some((path, mut visited)) = queue.pop_front() {
-    //         let last_node = *path.last().unwrap();
-
-    //         if path.len() - 1 == steps {
-    //             paths.push(path.to_vec());
-    //             continue;
-    //         }
-
-    //         self.neighbors(last_node).for_each(|neighbor| {
-    //             if visited.insert(neighbor as usize) {
-    //                 // O(1) cycle check
-    //                 let mut new_path = path.clone();
-    //                 new_path.push(neighbor);
-    //                 queue.push_back((new_path, visited.clone())); // Clone BitSet, but it's efficient
-    //             }
-    //         });
-    //     }
-
-    //     log::debug!(
-    //         "Walking {} steps took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
-
-    //     paths
-    // }
 }
 
 struct CSRGraph {
@@ -328,6 +218,7 @@ impl CSRGraph {
 }
 
 impl PassiveTree {
+    //TODO: make a macro on this so we can have 5..43 constified versions of this
     pub fn walk_n_steps_csr<const N: usize>(
         &self,
         start: NodeId,

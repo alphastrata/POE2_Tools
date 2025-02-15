@@ -13,8 +13,6 @@ pub fn quick_tree() -> PassiveTree {
     PassiveTree::from_value(&tree_data).unwrap()
 }
 
-use std::mem;
-
 pub fn bytes_to_human(bytes: usize) -> String {
     let units = ["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;
