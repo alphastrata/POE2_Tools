@@ -1,10 +1,153 @@
 use super::{type_wrappings::NodeId, PassiveTree};
 
-use ahash::AHashMap;
+use ahash::{AHashMap, HashMap, HashMapExt, HashSet, HashSetExt};
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::{unbounded, Receiver, Sender}; // for cloneable receivers
 use smallvec::SmallVec;
 use std::{collections::VecDeque, sync::Arc, thread, time::Duration};
+
+pub enum TreeFeature {
+    /// a self contained string of nodes, if this was removed,
+    /// all children would become invalid.
+    BranchStart,
+
+    /// Children of a Branch start
+    BranchMember,
+
+    // Part of the 'Main' contigious part of the tree.
+    Trunk,
+
+    /// What is says on the tin.
+    Root,
+
+    /// the `nth` most point, no neighbours, a dead end.
+    Leaf,
+}
+
+pub struct Branch {
+    /// Connecting to the 'main' trunk at:
+    pub connects_at: NodeId,
+    /// Kiddies (not mutually exclusive, coz cycles.)
+    pub children: Vec<NodeId>,
+
+    /// the distance to root:
+    pub dist_to_root: u8,
+
+    /// If one were to leave this branch, in order to NOT go backwards, what's next?
+    //NOTE: the most connected node on the board is 4, so we could have a tuple opt for this...
+    pub next: Vec<NodeId>,
+}
+
+/// A quick wrapper that allows you to separate 'branches' of the tree.
+pub struct PassiveAsBranches {
+    pub main_trunk: Vec<NodeId>,
+    pub branches: Vec<Branch>,
+}
+
+impl PassiveAsBranches {
+    pub fn from_tree<N>(tree: &PassiveTree, active_nodes: N) -> Self
+    where
+        N: IntoIterator<Item = NodeId>,
+    {
+        let active_nodes: HashSet<NodeId> = active_nodes.into_iter().collect();
+        let mut main_trunk = Vec::new();
+        let mut branches = Vec::new();
+        let root = *active_nodes
+            .iter()
+            .next()
+            .expect("Non-empty active nodes required");
+
+        let distances: HashMap<NodeId, usize> = active_nodes
+            .iter()
+            .map(|&node| (node, tree.bfs(root, node).len() - 1))
+            .collect();
+
+        let mut dist_counts = HashMap::new();
+        distances.values().for_each(|&dist| {
+            *dist_counts.entry(dist).or_insert(0) += 1;
+        });
+
+        let mut branch_start_nodes = HashSet::new();
+        for (&node, &dist) in &distances {
+            if dist_counts[&dist] > 1 {
+                branch_start_nodes.insert(node);
+            } else {
+                main_trunk.push(node);
+            }
+        }
+
+        branch_start_nodes.iter().for_each(|&start| {
+            let connects_at = tree
+                .edges
+                .iter()
+                .find_map(|edge| {
+                    let (n1, n2) = edge.as_tuple();
+                    let other = if n1 == start {
+                        n2
+                    } else if n2 == start {
+                        n1
+                    } else {
+                        return None;
+                    };
+                    if distances.get(&other)? < &distances[&start] {
+                        Some(other)
+                    } else {
+                        None
+                    }
+                })
+                .expect(&format!(
+                    "A Branch start= {:#?} somehow doesn't have a connection",
+                    &branch_start_nodes
+                ));
+
+            let mut children = vec![start];
+            let mut next = Vec::new();
+            let mut stack = vec![start];
+            let mut visited = HashSet::new();
+
+            while let Some(node) = stack.pop() {
+                if !visited.insert(node) {
+                    continue;
+                }
+                for edge in &tree.edges {
+                    let (n1, n2) = edge.as_tuple();
+                    let neighbor = if n1 == node {
+                        n2
+                    } else if n2 == node {
+                        n1
+                    } else {
+                        continue;
+                    };
+                    if active_nodes.contains(&neighbor) && neighbor != connects_at {
+                        stack.push(neighbor);
+                        children.push(neighbor);
+                    }
+                }
+            }
+
+            if let Some(&most_connected) = children.iter().max_by_key(|&&n| {
+                tree.edges
+                    .iter()
+                    .filter(|e| e.nodes().0 == n || e.nodes().1 == n)
+                    .count()
+            }) {
+                next.push(most_connected);
+            }
+
+            branches.push(Branch {
+                connects_at,
+                children,
+                dist_to_root: distances[&start] as u8,
+                next,
+            });
+        });
+
+        Self {
+            main_trunk,
+            branches,
+        }
+    }
+}
 
 impl PassiveTree {
     pub fn par_walk_n_steps_use_chains(
@@ -178,116 +321,6 @@ impl PassiveTree {
 
         paths
     }
-
-    //NOTE: just bitset
-    // About 1-3% better
-    // pub fn walk_n_steps(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     use bit_set::BitSet;
-
-    //     let t1 = std::time::Instant::now();
-    //     let mut paths = Vec::new();
-    //     let mut queue = VecDeque::new();
-
-    //     queue.push_back((start, 0, BitSet::new())); // (current_node, path_length, visited_nodes)
-
-    //     while let Some((last_node, length, mut visited)) = queue.pop_front() {
-    //         if length == steps {
-    //             paths.push(vec![last_node]); // Store only endpoints to reduce memory usage
-    //             continue;
-    //         }
-
-    //         for next_node in self.neighbors(&last_node) {
-    //             if visited.insert(next_node as usize) {
-    //                 // Avoid cycles
-    //                 queue.push_back((next_node, length + 1, visited.clone()));
-    //             }
-    //         }
-    //     }
-
-    //     log::debug!(
-    //         "Walking {} steps took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
-
-    //     paths
-    // }
-
-    // NOTE: smallvec
-    // pub fn walk_n_steps<const N: usize>(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     let t1 = std::time::Instant::now();
-    //     let mut paths = Vec::new();
-    //     let mut queue = VecDeque::new();
-
-    //     // Store full paths, initialized with `start`
-    //     queue.push_back(SmallVec::<[NodeId; N]>::from_elem(start, 1));
-
-    //     while let Some(path) = queue.pop_front() {
-    //         let last_node = *path.last().unwrap();
-
-    //         if path.len() - 1 == steps {
-    //             paths.push(path.to_vec()); // Store paths of exactly `n` steps
-    //             continue;
-    //         }
-
-    //         for neighbor in self.neighbors(last_node) {
-    //             if !path.contains(&neighbor) {
-    //                 // Ensure no cycles in the current path
-    //                 let mut new_path = path.clone();
-    //                 new_path.push(neighbor);
-    //                 queue.push_back(new_path);
-    //             }
-    //         }
-    //     }
-
-    //     log::debug!(
-    //         "Walking {} steps took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
-
-    //     paths
-    // }
-
-    // smallvec and bitset
-    // pub fn walk_n_steps<const N: usize>(&self, start: NodeId, steps: usize) -> Vec<Vec<NodeId>> {
-    //     let t1 = std::time::Instant::now();
-    //     let mut paths = Vec::new();
-    //     let mut queue = VecDeque::new();
-
-    //     let visited = BitSet::with_capacity(self.nodes.len()); // O(1) lookups
-
-    //     queue.push_back((
-    //         SmallVec::<[NodeId; N]>::from_elem(start, 1),
-    //         visited.clone(),
-    //     ));
-
-    //     while let Some((path, mut visited)) = queue.pop_front() {
-    //         let last_node = *path.last().unwrap();
-
-    //         if path.len() - 1 == steps {
-    //             paths.push(path.to_vec());
-    //             continue;
-    //         }
-
-    //         self.neighbors(last_node).for_each(|neighbor| {
-    //             if visited.insert(neighbor as usize) {
-    //                 // O(1) cycle check
-    //                 let mut new_path = path.clone();
-    //                 new_path.push(neighbor);
-    //                 queue.push_back((new_path, visited.clone())); // Clone BitSet, but it's efficient
-    //             }
-    //         });
-    //     }
-
-    //     log::debug!(
-    //         "Walking {} steps took {}ms",
-    //         steps,
-    //         t1.elapsed().as_millis()
-    //     );
-
-    //     paths
-    // }
 }
 
 struct CSRGraph {
@@ -328,6 +361,7 @@ impl CSRGraph {
 }
 
 impl PassiveTree {
+    //TODO: make a macro on this so we can have 5..43 constified versions of this
     pub fn walk_n_steps_csr<const N: usize>(
         &self,
         start: NodeId,
@@ -494,5 +528,38 @@ mod test {
                 });
             });
         });
+    }
+
+    #[test]
+    fn passive_as_branches() {
+        use ahash::AHashSet;
+
+        let mut tree = quick_tree();
+        tree.remove_hidden();
+
+        let active_nodes: AHashSet<NodeId> =
+            crate::consts::LEVEL_ONE_NODES.iter().cloned().collect();
+
+        let passive_branches =
+            crate::exploration::PassiveAsBranches::from_tree(&tree, active_nodes.clone());
+
+        println!("Main trunk nodes: {:?}", passive_branches.main_trunk);
+        println!("Total branches: {}", passive_branches.branches.len());
+
+        for (i, branch) in passive_branches.branches.iter().enumerate() {
+            println!(
+                "  Branch {}: connects_at: {}, children: {:?}, dist_to_root: {}, next: {:?}",
+                i, branch.connects_at, branch.children, branch.dist_to_root, branch.next
+            );
+        }
+
+        assert!(
+            !passive_branches.branches.is_empty(),
+            "Expected at least one branch"
+        );
+        assert!(
+            !passive_branches.main_trunk.is_empty(),
+            "Expected main trunk nodes"
+        );
     }
 }

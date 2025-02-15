@@ -33,6 +33,7 @@ pub struct PassiveTree {
     pub edges: AHashSet<Edge>,
     pub passive_skills: AHashMap<String, skills::PassiveSkill>,
 }
+
 pub fn quick_tree() -> PassiveTree {
     let file = std::fs::File::open("../../data/POE2_Tree.json").unwrap();
     let reader = std::io::BufReader::new(file);
