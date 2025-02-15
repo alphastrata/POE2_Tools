@@ -153,6 +153,21 @@ pub fn activate_edge_with_colour(client: &Client, from: NodeId, to: NodeId, colo
     }
 }
 
+pub fn move_camera(
+    client: &Client,
+    pos: bevy::math::Vec3,
+) -> Result<reqwest::blocking::Response, reqwest::Error> {
+    let json = format!(
+        r#"{{"jsonrpc":"2.0","method":"move_camera","params":[{}, {}, {}],"id":1}}"#,
+        pos.x, pos.y, pos.z
+    );
+    client
+        .post(VIS_URL)
+        .header("Content-Type", "application/json")
+        .body(json)
+        .send()
+}
+
 pub fn clear(client: &Client) -> Result<reqwest::blocking::Response, reqwest::Error> {
     let json = r#"{"jsonrpc":"2.0","method":"clear","params":[],"id":1}"#;
     client

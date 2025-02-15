@@ -17,7 +17,7 @@ impl Plugin for TreeCanvasPlugin {
 
             let mut tree = poe_tree::PassiveTree::from_value(&tree_data).unwrap();
             // If you DON'T WANT THE ASCENDENCIES.
-            tree.remove_hidden();
+            // tree.remove_hidden();
 
             // CHAR_START_NODES.iter().for_each(|nid| {
             //     _ = tree.nodes.remove(nid);
