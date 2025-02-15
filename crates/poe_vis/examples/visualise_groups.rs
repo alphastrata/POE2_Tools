@@ -23,7 +23,7 @@ fn main() {
                 .filter_map(|(gid, gval)| {
                     let gid = gid.parse::<NodeId>().ok()?;
                     let x = gval.get("x")?.as_f64()? as f32;
-                    let y = gval.get("y")?.as_f64()? as f32;
+                    let y = gval.get("y")?.as_f64()? as f32 * -1.0;
                     Some((gid, Vec3 { x, y, z: 100.0 }))
                 })
                 .collect()
@@ -49,27 +49,64 @@ fn main() {
     }
 
     let mut prev = Vec3::default();
-    // For each group: draw the group circle, then each node's circle,
-    // then compute the average (center) of all node positions and move the camera there.
     groups.iter().for_each(|(gid, grp_pos)| {
         if let Some(nodes) = group_nodes.get(gid) {
-            let mut cam = *grp_pos;
-            cam.z = 10.0;
-            if let Err(e) = smooth_move_camera2(&client, prev, cam) {
+            // Group origin pos with fixed z
+            let group_origin = Vec3 {
+                x: grp_pos.x,
+                y: grp_pos.y,
+                z: 10.0,
+            };
+            // Move from prev to group origin
+            if let Err(e) = smooth_move_camera2(&client, prev, group_origin) {
                 eprintln!("{e}");
             }
-            prev = cam;
-
+            // Draw group circle
             let (_nid, rep) = nodes[0];
             let group_radius = get_circle_radius(rep.radius, rep.position, &rep.parent);
             let col = group_colours.get(gid).unwrap();
-            common::draw_circle(&client, group_radius, *grp_pos, col, 5000);
+            common::draw_circle(&client, group_radius, *grp_pos, col, 500000);
 
-            nodes.into_iter().for_each(|(nid, _pnode)| {
+            prev = group_origin;
+
+            // Compute average position of nodes, placed.
+            let (sum, count) = nodes
+                .iter()
+                .fold((Vec3::default(), 0), |(acc, cnt), (nid, _)| {
+                    let pos = common::get_node_position(&client, **nid);
+                    (
+                        Vec3 {
+                            x: acc.x + pos.x,
+                            y: acc.y + pos.y,
+                            z: acc.z + pos.z,
+                        },
+                        cnt + 1,
+                    )
+                });
+            let avg = Vec3 {
+                x: sum.x / count as f32,
+                y: sum.y / count as f32,
+                z: 10.0,
+            };
+
+            // Move from group origin to avg node position
+            if let Err(e) = smooth_move_camera2(&client, group_origin, avg) {
+                eprintln!("{e}");
+            }
+            prev = avg;
+
+            // Draw each node's circle
+            nodes.into_iter().for_each(|(nid, _)| {
                 let pos = common::get_node_position(&client, **nid);
-                common::draw_circle(&client, 92.0, pos, col, 5000);
+                common::draw_circle(&client, 92.0, pos, col, 500000);
                 thread::sleep(Duration::from_millis(38));
             });
+
+            // Move back from avg to group origin
+            if let Err(e) = smooth_move_camera2(&client, avg, group_origin) {
+                eprintln!("{e}");
+            }
+            prev = group_origin;
 
             thread::sleep(Duration::from_millis(300));
         }
