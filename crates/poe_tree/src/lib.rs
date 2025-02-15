@@ -12,7 +12,7 @@ pub mod skills;
 pub mod stats;
 pub mod type_wrappings;
 
-use ahash::{AHashMap, AHashSet};
+use ahash::{AHashMap, AHashSet, HashSet, HashSetExt};
 use consts::{CHAR_START_NODES, ORBIT_RADII, ORBIT_SLOTS};
 use debug_utils::format_bytes;
 use edges::Edge;
@@ -45,6 +45,22 @@ pub fn quick_tree() -> PassiveTree {
 }
 impl PassiveTree {
     const CULL_NODES_AFTER_THIS: f32 = 12_400.0;
+
+    pub fn branches<N>(&self, active_nodes: N) -> HashSet<NodeId>
+    where
+        N: IntoIterator<Item = NodeId>,
+    {
+        let active_nodes: HashSet<NodeId> = active_nodes.into_iter().collect();
+        let mut branch_nodes = HashSet::new();
+
+        for &node in &active_nodes {
+            if self.neighbors(node).count() >= 3 {
+                branch_nodes.insert(node);
+            }
+        }
+
+        branch_nodes
+    }
 
     /// Prunes nodes and edges that lie beyond CULL_NODES_AFTER_THIS and are not character start nodes.
     /// Also prunes the adjacency list to reflect the removal of these nodes/edges.

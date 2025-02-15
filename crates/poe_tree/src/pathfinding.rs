@@ -18,7 +18,7 @@ impl PassiveTree {
     pub const STEP_LIMIT: NodeId = 123;
 
     pub fn is_node_within_distance(&self, start: NodeId, target: NodeId, max_steps: usize) -> bool {
-        let path = self.find_path(start, target);
+        let path = self.bfs(start, target);
         !path.is_empty() && path.len() <= max_steps + 1
     }
     pub fn fuzzy_search_nodes(&self, query: &str) -> Vec<NodeId> {
@@ -66,7 +66,7 @@ impl PassiveTree {
         Ok(path)
     }
     pub fn are_nodes_connected(&self, node_a: NodeId, node_b: NodeId) -> bool {
-        !self.find_shorpath(node_a, node_b).is_empty()
+        !self.find_shortest_path(node_a, node_b).is_empty()
     }
     pub fn find_node_by_name_or_id(&self, identifier: &str) -> Result<NodeId, String> {
         // Try finding by NodeId first
@@ -145,10 +145,7 @@ impl PassiveTree {
         })
     }
 
-    pub fn find_shorpath(&self, a: NodeId, b: NodeId) -> Vec<NodeId> {
-        self.bfs(a, b)
-    }
-    pub fn find_path(&self, a: NodeId, b: NodeId) -> Vec<NodeId> {
+    pub fn find_shortest_path(&self, a: NodeId, b: NodeId) -> Vec<NodeId> {
         self.bfs(a, b)
     }
 
@@ -573,7 +570,7 @@ mod test {
         let start_id = flow_ids[0];
         let target_id = chaos_ids[0];
 
-        let bfs_path = tree.find_shorpath(start_id, target_id);
+        let bfs_path = tree.find_shortest_path(start_id, target_id);
         if bfs_path.is_empty() {
             panic!("No path found between {} and {}", start_id, target_id);
         }
