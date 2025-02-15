@@ -1,7 +1,7 @@
 mod common;
 use bevy::utils::hashbrown::HashSet;
 use common::*;
-use poe_tree::type_wrappings::NodeId;
+use poe_tree::{ type_wrappings::NodeId};
 use reqwest::blocking::Client;
 
 fn main() {

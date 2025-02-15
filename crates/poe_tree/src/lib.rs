@@ -43,6 +43,7 @@ pub fn quick_tree() -> PassiveTree {
     tree.remove_hidden();
     tree
 }
+
 impl PassiveTree {
     const CULL_NODES_AFTER_THIS: f32 = 12_400.0;
 
@@ -400,6 +401,15 @@ pub fn calculate_world_position_with_negative_y(
     let (wx, mut wy) = calculate_world_position(group, radius, position);
     wy *= -1.0;
     (wx, wy)
+}
+
+pub fn get_circle_radius(radius: u8, position: NodeId, group: &GroupId) -> f32 {
+    *ORBIT_RADII.get(radius as usize).unwrap_or_else(|| {
+        panic!(
+            "Failed to retrieve radius for r={} with position={} and group coordinates=({:#?})",
+            radius, position, group
+        )
+    })
 }
 
 #[cfg(test)]
