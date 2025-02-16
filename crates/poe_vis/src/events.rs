@@ -9,6 +9,13 @@ use std::path::PathBuf;
 
 use crate::components::UIGlyph;
 
+#[derive(Event)]
+pub struct OptimiseReq {
+    pub selector: Box<dyn Fn(&poe_tree::stats::Stat) -> bool + Send + Sync>,
+    // pub starting_loc: NodeId,
+    pub delta: usize,
+}
+
 #[derive(Event, DerefMut, Deref)]
 pub struct VirtualPathReq(pub NodeId);
 

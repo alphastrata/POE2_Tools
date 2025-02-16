@@ -10,6 +10,13 @@ use poe_tree::{character::Character, edges::Edge, type_wrappings::*};
 
 use crate::{components::EdgeMarker, consts::SEARCH_THRESHOLD};
 
+#[derive(Resource, Default)]
+pub struct Optimiser {
+    pub results: Vec<Vec<NodeId>>,
+    // maybe a made at?
+    // maybe a stats?
+}
+
 #[derive(Resource)]
 pub struct NodeScaling {
     pub min_scale: f32,

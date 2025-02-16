@@ -8,7 +8,7 @@ use crate::{
         ClearAll, ClearSearchResults, DrawCircleReq, LoadCharacterReq, MoveCameraReq,
         NodeDeactivationReq, SaveCharacterAsReq, SaveCharacterReq,
     },
-    resources::{ActiveCharacter, CameraSettings, SearchState},
+    resources::{ActiveCharacter, CameraSettings, Optimiser, SearchState},
     PassiveTreeWrapper,
 };
 use bevy::{prelude::*, utils::HashMap};
@@ -29,8 +29,11 @@ pub struct UIPlugin;
 #[derive(Resource, Default)]
 struct UICapturesInput(pub bool);
 
-#[derive(Deref, DerefMut, Resource, Default)]
-struct Toggles(HashMap<String, bool>);
+#[derive(Resource, Default)]
+struct Toggles {
+    selections: HashMap<String, bool>,
+    delta: u8,
+}
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
@@ -74,10 +77,11 @@ fn egui_ui_system(
     tree: Res<PassiveTreeWrapper>,
     character: ResMut<ActiveCharacter>,
     settings: Res<CameraSettings>,
-    searchbox_state: ResMut<SearchState>,
+    _searchbox_state: ResMut<SearchState>,
     clipboard: ResMut<EguiClipboard>,
 
     toggles: Local<Toggles>,
+    optimiser: ResMut<Optimiser>,
 ) {
     topbar_menu_system(
         &mut contexts,
@@ -100,6 +104,7 @@ fn egui_ui_system(
         draw_circle,
         // searchbox_state,
         clipboard,
+        optimiser,
         toggles,
     );
 }
@@ -112,11 +117,12 @@ fn rhs_menu(
     mut clear_search_results_tx: EventWriter<ClearSearchResults>,
     mut move_camera_tx: EventWriter<MoveCameraReq>,
     tree: Res<PassiveTreeWrapper>,
-    mut character: ResMut<ActiveCharacter>,
+    character: ResMut<ActiveCharacter>,
     settings: Res<CameraSettings>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     // searchbox_state: ResMut<SearchState>,
     mut clipboard: ResMut<EguiClipboard>,
+    optimiser: ResMut<Optimiser>,
     toggles: Local<Toggles>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
@@ -252,7 +258,15 @@ fn rhs_menu(
             clear_search_results_tx.send(ClearSearchResults);
         }
 
-        draw_optimiser_ui(ui, &tree, character, draw_circle, projection, toggles);
+        draw_optimiser_ui(
+            ui,
+            &tree,
+            character,
+            optimiser,
+            draw_circle,
+            projection,
+            toggles,
+        );
     })
 }
 
@@ -260,9 +274,10 @@ fn draw_optimiser_ui(
     ui: &mut egui::Ui,
     tree: &Res<PassiveTreeWrapper>,
     mut character: ResMut<ActiveCharacter>,
+    mut optimiser: ResMut<Optimiser>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     projection: &OrthographicProjection,
-    mut toggles: Local<Toggles>,
+    mut togglers: Local<Toggles>,
 ) {
     ui.heading("Optimiser");
     ui.separator();
@@ -319,15 +334,15 @@ fn draw_optimiser_ui(
         .for_each(|(i, stat_name)| {
             let color_str = palette[i % palette.len()];
             let egui_col = tailwind_to_egui(color_str);
-            let mut is_toggled = toggles.0.get(stat_name).copied().unwrap_or(false);
+            let mut is_toggled = togglers.selections.get(stat_name).copied().unwrap_or(false);
 
             ui.horizontal(|ui| {
                 ui.label(" ");
                 let response = ui.colored_label(egui_col, stat_name);
                 ui.checkbox(&mut is_toggled, "");
 
-                if is_toggled != *toggles.0.get(stat_name).unwrap_or(&false) {
-                    toggles.0.insert(stat_name.clone(), is_toggled);
+                if is_toggled != *togglers.selections.get(stat_name).unwrap_or(&false) {
+                    togglers.selections.insert(stat_name.clone(), is_toggled);
                 }
 
                 // Hover preview
@@ -351,18 +366,21 @@ fn draw_optimiser_ui(
 
     ui.separator();
 
+    //TODO: we need a delta
+    const DELTA: usize = 3;
+
+    ui.horizontal(|ui| {
+        ui.label("Delta:");
+        ui.add(egui::Slider::new(&mut togglers.delta, 1..=10).text("Path length adjustment"));
+    });
     // Optimise button - only show paths when clicked
     if ui.button("Optimise").clicked() {
+        let branches = tree.branches(&character.activated_node_ids);
         distinct_stats
             .iter()
-            .filter(|stat| toggles.0.get(*stat) == Some(&true))
+            .filter(|stat| togglers.selections.get(*stat) == Some(&true))
             .for_each(|stat_name| {
                 let selector = |s: &Stat| s.name() == stat_name.as_str();
-                let paths = tree.take_while(
-                    character.starting_node,
-                    selector,
-                    character.activated_node_ids.len(),
-                );
 
                 // Display each path with hover/click functionality
                 paths.iter().enumerate().for_each(|(idx, path)| {

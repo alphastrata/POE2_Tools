@@ -4,7 +4,7 @@ pub use generated::{parse_tailwind_color, tailwind_to_egui};
 
 use std::{
     ops::ControlFlow,
-    sync::{Arc, Mutex},
+    sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex},
     time::Duration,
 };
 
@@ -78,6 +78,7 @@ impl Plugin for BGServicesPlugin {
             .add_event::<NodeDeactivationReq>()
             .add_event::<NodeDeactivationReq>()
             .add_event::<NodeScaleReq>()
+            .add_event::<OptimiseReq>()
             .add_event::<SaveCharacterAsReq>()
             .add_event::<SaveCharacterReq>()
             .add_event::<ShowSearch>()
@@ -86,7 +87,9 @@ impl Plugin for BGServicesPlugin {
             //spacing..
             ;
 
-        app.insert_resource(PathRepairRequired(false));
+        app //
+            .insert_resource(PathRepairRequired(false))
+            .insert_resource(Optimiser::default());
 
         app.add_systems(
             PreUpdate,
@@ -736,4 +739,34 @@ fn process_scale_requests(
                 t.scale = Vec3::splat(*new_scale);
             }
         });
+}
+
+static mut WORKING: AtomicBool = AtomicBool::new(false);
+fn populate_optimiser(
+    mut optimiser: ResMut<Optimiser>,
+    tree: Res<PassiveTreeWrapper>,
+    active_character: Res<ActiveCharacter>,
+    mut req: EventReader<OptimiseReq>,
+) {
+    req.read().for_each(|req| {
+        unsafe {
+            if WORKING.load(Ordering::Relaxed) {
+                return;
+            }
+            WORKING.store(true, Ordering::Acquire);
+        }
+        let OptimiseReq { selector, delta };
+
+        let new: Vec<Vec<NodeId>> = tree
+            .branches(&active_character.activated_node_ids)
+            .iter()
+            .flat_map(|opt| tree.take_while(*opt, *selector, delta))
+            .collect();
+
+        optimiser.results = new;
+
+        unsafe {
+            WORKING.store(false, std::sync::atomic::Ordering::Acquire);
+        }
+    })
 }

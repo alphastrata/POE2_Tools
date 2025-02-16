@@ -50,11 +50,7 @@ impl PassiveTree {
     /// 1 connection is a leaf
     /// 2 connections is almost all nodes, and 'in' and an 'out'
     /// >3 is a branch point.
-    pub fn branches<N>(&self, active_nodes: N) -> HashSet<NodeId>
-    where
-        N: IntoIterator<Item = NodeId>,
-    {
-        let active_nodes: HashSet<NodeId> = active_nodes.into_iter().collect();
+    pub fn branches(&self, active_nodes: &HashSet<NodeId>) -> HashSet<NodeId> {
         let mut branch_nodes = HashSet::new();
 
         active_nodes
