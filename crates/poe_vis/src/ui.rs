@@ -7,10 +7,12 @@ use crate::{
         ClearAll, ClearSearchResults, DrawCircleReq, LoadCharacterReq, MoveCameraReq,
         NodeDeactivationReq, OptimiseReq, SaveCharacterAsReq, SaveCharacterReq,
     },
-    resources::{ActiveCharacter, CameraSettings, Optimiser, SearchState, Toggles},
+    resources::{
+        ActiveCharacter, CameraSettings, Optimiser, PathRepairRequired, SearchState, Toggles,
+    },
     PassiveTreeWrapper,
 };
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{ecs::system::SystemParam, prelude::*, utils::HashMap};
 use bevy_egui::{
     egui::{self, Align, Context, SidePanel, TextBuffer},
     EguiClipboard, EguiContext, EguiContexts, EguiPlugin,
@@ -54,25 +56,44 @@ fn update_active_nodecount(
 ) {
     counter.0 = active_nodes.iter().count();
 }
+
+/// you can only have a maximum of 16 args to a bevy system, so you need to wrap them.
+#[derive(SystemParam)]
+struct EguiSystemParamsWrapper<'w> {
+    character: ResMut<'w, ActiveCharacter>,
+    togglers: ResMut<'w, Toggles>,
+    optimiser: Res<'w, Optimiser>,
+    clipboard: ResMut<'w, EguiClipboard>,
+    settings: Res<'w, CameraSettings>,
+    tree: Res<'w, PassiveTreeWrapper>,
+    path_repair: ResMut<'w, PathRepairRequired>,
+}
+
 fn egui_ui_system(
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
     camera_query: Query<&mut OrthographicProjection, With<Camera2d>>,
-    character: ResMut<ActiveCharacter>,
     mut load_tx: EventWriter<LoadCharacterReq>,
     mut clear_all_tx: EventWriter<ClearAll>,
     mut clear_search_results_tx: EventWriter<ClearSearchResults>,
-    mut clipboard: ResMut<EguiClipboard>,
     mut contexts: EguiContexts,
     mut draw_circle: EventWriter<DrawCircleReq>,
     mut move_camera_tx: EventWriter<MoveCameraReq>,
     mut optimiser_req: EventWriter<OptimiseReq>,
-    mut togglers: ResMut<Toggles>,
-    optimiser: Res<Optimiser>,
     mut save_as_tx: EventWriter<SaveCharacterAsReq>,
     mut save_tx: EventWriter<SaveCharacterReq>,
-    settings: Res<CameraSettings>,
-    tree: Res<PassiveTreeWrapper>,
+    sys_params: EguiSystemParamsWrapper,
 ) {
+    //you can only have a maximum of 16 args to a bevy system, so you need to wrap them.
+    let EguiSystemParamsWrapper {
+        character,
+        togglers,
+        optimiser,
+        clipboard,
+        settings,
+        tree,
+        path_repair,
+    } = sys_params;
+
     topbar_menu_system(
         &mut contexts,
         &mut save_tx,
@@ -93,9 +114,10 @@ fn egui_ui_system(
         settings,
         draw_circle,
         clipboard,
-        &optimiser,
+        optimiser,
         optimiser_req,
         togglers,
+        path_repair,
     );
 }
 
@@ -111,9 +133,10 @@ fn rhs_menu(
     settings: Res<CameraSettings>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     mut clipboard: ResMut<EguiClipboard>,
-    optimiser: &Optimiser,
+    optimiser: Res<Optimiser>,
     optimiser_req: EventWriter<OptimiseReq>,
     mut togglers: ResMut<Toggles>,
+    path_repair: ResMut<PathRepairRequired>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
 
@@ -256,7 +279,8 @@ fn rhs_menu(
             optimiser_req,
             draw_circle,
             projection,
-            toggles,
+            togglers,
+            path_repair,
         );
     })
 }
@@ -387,11 +411,12 @@ fn draw_optimiser_ui(
     ui: &mut egui::Ui,
     tree: &Res<PassiveTreeWrapper>,
     mut character: ResMut<ActiveCharacter>,
-    optimiser: ResMut<Optimiser>,
+    optimiser: Res<Optimiser>,
     mut optimiser_req: EventWriter<OptimiseReq>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     projection: &OrthographicProjection,
     mut togglers: ResMut<Toggles>,
+    mut path_repair: ResMut<PathRepairRequired>,
 ) {
     ui.heading("Optimiser");
     ui.separator();
@@ -496,7 +521,7 @@ fn draw_optimiser_ui(
     });
 
     // Optimise button (only enabled if a stat is selected)
-    let optimise_disabled = toggled_stat.is_none() || !optimiser.available();
+    let optimise_disabled = toggled_stat.is_none() || !optimiser.is_available();
     let button = ui.add_enabled(!optimise_disabled, egui::Button::new("Optimise"));
 
     if button.clicked() && !optimise_disabled {
@@ -526,18 +551,21 @@ fn draw_optimiser_ui(
                         .filter_map(|id| tree.nodes.get(id))
                         .for_each(|node| {
                             draw_circle.send(DrawCircleReq {
-                                radius: 20.0,
-                                origin: Vec3::new(node.wx, -node.wy, 0.0),
-                                mat: "sky-400".into(),
-                                glyph: UIGlyph::from_millis(25),
+                                radius: 95.0,
+                                // have to go above the nodes to see the circles, and slightly larger than them.
+                                origin: Vec3::new(node.wx, -node.wy, 10.0),
+                                mat: "teal-800".into(),
+                                glyph: UIGlyph::from_millis(125),
                             });
                         });
                 }
 
                 // Click handling
                 if button.clicked() {
+                    log::debug!("Replacing existing path with new one...");
                     character.activated_node_ids.clear();
                     character.activated_node_ids.extend(path.iter().copied());
+                    path_repair.request_path_repair();
                 }
             });
     }

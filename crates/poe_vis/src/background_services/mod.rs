@@ -661,18 +661,19 @@ fn process_manual_node_highlights(
         });
 }
 
+//TODO: bool flag
 fn process_virtual_paths(
     mut colour_events: EventWriter<NodeColourReq>,
     game_materials: Res<GameMaterials>,
     edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
     nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
 ) {
-    nodes.iter().for_each(|(ent, em)| {
+    nodes.iter().for_each(|(ent, _em)| {
         let mat = game_materials.blue.clone_weak();
         colour_events.send(NodeColourReq(ent, mat.clone_weak()));
     });
 
-    edges.iter().for_each(|(ent, em)| {
+    edges.iter().for_each(|(ent, _em)| {
         let mat = game_materials.blue.clone_weak();
         colour_events.send(NodeColourReq(ent, mat.clone_weak()));
     });

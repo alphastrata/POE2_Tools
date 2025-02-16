@@ -19,7 +19,8 @@ impl Plugin for CharacterPlugin {
 
         app.add_systems(
             Update,
-            activate_starting_nodes.run_if(on_event::<LoadCharacterReq>),
+            activate_starting_nodes
+                .run_if(on_event::<LoadCharacterReq>.or(ActiveCharacter::has_been_updated)),
         );
 
         app.add_systems(PostUpdate, update_active_character.after(clear));
@@ -27,6 +28,19 @@ impl Plugin for CharacterPlugin {
         log::debug!("CharacterPlugin plugin enabled");
     }
 }
+
+impl ActiveCharacter {
+    pub fn has_been_updated(
+        active_char: Res<ActiveCharacter>,
+        actual_active_nodes: Query<&NodeMarker, With<NodeActive>>,
+    ) -> bool {
+        log::debug!("Checking for updates to the ActiveCharacter");
+        actual_active_nodes
+            .into_iter()
+            .all(|nid| active_char.activated_node_ids.contains(nid))
+    }
+}
+
 fn activate_starting_nodes(
     mut node_activator: EventWriter<NodeActivationReq>,
     mut path_repair: ResMut<PathRepairRequired>,
@@ -41,6 +55,16 @@ fn activate_starting_nodes(
         node_activator.send(NodeActivationReq(*nid));
     });
     path_repair.request_path_repair();
+}
+
+/// aliasing the `[activate_starting_nodes]` nodes logic again, but wrapped to more accurately reflect usage
+fn update_active_from_character(
+    node_activator: EventWriter<NodeActivationReq>,
+    path_repair: ResMut<PathRepairRequired>,
+    active_character: ResMut<ActiveCharacter>,
+    starting_node: ResMut<RootNode>,
+) {
+    activate_starting_nodes(node_activator, path_repair, active_character, starting_node);
 }
 
 fn update_active_character(

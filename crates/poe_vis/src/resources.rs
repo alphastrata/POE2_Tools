@@ -8,7 +8,10 @@ use bevy::{
 use bevy_cosmic_edit::CosmicTextChanged;
 use poe_tree::{character::Character, edges::Edge, type_wrappings::*};
 
-use crate::{components::EdgeMarker, consts::SEARCH_THRESHOLD};
+use crate::{
+    components::{EdgeMarker, NodeActive, NodeMarker},
+    consts::SEARCH_THRESHOLD,
+};
 
 #[derive(Resource, Default)]
 pub struct Toggles {
