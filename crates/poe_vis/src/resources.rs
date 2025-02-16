@@ -10,11 +10,29 @@ use poe_tree::{character::Character, edges::Edge, type_wrappings::*};
 
 use crate::{components::EdgeMarker, consts::SEARCH_THRESHOLD};
 
+#[derive(Default, Debug, PartialEq)]
+pub enum JobStatus {
+    #[default]
+    Available,
+    Processing,
+    Finished,
+    Stalled,
+    Errored,
+}
+impl Optimiser {
+    pub fn available(&self) -> bool {
+        match self.status {
+            JobStatus::Available => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Resource, Default)]
 pub struct Optimiser {
     pub results: Vec<Vec<NodeId>>,
-    // maybe a made at?
-    // maybe a stats?
+
+    pub status: JobStatus,
 }
 
 #[derive(Resource)]

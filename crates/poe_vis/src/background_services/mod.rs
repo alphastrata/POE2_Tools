@@ -3,6 +3,7 @@ mod generated;
 pub use generated::{parse_tailwind_color, tailwind_to_egui};
 
 use std::{
+    boxed::Box,
     ops::ControlFlow,
     sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex},
     time::Duration,
@@ -19,6 +20,7 @@ use bevy::{
 };
 use poe_tree::{
     consts::LEVEL_ONE_NODES,
+    stats::Stat,
     type_wrappings::{EdgeId, NodeId},
     PassiveTree,
 };
@@ -134,6 +136,13 @@ impl Plugin for BGServicesPlugin {
                     .run_if(sufficient_active_nodes)
                     .run_if(resource_equals(PathRepairRequired(true))),
             ),
+        );
+
+        // Optimiser routines:
+        app.add_systems(
+            PostUpdate,
+            //TODO: cap the framerate that this can run at...i.e && NOT WORKING
+            populate_optimiser.run_if(on_event::<OptimiseReq>),
         );
 
         app.add_systems(Update, clear.run_if(on_event::<ClearAll>));
@@ -720,7 +729,7 @@ fn clear_virtual_paths(
         colour_nodes.send(NodeColourReq(ent, mat.clone_weak()));
     });
 
-    edges.iter().for_each(|(ent, em)| {
+    edges.iter().for_each(|(ent, _em)| {
         let mat = game_materials.edge_base.clone_weak();
         commands.entity(ent).remove::<VirtualPathMember>();
 
@@ -741,6 +750,7 @@ fn process_scale_requests(
         });
 }
 
+// NOTE: atomics because I'm too lazy to think of a runtime condition etc for this ...
 static mut WORKING: AtomicBool = AtomicBool::new(false);
 fn populate_optimiser(
     mut optimiser: ResMut<Optimiser>,
@@ -748,25 +758,52 @@ fn populate_optimiser(
     active_character: Res<ActiveCharacter>,
     mut req: EventReader<OptimiseReq>,
 ) {
+    log::trace!("Optimise requested");
     req.read().for_each(|req| {
         unsafe {
-            if WORKING.load(Ordering::Relaxed) {
-                return;
+            if WORKING.load(Ordering::Acquire) {
+                log::warn!("Already processing a job!");
+                return; // Another thread is working
             }
-            WORKING.store(true, Ordering::Acquire);
+            WORKING.store(true, Ordering::Release);
         }
-        let OptimiseReq { selector, delta };
-
-        let new: Vec<Vec<NodeId>> = tree
+        optimiser.results = tree
             .branches(&active_character.activated_node_ids)
             .iter()
-            .flat_map(|opt| tree.take_while(*opt, *selector, delta))
+            .flat_map(|opt| tree.take_while(*opt, &req.selector, req.delta))
             .collect();
 
-        optimiser.results = new;
-
         unsafe {
-            WORKING.store(false, std::sync::atomic::Ordering::Acquire);
+            log::info!("Optimiser finished processing");
+            WORKING.store(false, Ordering::Relaxed);
         }
     })
 }
+
+//TODO: something like this:
+// pub struct WorkTracker {
+//     working: AtomicBool,
+// }
+
+// impl WorkTracker {
+//     pub const fn new() -> Self {
+//         Self {
+//             working: AtomicBool::new(false),
+//         }
+//     }
+
+//     /// Attempts to start work. Returns `true` if successful, `false` if already working.
+//     pub fn start(&self) -> bool {
+//         !self.working.swap(true, Ordering::Acquire)
+//     }
+
+//     /// Marks work as finished.
+//     pub fn finish(&self) {
+//         self.working.store(false, Ordering::Release);
+//     }
+
+//     /// Checks if work is in progress.
+//     pub fn is_working(&self) -> bool {
+//         self.working.load(Ordering::Acquire)
+//     }
+// }

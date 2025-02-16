@@ -6,7 +6,7 @@ use crate::{
     consts::TAILWIND_COLOURS_AS_STR,
     events::{
         ClearAll, ClearSearchResults, DrawCircleReq, LoadCharacterReq, MoveCameraReq,
-        NodeDeactivationReq, SaveCharacterAsReq, SaveCharacterReq,
+        NodeDeactivationReq, OptimiseReq, SaveCharacterAsReq, SaveCharacterReq,
     },
     resources::{ActiveCharacter, CameraSettings, Optimiser, SearchState},
     PassiveTreeWrapper,
@@ -32,7 +32,7 @@ struct UICapturesInput(pub bool);
 #[derive(Resource, Default)]
 struct Toggles {
     selections: HashMap<String, bool>,
-    delta: u8,
+    delta: usize,
 }
 
 impl Plugin for UIPlugin {
@@ -77,10 +77,10 @@ fn egui_ui_system(
     tree: Res<PassiveTreeWrapper>,
     character: ResMut<ActiveCharacter>,
     settings: Res<CameraSettings>,
-    _searchbox_state: ResMut<SearchState>,
     clipboard: ResMut<EguiClipboard>,
 
     toggles: Local<Toggles>,
+    optimiser_req: EventWriter<OptimiseReq>,
     optimiser: ResMut<Optimiser>,
 ) {
     topbar_menu_system(
@@ -105,6 +105,7 @@ fn egui_ui_system(
         // searchbox_state,
         clipboard,
         optimiser,
+        optimiser_req,
         toggles,
     );
 }
@@ -120,9 +121,9 @@ fn rhs_menu(
     character: ResMut<ActiveCharacter>,
     settings: Res<CameraSettings>,
     mut draw_circle: EventWriter<DrawCircleReq>,
-    // searchbox_state: ResMut<SearchState>,
     mut clipboard: ResMut<EguiClipboard>,
     optimiser: ResMut<Optimiser>,
+    mut optimiser_req: EventWriter<OptimiseReq>,
     toggles: Local<Toggles>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
@@ -263,154 +264,12 @@ fn rhs_menu(
             &tree,
             character,
             optimiser,
+            optimiser_req,
             draw_circle,
             projection,
             toggles,
         );
     })
-}
-
-fn draw_optimiser_ui(
-    ui: &mut egui::Ui,
-    tree: &Res<PassiveTreeWrapper>,
-    mut character: ResMut<ActiveCharacter>,
-    mut optimiser: ResMut<Optimiser>,
-    mut draw_circle: EventWriter<DrawCircleReq>,
-    projection: &OrthographicProjection,
-    mut togglers: Local<Toggles>,
-) {
-    ui.heading("Optimiser");
-    ui.separator();
-
-    // Build aggregated stats from root + active nodes
-    let mut aggregator: Vec<(NodeId, &Stat)> = Vec::new();
-
-    // Add root node stats
-    if let Some(root) = tree.nodes.get(&character.starting_node) {
-        aggregator.extend(
-            root.as_passive_skill(tree)
-                .stats()
-                .into_iter()
-                .map(|stat| (character.starting_node, stat)),
-        );
-    }
-
-    // Add activated nodes stats
-    character
-        .activated_node_ids
-        .iter()
-        .filter(|&&id| id != character.starting_node)
-        .for_each(|id| {
-            if let Some(node) = tree.nodes.get(id) {
-                aggregator.extend(
-                    node.as_passive_skill(tree)
-                        .stats()
-                        .into_iter()
-                        .map(|stat| (*id, stat)),
-                );
-            }
-        });
-
-    // Get distinct sorted stats
-    let mut distinct_stats: Vec<String> = aggregator
-        .iter()
-        .map(|(_, s)| s.name().to_string())
-        .collect();
-    distinct_stats.sort();
-    distinct_stats.dedup();
-
-    // UI: Display root node
-    ui.label(format!(
-        "Root: {}",
-        tree.nodes[&character.starting_node].name
-    ));
-    ui.separator();
-
-    // Display stat toggles
-    let palette = TAILWIND_COLOURS_AS_STR;
-    distinct_stats
-        .iter()
-        .enumerate()
-        .for_each(|(i, stat_name)| {
-            let color_str = palette[i % palette.len()];
-            let egui_col = tailwind_to_egui(color_str);
-            let mut is_toggled = togglers.selections.get(stat_name).copied().unwrap_or(false);
-
-            ui.horizontal(|ui| {
-                ui.label(" ");
-                let response = ui.colored_label(egui_col, stat_name);
-                ui.checkbox(&mut is_toggled, "");
-
-                if is_toggled != *togglers.selections.get(stat_name).unwrap_or(&false) {
-                    togglers.selections.insert(stat_name.clone(), is_toggled);
-                }
-
-                // Hover preview
-                if response.hovered() {
-                    let radius = 20.0 * projection.scale;
-                    aggregator
-                        .iter()
-                        .filter(|(_, s)| s.name() == stat_name)
-                        .filter_map(|(id, _)| tree.nodes.get(id))
-                        .for_each(|node| {
-                            draw_circle.send(DrawCircleReq {
-                                radius,
-                                origin: Vec3::new(node.wx, -node.wy, 0.0),
-                                mat: color_str.into(),
-                                glyph: UIGlyph::from_millis(500),
-                            });
-                        });
-                }
-            });
-        });
-
-    ui.separator();
-
-    //TODO: we need a delta
-    const DELTA: usize = 3;
-
-    ui.horizontal(|ui| {
-        ui.label("Delta:");
-        ui.add(egui::Slider::new(&mut togglers.delta, 1..=10).text("Path length adjustment"));
-    });
-    // Optimise button - only show paths when clicked
-    if ui.button("Optimise").clicked() {
-        let branches = tree.branches(&character.activated_node_ids);
-        distinct_stats
-            .iter()
-            .filter(|stat| togglers.selections.get(*stat) == Some(&true))
-            .for_each(|stat_name| {
-                let selector = |s: &Stat| s.name() == stat_name.as_str();
-
-                // Display each path with hover/click functionality
-                paths.iter().enumerate().for_each(|(idx, path)| {
-                    let button = ui.button(format!("Path #{} for {}", idx + 1, stat_name));
-
-                    // Hover preview
-                    if button.hovered() {
-                        path.iter()
-                            .filter_map(|id| tree.nodes.get(id))
-                            .for_each(|node| {
-                                draw_circle.send(DrawCircleReq {
-                                    radius: 20.0,
-                                    origin: Vec3::new(node.wx, -node.wy, 0.0),
-                                    mat: "sky-400".into(),
-                                    glyph: UIGlyph::from_millis(25),
-                                });
-                            });
-                    }
-
-                    // Click handling
-                    if button.clicked() {
-                        character.activated_node_ids.clear();
-                        character.activated_node_ids.extend(path.iter().copied());
-                    }
-                });
-            });
-    }
-
-    ui.separator();
-    ui.label("Optimiser controls go here...");
 }
 
 fn topbar_menu_system(
@@ -533,4 +392,171 @@ fn display_aggregated_stats<'t>(
             }
         }
     }
+}
+
+fn draw_optimiser_ui(
+    ui: &mut egui::Ui,
+    tree: &Res<PassiveTreeWrapper>,
+    mut character: ResMut<ActiveCharacter>,
+    optimiser: ResMut<Optimiser>,
+    mut optimiser_req: EventWriter<OptimiseReq>,
+    mut draw_circle: EventWriter<DrawCircleReq>,
+    projection: &OrthographicProjection,
+    mut togglers: Local<Toggles>,
+) {
+    ui.heading("Optimiser");
+    ui.separator();
+
+    // Aggregate stats from root + active nodes
+    let mut aggregator: Vec<(NodeId, &Stat)> = Vec::new();
+
+    if let Some(root) = tree.nodes.get(&character.starting_node) {
+        aggregator.extend(
+            root.as_passive_skill(tree)
+                .stats()
+                .into_iter()
+                .map(|stat| (character.starting_node, stat)),
+        );
+    }
+
+    character
+        .activated_node_ids
+        .iter()
+        .filter(|&&id| id != character.starting_node)
+        .for_each(|id| {
+            if let Some(node) = tree.nodes.get(id) {
+                aggregator.extend(
+                    node.as_passive_skill(tree)
+                        .stats()
+                        .into_iter()
+                        .map(|stat| (*id, stat)),
+                );
+            }
+        });
+
+    // Get distinct sorted stats
+    let mut distinct_stats: Vec<String> = aggregator
+        .iter()
+        .map(|(_, s)| s.name().to_string())
+        .collect();
+    distinct_stats.sort();
+    distinct_stats.dedup();
+
+    // Display root node
+    // TODO: we can remove this concept entirely really...
+    ui.label(format!("Root: {}", character.starting_node));
+    ui.separator();
+
+    // Stat Selection UI
+    let palette = TAILWIND_COLOURS_AS_STR;
+    distinct_stats
+        .iter()
+        .enumerate()
+        .for_each(|(i, stat_name)| {
+            let color_str = palette[i % palette.len()];
+            let egui_col = tailwind_to_egui(color_str);
+            let mut is_toggled = *togglers.selections.get(stat_name).unwrap_or(&false);
+
+            ui.horizontal(|ui| {
+                ui.label(" ");
+                let response = ui.colored_label(egui_col, stat_name);
+
+                // Right-aligned checkbox
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.checkbox(&mut is_toggled, "").changed() {
+                        // Ensure only one stat is toggled at a time
+                        togglers.selections.iter_mut().for_each(|(_, v)| *v = false);
+                        togglers.selections.insert(stat_name.clone(), is_toggled);
+                    }
+                });
+
+                // Hover preview
+                if response.hovered() {
+                    let radius = 20.0 * projection.scale;
+                    aggregator
+                        .iter()
+                        .filter(|(_, s)| s.name() == stat_name)
+                        .filter_map(|(id, _)| tree.nodes.get(id))
+                        .for_each(|node| {
+                            draw_circle.send(DrawCircleReq {
+                                radius,
+                                origin: Vec3::new(node.wx, -node.wy, 0.0),
+                                mat: color_str.into(),
+                                glyph: UIGlyph::from_millis(500),
+                            });
+                        });
+                }
+            });
+        });
+
+    ui.separator();
+
+    // Delta slider
+    ui.horizontal(|ui| {
+        ui.label("Delta:");
+        ui.add(egui::Slider::new(&mut togglers.delta, 1..=10).text("Path length adjustment"));
+    });
+
+    // Get selected stat (if any)
+    let toggled_stat = togglers.selections.iter().find_map(|(stat, &is_selected)| {
+        if is_selected {
+            Some(stat.clone())
+        } else {
+            None
+        }
+    });
+
+    // Optimise button (only enabled if a stat is selected)
+    let optimise_disabled = toggled_stat.is_none() || !optimiser.available();
+    let button = ui.add_enabled(!optimise_disabled, egui::Button::new("Optimise"));
+
+    if button.clicked() {
+        if let Some(ref stat_name) = toggled_stat.clone() {
+            let selector = move |s: &Stat| s.name() == stat_name.as_str();
+
+            optimiser_req.send(OptimiseReq {
+                selector: Box::new(selector), // Ensure it's boxed for dynamic dispatch
+                delta: togglers.delta,
+            });
+        }
+    }
+
+    ui.separator();
+    ui.label("Optimiser controls go here...");
+
+    // Display paths if available
+    optimiser
+        .results
+        .iter()
+        .enumerate()
+        .for_each(|(idx, path)| {
+            let Some(stat) = toggled_stat.clone() else {
+                log::error!("Unable to pull path for stat? something is horribly wrong!");
+                return;
+            };
+            let button = ui.button(format!("Path #{} for {}", idx + 1, stat));
+
+            // Hover preview
+            if button.hovered() {
+                path.iter()
+                    .filter_map(|id| tree.nodes.get(id))
+                    .for_each(|node| {
+                        draw_circle.send(DrawCircleReq {
+                            radius: 20.0,
+                            origin: Vec3::new(node.wx, -node.wy, 0.0),
+                            mat: "sky-400".into(),
+                            glyph: UIGlyph::from_millis(25),
+                        });
+                    });
+            }
+
+            // Click handling
+            if button.clicked() {
+                character.activated_node_ids.clear();
+                character.activated_node_ids.extend(path.iter().copied());
+            }
+        });
+
+    ui.separator();
+    ui.label("Optimiser controls go here...");
 }

@@ -28,12 +28,7 @@ impl PassiveTree {
             .nodes
             .iter()
             .filter_map(|(&nid, node)| {
-                if node
-                    .as_passive_skill(self)
-                    .stats()
-                    .iter()
-                    .any(&predicate)
-                {
+                if node.as_passive_skill(self).stats().iter().any(&predicate) {
                     Some(nid)
                 } else {
                     None
@@ -87,12 +82,7 @@ impl PassiveTree {
             self.nodes
                 .iter()
                 .fold(AHashSet::new(), |mut acc, (&nid, node)| {
-                    if node
-                        .as_passive_skill(self)
-                        .stats()
-                        .iter()
-                        .any(&predicate)
-                    {
+                    if node.as_passive_skill(self).stats().iter().any(&predicate) {
                         // acc.push(nid);
                         acc.insert(nid);
                     }
@@ -174,11 +164,7 @@ impl PassiveTree {
                     .map(|node_id| {
                         let poe_node = self.nodes.get(node_id).unwrap();
                         let skill = poe_node.as_passive_skill(self);
-                        skill
-                            .stats()
-                            .iter()
-                            .filter_map(&stat_selector)
-                            .sum::<f32>()
+                        skill.stats().iter().filter_map(&stat_selector).sum::<f32>()
                     })
                     .sum();
 

@@ -1,3 +1,4 @@
+#![feature(box_into_inner)]
 #![allow(dead_code, unused_imports)]
 #![allow(clippy::type_complexity)]
 use bevy::color::palettes::tailwind;
