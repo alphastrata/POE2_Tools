@@ -97,7 +97,7 @@ pub struct ActiveCharacter {
     pub character: poe_tree::character::Character,
 }
 
-#[derive(Resource, DerefMut, Deref)]
+#[derive(Resource, DerefMut, Deref, PartialEq, Eq)]
 pub struct RootNode(pub Option<NodeId>);
 impl RootNode {
     pub fn is_set(root: Res<RootNode>) -> bool {

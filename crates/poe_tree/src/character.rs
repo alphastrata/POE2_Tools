@@ -139,7 +139,19 @@ impl fmt::Display for CharacterClass {
 }
 
 impl CharacterClass {
-    pub fn to_string(&self) -> &str {
+    pub fn to_string(&self) -> String {
+        match self {
+            CharacterClass::Monk => "Monk",
+            CharacterClass::Sorceress => "Sorceress",
+            CharacterClass::Witch => "Witch",
+            CharacterClass::Warrior => "Warrior",
+            CharacterClass::Mercenary => "Mercenary",
+            CharacterClass::Ranger => "Ranger",
+        }
+        .to_string()
+    }
+
+    pub fn as_str(&self) -> &str {
         match self {
             CharacterClass::Monk => "Monk",
             CharacterClass::Sorceress => "Sorceress",

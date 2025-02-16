@@ -6,14 +6,23 @@ use crate::{
     resources::{ActiveCharacter, LastSaveLocation, PathRepairRequired, RootNode},
 };
 use bevy::{color::Color, prelude::*, utils::HashMap};
-use poe_tree::{character::Character, type_wrappings::NodeId};
+use poe_tree::{character::Character, consts::get_char_starts_node_map, type_wrappings::NodeId};
 
 pub struct CharacterPlugin;
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(LastSaveLocation(DEFAULT_SAVE_PATH.into()));
 
-        app.add_systems(Startup, setup_character);
+        app.add_systems(
+            Startup,
+            (
+                setup_character,
+                set_starting_node_based_on_character_class.run_if(
+                    resource_exists::<ActiveCharacter>
+                        .or(resource_exists_and_equals(RootNode(None))),
+                ),
+            ),
+        );
 
         app.add_systems(PostStartup, activate_starting_nodes);
 
@@ -73,6 +82,19 @@ fn update_active_character(
 ) {
     active_character.activated_node_ids = actuals.into_iter().map(|nm| nm.0).collect();
     log::debug!("activated node updates pushed to Character");
+}
+
+fn set_starting_node_based_on_character_class(
+    mut active_character: ResMut<ActiveCharacter>,
+    mut starting_node: ResMut<RootNode>,
+) {
+    let options = get_char_starts_node_map();
+    let class = active_character.character_class.as_str();
+    let new = *options
+        .get(class)
+        .expect("it should be impossible to request a class we do NOT have a starting node for");
+    active_character.starting_node = new;
+    starting_node.0 = Some(new);
 }
 
 fn setup_character(

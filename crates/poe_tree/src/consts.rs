@@ -27,6 +27,20 @@ pub const CHAR_START_NODES: [NodeId; 6] = [
     44683, // SIX (Monk, 2 o'clock)
 ];
 
+static CHAR_STARTS_NODES_MAP: LazyLock<AHashMap<&'static str, NodeId>> = LazyLock::new(|| {
+    let mut m = AHashMap::new();
+    m.insert("Monk", 44683);
+    m.insert("Ranger", 50459);
+    m.insert("Mercenary", 50986);
+    m.insert("Warrior", 47175);
+    m.insert("Unknown", 61525);
+    m.insert("Sorcerer/Witch", 54447);
+    m
+});
+pub fn get_char_starts_node_map() -> &'static AHashMap<&'static str, NodeId> {
+    &CHAR_STARTS_NODES_MAP
+}
+
 /// Level one nodes grouped by character class, excluding `is_just_icon: true`.
 ///
 /// | Node ID | Name                      | Class          |
