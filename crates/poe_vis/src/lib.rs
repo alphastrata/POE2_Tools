@@ -54,11 +54,12 @@ impl Plugin for PoeVis {
             MouseControlsPlugin,
             UserConfigPlugin,
             SearchToolsPlugin,
-            HotkeysPlugin,
             OverlaysAndPopupsPlugin,
             NodeInteractionPlugin,
             // ShadersPlugin
-            UIPlugin,
+            //  If making RPC Videos suggest disabling these:
+            // HotkeysPlugin,
+            // UIPlugin,
         ));
     }
 }

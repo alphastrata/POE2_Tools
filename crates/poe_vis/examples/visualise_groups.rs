@@ -49,8 +49,11 @@ fn main() {
     }
 
     let mut prev = Vec3::default();
-    groups.iter().for_each(|(gid, grp_pos)| {
+    for (gid, grp_pos) in groups.iter() {
         if let Some(nodes) = group_nodes.get(gid) {
+            if nodes.len() < 3 {
+                continue;
+            }
             // Group origin pos with fixed z
             let group_origin = Vec3 {
                 x: grp_pos.x,
@@ -65,7 +68,7 @@ fn main() {
             let (_nid, rep) = nodes[0];
             let group_radius = get_circle_radius(rep.radius, rep.position, &rep.parent);
             let col = group_colours.get(gid).unwrap();
-            common::draw_circle(&client, group_radius, *grp_pos, col, 500000);
+            common::draw_circle(&client, group_radius, *grp_pos, col, 7200);
 
             prev = group_origin;
 
@@ -98,8 +101,12 @@ fn main() {
             // Draw each node's circle
             nodes.into_iter().for_each(|(nid, _)| {
                 let pos = common::get_node_position(&client, **nid);
-                common::draw_circle(&client, 92.0, pos, col, 500000);
-                thread::sleep(Duration::from_millis(38));
+                flash_shrink_step(&client, pos, col, 130.0, 0, 900);
+                flash_shrink_step(&client, pos, col, 120.0, 0, 700);
+                flash_shrink_step(&client, pos, col, 110.0, 0, 500);
+                flash_shrink_step(&client, pos, col, 100.0, 0, 300);
+                common::draw_circle(&client, 90.0, pos, col, 2000);
+                std::thread::sleep(Duration::from_millis(70));
             });
 
             // Move back from avg to group origin
@@ -108,9 +115,22 @@ fn main() {
             }
             prev = group_origin;
 
-            thread::sleep(Duration::from_millis(300));
+            thread::sleep(Duration::from_millis(200));
         }
-    });
+    }
+}
+
+// Add this helper function:
+fn flash_shrink_step(
+    client: &Client,
+    pos: Vec3,
+    col: &str,
+    radius: f32,
+    sleep_ms: u64,
+    draw_duration: u64,
+) {
+    common::draw_circle(&client, radius, pos, col, draw_duration);
+    thread::sleep(Duration::from_millis(sleep_ms));
 }
 
 fn smooth_move_camera(

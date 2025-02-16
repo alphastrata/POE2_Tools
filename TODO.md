@@ -2,7 +2,8 @@
 - [ ] BUG: sometimes active nodes' connecting edge doesn't highlight.
 - [ ] RPC circle and rect are kinda shit, replace both with a quad and let's do a custom shader, the aliasing is fucking abhorent.
 - [ ] Remove permanent starting node—add UI button and RPC command to set it to None.
-- [ ] Arcs not lines: Use arcs (like POE2) instead of straight lines. Calculate start and finish points to form an arc (maybe use `calculate_world_position` info, and compare with PoB assets to work out arc-length and radius).
+~~- [ ] Arcs not lines: Use arcs (like POE2) instead of straight lines. Calculate start and finish points to form an arc (maybe use `calculate_world_position` info, and compare with PoB assets to work out arc-length and radius).
+~~
 - [ ] Pruned Node Handling: When a pruned path disconnects downstream nodes:
   - Turn them red for two seconds.
   - Remove them from both `PassiveTree.active` and `.highlighted_nodes`.
@@ -10,15 +11,16 @@
 - [ ] Fuzzy Search Behaviour: Pressing Enter in the fuzzy search field should close it and focus the top search result.
 - [ ] Tab Navigation: Implement tabs.
 - [ ] Icon Integration: Incorporate node icons if available.
-- [ ] Expanded Colour Palette: Expand the colour choices in `user_config.toml` (currently around eight or nine colours).
 - [ ] Use arcs with PNGs—choose the right arc once determined.
 - [ ] Develop a screenspace shader that tints the background circle in six 60° wedges, blending colours from int → dex → str (and intermediate values).
-- [ ] Handle root_node being None -> #DirectionTextPlugin? ThrowWarning?
-- [ ] Handle no starting node
+
+## [ ] Handle root node by forcing it to == the ONLY real start node from 0 based on class
+- [ ] `ClearAll` needs to handle re-root.
+
 - [ ] Replace the 'Attribute Text' with some sorta UI letting em spend
+
 - [ ] Export complex POB builds for path testing.
 - [ ] 'Keystone' node building UI, place anchors and path between.
-- [ ] `ClearAll` needs to handle re-root.
 - [ ] right-click dialouge.
 - [ ] `keystone` or `anchor` nodes may be `PermanentlyAssigned` component. using 'Pinned'
 - [ ] Default Starting Stats: Set up default starting stats for all character classes, build them from POB exports.
@@ -26,6 +28,7 @@
 
 ## Changelog (Completed Tasks)
 
+- [x] Expanded Colour Palette: Expand the colour choices in `user_config.toml` (currently around eight or nine colours).
 - [x] Virtual Path for Hovered Nodes: If `.hovered_node` isn’t connected to the starting node, display a 'virtual path' indicating the potential route (like maxroll.gg).
 - [x] Improve performance of `walk_n_steps` (it's too slow):
 - [x] Try a CSR `impl`.
