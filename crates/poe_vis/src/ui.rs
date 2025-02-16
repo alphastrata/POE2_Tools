@@ -1,5 +1,4 @@
-use std::borrow::BorrowMut;
-
+#![allow(unused_mut)]
 use crate::{
     background_services::tailwind_to_egui,
     components::{NodeActive, NodeMarker, UIGlyph},
@@ -8,7 +7,7 @@ use crate::{
         ClearAll, ClearSearchResults, DrawCircleReq, LoadCharacterReq, MoveCameraReq,
         NodeDeactivationReq, OptimiseReq, SaveCharacterAsReq, SaveCharacterReq,
     },
-    resources::{ActiveCharacter, CameraSettings, Optimiser, SearchState},
+    resources::{ActiveCharacter, CameraSettings, Optimiser, SearchState, Toggles},
     PassiveTreeWrapper,
 };
 use bevy::{prelude::*, utils::HashMap};
@@ -29,23 +28,19 @@ pub struct UIPlugin;
 #[derive(Resource, Default)]
 struct UICapturesInput(pub bool);
 
-#[derive(Resource, Default)]
-struct Toggles {
-    selections: HashMap<String, bool>,
-    delta: usize,
-}
-
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
             // space
             .init_resource::<UICapturesInput>()
             .init_resource::<ActiveNodeCounter>() // store node count
-            .init_resource::<Toggles>()
             // space
             .add_plugins(EguiPlugin)
             .add_systems(Update, update_active_nodecount) // track how many are active
-            .add_systems(Update, egui_ui_system); // draw EGUI
+            .add_systems(Update, egui_ui_system)
+
+         // draw EGUI
+        ;
     }
 }
 
@@ -60,28 +55,23 @@ fn update_active_nodecount(
     counter.0 = active_nodes.iter().count();
 }
 fn egui_ui_system(
-    mut contexts: EguiContexts,
-
-    camera_query: Query<&mut OrthographicProjection, With<Camera2d>>,
-    move_camera_tx: EventWriter<MoveCameraReq>,
-
     active_nodes: Query<&NodeMarker, With<NodeActive>>,
-    mut clear_all_tx: EventWriter<ClearAll>,
-    clear_search_results_tx: EventWriter<ClearSearchResults>,
-
-    mut save_tx: EventWriter<SaveCharacterReq>,
-    mut save_as_tx: EventWriter<SaveCharacterAsReq>,
-    mut load_tx: EventWriter<LoadCharacterReq>,
-    draw_circle: EventWriter<DrawCircleReq>,
-
-    tree: Res<PassiveTreeWrapper>,
+    camera_query: Query<&mut OrthographicProjection, With<Camera2d>>,
     character: ResMut<ActiveCharacter>,
+    mut load_tx: EventWriter<LoadCharacterReq>,
+    mut clear_all_tx: EventWriter<ClearAll>,
+    mut clear_search_results_tx: EventWriter<ClearSearchResults>,
+    mut clipboard: ResMut<EguiClipboard>,
+    mut contexts: EguiContexts,
+    mut draw_circle: EventWriter<DrawCircleReq>,
+    mut move_camera_tx: EventWriter<MoveCameraReq>,
+    mut optimiser_req: EventWriter<OptimiseReq>,
+    mut togglers: ResMut<Toggles>,
+    optimiser: Res<Optimiser>,
+    mut save_as_tx: EventWriter<SaveCharacterAsReq>,
+    mut save_tx: EventWriter<SaveCharacterReq>,
     settings: Res<CameraSettings>,
-    clipboard: ResMut<EguiClipboard>,
-
-    toggles: Local<Toggles>,
-    optimiser_req: EventWriter<OptimiseReq>,
-    optimiser: ResMut<Optimiser>,
+    tree: Res<PassiveTreeWrapper>,
 ) {
     topbar_menu_system(
         &mut contexts,
@@ -102,11 +92,10 @@ fn egui_ui_system(
         character,
         settings,
         draw_circle,
-        // searchbox_state,
         clipboard,
-        optimiser,
+        &optimiser,
         optimiser_req,
-        toggles,
+        togglers,
     );
 }
 
@@ -122,9 +111,9 @@ fn rhs_menu(
     settings: Res<CameraSettings>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     mut clipboard: ResMut<EguiClipboard>,
-    optimiser: ResMut<Optimiser>,
-    mut optimiser_req: EventWriter<OptimiseReq>,
-    toggles: Local<Toggles>,
+    optimiser: &Optimiser,
+    optimiser_req: EventWriter<OptimiseReq>,
+    mut togglers: ResMut<Toggles>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
 
@@ -402,7 +391,7 @@ fn draw_optimiser_ui(
     mut optimiser_req: EventWriter<OptimiseReq>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     projection: &OrthographicProjection,
-    mut togglers: Local<Toggles>,
+    mut togglers: ResMut<Toggles>,
 ) {
     ui.heading("Optimiser");
     ui.separator();

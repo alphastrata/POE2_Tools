@@ -10,28 +10,37 @@ use poe_tree::{character::Character, edges::Edge, type_wrappings::*};
 
 use crate::{components::EdgeMarker, consts::SEARCH_THRESHOLD};
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Resource, Default)]
+pub struct Toggles {
+    pub selections: HashMap<String, bool>,
+    pub delta: usize,
+}
+
+#[derive(Resource, Debug, PartialEq)]
 pub enum JobStatus {
-    #[default]
     Available,
-    Processing,
-    Finished,
-    Stalled,
-    Errored,
+    Busy,
 }
 impl Optimiser {
-    pub fn available(&self) -> bool {
+    pub fn is_available(&self) -> bool {
         match self.status {
             JobStatus::Available => true,
             _ => false,
         }
     }
+
+    pub fn set_busy(&mut self) {
+        self.status == JobStatus::Busy;
+    }
+
+    pub fn set_available(&mut self) {
+        self.status == JobStatus::Available;
+    }
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct Optimiser {
     pub results: Vec<Vec<NodeId>>,
-
     pub status: JobStatus,
 }
 

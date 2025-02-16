@@ -90,8 +90,12 @@ impl Plugin for BGServicesPlugin {
             ;
 
         app //
-            .insert_resource(PathRepairRequired(false))
-            .insert_resource(Optimiser::default());
+            .init_resource::<Toggles>()
+            .insert_resource(Optimiser {
+                results: Vec::new(),
+                status: JobStatus::Available,
+            })
+            .insert_resource(PathRepairRequired(false));
 
         app.add_systems(
             PreUpdate,
@@ -722,7 +726,7 @@ fn clear_virtual_paths(
     edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
     nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
 ) {
-    nodes.iter().for_each(|(ent, em)| {
+    nodes.iter().for_each(|(ent, _em)| {
         let mat = game_materials.node_base.clone_weak();
         commands.entity(ent).remove::<VirtualPathMember>();
 
@@ -751,7 +755,6 @@ fn process_scale_requests(
 }
 
 // NOTE: atomics because I'm too lazy to think of a runtime condition etc for this ...
-static mut WORKING: AtomicBool = AtomicBool::new(false);
 fn populate_optimiser(
     mut optimiser: ResMut<Optimiser>,
     tree: Res<PassiveTreeWrapper>,
@@ -760,50 +763,14 @@ fn populate_optimiser(
 ) {
     log::trace!("Optimise requested");
     req.read().for_each(|req| {
-        unsafe {
-            if WORKING.load(Ordering::Acquire) {
-                log::warn!("Already processing a job!");
-                return; // Another thread is working
-            }
-            WORKING.store(true, Ordering::Release);
+        if optimiser.is_available() {
+            optimiser.set_busy();
+            optimiser.results = tree
+                .branches(&active_character.activated_node_ids)
+                .iter()
+                .flat_map(|opt| tree.take_while(*opt, &req.selector, req.delta))
+                .collect();
         }
-        optimiser.results = tree
-            .branches(&active_character.activated_node_ids)
-            .iter()
-            .flat_map(|opt| tree.take_while(*opt, &req.selector, req.delta))
-            .collect();
-
-        unsafe {
-            log::info!("Optimiser finished processing");
-            WORKING.store(false, Ordering::Relaxed);
-        }
+        optimiser.set_available();
     })
 }
-
-//TODO: something like this:
-// pub struct WorkTracker {
-//     working: AtomicBool,
-// }
-
-// impl WorkTracker {
-//     pub const fn new() -> Self {
-//         Self {
-//             working: AtomicBool::new(false),
-//         }
-//     }
-
-//     /// Attempts to start work. Returns `true` if successful, `false` if already working.
-//     pub fn start(&self) -> bool {
-//         !self.working.swap(true, Ordering::Acquire)
-//     }
-
-//     /// Marks work as finished.
-//     pub fn finish(&self) {
-//         self.working.store(false, Ordering::Release);
-//     }
-
-//     /// Checks if work is in progress.
-//     pub fn is_working(&self) -> bool {
-//         self.working.load(Ordering::Acquire)
-//     }
-// }
