@@ -13,7 +13,7 @@ use crate::{
 };
 use bevy::{prelude::*, utils::HashMap};
 use bevy_egui::{
-    egui::{self, Align, Context, SidePanel},
+    egui::{self, Align, Context, SidePanel, TextBuffer},
     EguiClipboard, EguiContext, EguiContexts, EguiPlugin,
 };
 
@@ -510,53 +510,47 @@ fn draw_optimiser_ui(
     let optimise_disabled = toggled_stat.is_none() || !optimiser.available();
     let button = ui.add_enabled(!optimise_disabled, egui::Button::new("Optimise"));
 
-    if button.clicked() {
-        if let Some(ref stat_name) = toggled_stat.clone() {
-            let selector = move |s: &Stat| s.name() == stat_name.as_str();
-
+    if button.clicked() && !optimise_disabled {
+        if let Some(stat_name) = toggled_stat.clone() {
             optimiser_req.send(OptimiseReq {
-                selector: Box::new(selector), // Ensure it's boxed for dynamic dispatch
+                selector: Box::new(move |s: &Stat| s.name().to_owned() == stat_name), // Now using owned String
                 delta: togglers.delta,
             });
         }
-    }
+    } else {
+        // Display paths if available
+        optimiser
+            .results
+            .iter()
+            .enumerate()
+            .for_each(|(idx, path)| {
+                let Some(stat) = toggled_stat.as_ref() else {
+                    log::error!("Unable to pull path for stat? something is horribly wrong!");
+                    return;
+                };
 
-    ui.separator();
-    ui.label("Optimiser controls go here...");
+                let button = ui.button(format!("Path #{} for {}", idx + 1, stat));
 
-    // Display paths if available
-    optimiser
-        .results
-        .iter()
-        .enumerate()
-        .for_each(|(idx, path)| {
-            let Some(stat) = toggled_stat.clone() else {
-                log::error!("Unable to pull path for stat? something is horribly wrong!");
-                return;
-            };
-            let button = ui.button(format!("Path #{} for {}", idx + 1, stat));
-
-            // Hover preview
-            if button.hovered() {
-                path.iter()
-                    .filter_map(|id| tree.nodes.get(id))
-                    .for_each(|node| {
-                        draw_circle.send(DrawCircleReq {
-                            radius: 20.0,
-                            origin: Vec3::new(node.wx, -node.wy, 0.0),
-                            mat: "sky-400".into(),
-                            glyph: UIGlyph::from_millis(25),
+                // Hover preview
+                if button.hovered() {
+                    path.iter()
+                        .filter_map(|id| tree.nodes.get(id))
+                        .for_each(|node| {
+                            draw_circle.send(DrawCircleReq {
+                                radius: 20.0,
+                                origin: Vec3::new(node.wx, -node.wy, 0.0),
+                                mat: "sky-400".into(),
+                                glyph: UIGlyph::from_millis(25),
+                            });
                         });
-                    });
-            }
+                }
 
-            // Click handling
-            if button.clicked() {
-                character.activated_node_ids.clear();
-                character.activated_node_ids.extend(path.iter().copied());
-            }
-        });
-
-    ui.separator();
-    ui.label("Optimiser controls go here...");
+                // Click handling
+                if button.clicked() {
+                    character.activated_node_ids.clear();
+                    character.activated_node_ids.extend(path.iter().copied());
+                }
+            });
+    }
+    //TODO: more optimiser controls...
 }
