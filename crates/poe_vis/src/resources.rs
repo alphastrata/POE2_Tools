@@ -13,6 +13,21 @@ use crate::{
     consts::SEARCH_THRESHOLD,
 };
 
+#[derive(Resource, PartialEq, Eq)]
+pub struct ToggleUi(pub bool);
+
+impl Default for ToggleUi {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+impl ToggleUi {
+    pub fn flip(&mut self) {
+        self.0 = !self.0;
+    }
+}
+
 #[derive(Resource, Default)]
 pub struct Toggles {
     pub selections: HashMap<String, bool>,

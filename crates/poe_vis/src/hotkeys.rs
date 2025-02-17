@@ -4,7 +4,7 @@ use bevy_egui::EguiContexts;
 use crate::{
     components::SearchMarker,
     events::{SaveCharacterReq, ShowSearch},
-    resources::{CameraSettings, SearchState, UserConfig},
+    resources::{CameraSettings, SearchState, ToggleUi, UserConfig},
 };
 
 pub struct HotkeysPlugin;
@@ -28,6 +28,7 @@ fn handle_input(
     keys: Res<ButtonInput<KeyCode>>,
     searchstate: Res<SearchState>,
     mut settings: ResMut<CameraSettings>,
+    mut toggle_ui: ResMut<ToggleUi>,
     mut contexts: EguiContexts,
 ) {
     // Always allow open/close of searchbox and the arrows:
@@ -35,6 +36,11 @@ fn handle_input(
         searchbox_toggle.send(ShowSearch);
         log::trace!("Searchbox toggle sent");
     }
+
+    if check_action(&config, "toggle_ui", &keys) {
+        toggle_ui.flip();
+    }
+
     // don't always allow these to be triggered:
     let ctx = contexts.ctx_mut();
     match ctx.wants_pointer_input() || ctx.wants_keyboard_input() {

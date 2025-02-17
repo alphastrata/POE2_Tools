@@ -161,6 +161,17 @@ impl CharacterClass {
             CharacterClass::Ranger => "Ranger",
         }
     }
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "Monk" => CharacterClass::Monk,
+            "Sorceress" => CharacterClass::Sorceress,
+            "Witch" => CharacterClass::Witch,
+            "Warrior" => CharacterClass::Warrior,
+            "Mercenary" => CharacterClass::Mercenary,
+            "Ranger" => CharacterClass::Ranger,
+            _ => CharacterClass::Monk,
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]

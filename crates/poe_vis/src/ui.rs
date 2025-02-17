@@ -8,7 +8,8 @@ use crate::{
         NodeDeactivationReq, OptimiseReq, SaveCharacterAsReq, SaveCharacterReq,
     },
     resources::{
-        ActiveCharacter, CameraSettings, Optimiser, PathRepairRequired, SearchState, Toggles,
+        ActiveCharacter, CameraSettings, Optimiser, PathRepairRequired, SearchState, ToggleUi,
+        Toggles,
     },
     PassiveTreeWrapper,
 };
@@ -19,6 +20,8 @@ use bevy_egui::{
 };
 
 use poe_tree::{
+    character::CharacterClass,
+    consts::get_char_starts_node_map,
     nodes::PoeNode,
     stats::{arithmetic::PlusPercentage, Stat},
     type_wrappings::NodeId,
@@ -36,10 +39,11 @@ impl Plugin for UIPlugin {
             // space
             .init_resource::<UICapturesInput>()
             .init_resource::<ActiveNodeCounter>() // store node count
+            .init_resource::<ToggleUi>()
             // space
             .add_plugins(EguiPlugin)
             .add_systems(Update, update_active_nodecount) // track how many are active
-            .add_systems(Update, egui_ui_system)
+            .add_systems(Update, egui_ui_system.run_if(resource_exists_and_equals(ToggleUi(true))))
 
          // draw EGUI
         ;
@@ -129,14 +133,14 @@ fn rhs_menu(
     mut clear_search_results_tx: EventWriter<ClearSearchResults>,
     mut move_camera_tx: EventWriter<MoveCameraReq>,
     tree: Res<PassiveTreeWrapper>,
-    character: ResMut<ActiveCharacter>,
+    mut character: ResMut<ActiveCharacter>,
     settings: Res<CameraSettings>,
     mut draw_circle: EventWriter<DrawCircleReq>,
     mut clipboard: ResMut<EguiClipboard>,
     optimiser: Res<Optimiser>,
     optimiser_req: EventWriter<OptimiseReq>,
     mut togglers: ResMut<Toggles>,
-    path_repair: ResMut<PathRepairRequired>,
+    mut path_repair: ResMut<PathRepairRequired>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
 
@@ -147,7 +151,26 @@ fn rhs_menu(
         ui.heading("Active Nodes");
         ui.separator();
 
-        ui.heading(format!("CLASS: {}", character.character_class));
+        egui::ComboBox::from_label("CLASS:")
+            .selected_text(character.character_class.as_str())
+            .show_ui(ui, |ui| {
+                for class_str in get_char_starts_node_map().keys() {
+                    let class_value = CharacterClass::from_str(class_str);
+                    if ui
+                        .selectable_value(
+                            &mut character.character_class,
+                            class_value,
+                            class_value.as_str(),
+                        )
+                        .clicked()
+                    {
+                        log::debug!("Class changed we need to nuke everything!");
+                        path_repair.request_path_repair();
+                        break;
+                    }
+                }
+            });
+        ui.separator();
         ui.separator();
 
         ui.collapsing("Node details...", |ui| {
@@ -252,7 +275,7 @@ fn rhs_menu(
         });
         ui.separator();
 
-        ui.heading(format!("{} Points Spent", active_nodes.iter().len()));
+        ui.heading(format!("{} Points Spent", active_nodes.iter().len() - 1));
         ui.separator();
 
         if ui.button("Copy path to clipboard").clicked() {
@@ -486,7 +509,7 @@ fn draw_optimiser_ui(
 
                 // Hover preview
                 if response.hovered() {
-                    let radius = 20.0 * projection.scale;
+                    let radius = 82.0 * projection.scale;
                     aggregator
                         .iter()
                         .filter(|(_, s)| s.name() == stat_name)

@@ -58,8 +58,8 @@ impl Plugin for PoeVis {
             NodeInteractionPlugin,
             // ShadersPlugin
             //  If making RPC Videos suggest disabling these:
-            // HotkeysPlugin,
-            // UIPlugin,
+            HotkeysPlugin,
+            UIPlugin,
         ));
     }
 }

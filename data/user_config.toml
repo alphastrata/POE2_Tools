@@ -33,6 +33,7 @@ search_for_node_by_name = ["/"]
 exit = ["esc"]
 load_character_nodes = ["l"]
 save_active_character = ["s"]
+toggle_ui = ["u"]
 
 
 #TODO: base_node_size
