@@ -13,23 +13,20 @@ impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(LastSaveLocation(DEFAULT_SAVE_PATH.into()));
 
-        app.add_systems(
-            Startup,
-            (
-                setup_character,
-                set_starting_node_based_on_character_class.run_if(
-                    resource_exists::<ActiveCharacter>
-                        .or(resource_exists_and_equals(RootNode(None))),
-                ),
-            ),
-        );
+        app.add_systems(Startup, setup_character);
 
         app.add_systems(PostStartup, activate_starting_nodes);
 
         app.add_systems(
             Update,
-            activate_starting_nodes
-                .run_if(on_event::<LoadCharacterReq>.or(ActiveCharacter::has_been_updated)),
+            (
+                set_starting_node_based_on_character_class.run_if(
+                    resource_exists::<ActiveCharacter>
+                        .or(resource_exists_and_equals(RootNode(None))),
+                ),
+                activate_starting_nodes
+                    .run_if(on_event::<LoadCharacterReq>.or(ActiveCharacter::has_been_updated)),
+            ),
         );
 
         // app.add_systems(PostUpdate, update_active_character.after(clear));
