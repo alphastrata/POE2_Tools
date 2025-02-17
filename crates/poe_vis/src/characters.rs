@@ -32,7 +32,7 @@ impl Plugin for CharacterPlugin {
                 .run_if(on_event::<LoadCharacterReq>.or(ActiveCharacter::has_been_updated)),
         );
 
-        app.add_systems(PostUpdate, update_active_character.after(clear));
+        // app.add_systems(PostUpdate, update_active_character.after(clear));
 
         log::debug!("CharacterPlugin plugin enabled");
     }

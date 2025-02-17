@@ -196,12 +196,11 @@ pub fn clear(
     nodes: Query<(Entity, &NodeMarker)>,
     edges: Query<(Entity, &EdgeMarker)>,
 
-    // rx: EventReader<ClearAll>, // run_condition
     mut commands: Commands,
-    game_materials: Res<GameMaterials>,
-    mut colour_events: EventWriter<NodeColourReq>,
     mut active_character: ResMut<ActiveCharacter>,
-    mut path_repair: ResMut<PathRepairRequired>,
+
+    mut node_deactivation_tx: EventWriter<NodeDeactivationReq>,
+    mut edge_deactivation_tx: EventWriter<EdgeDeactivationReq>,
 ) {
     log::debug!("Clear command received.");
     active_character.activated_node_ids.clear();
@@ -211,26 +210,22 @@ pub fn clear(
         "active character's activated node count should be 0"
     );
 
-    let mat = &game_materials.node_base;
     nodes
         .iter()
         .filter(|(_ent, nid)| nid.0 != active_character.starting_node)
-        .for_each(|(ent, _nid)| {
-            commands.entity(ent).remove::<NodeActive>();
+        .for_each(|(ent, nid)| {
             commands.entity(ent).remove::<ManuallyHighlighted>();
             commands.entity(ent).remove::<VirtualPathMember>();
-            commands.entity(ent).insert(NodeInactive);
 
-            colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+            node_deactivation_tx.send(NodeDeactivationReq(**nid));
         });
 
-    edges.iter().for_each(|(ent, _nid)| {
-        commands.entity(ent).remove::<EdgeActive>();
+    edges.iter().for_each(|(ent, eid)| {
         commands.entity(ent).remove::<ManuallyHighlighted>();
         commands.entity(ent).remove::<VirtualPathMember>();
-        commands.entity(ent).insert(NodeInactive);
 
-        colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+        let (start, end) = eid.as_tuple();
+        edge_deactivation_tx.send(EdgeDeactivationReq(start, end));
     });
 
     assert_eq!(
@@ -240,7 +235,6 @@ pub fn clear(
     );
 
     // JIC we always require path repair after a Clear
-    path_repair.request_path_repair();
     log::debug!("ClearAll executed successfully, NOTHING should be highlighet/coloured etc.");
 }
 

@@ -154,7 +154,10 @@ fn rhs_menu(
         egui::ComboBox::from_label("CLASS:")
             .selected_text(character.character_class.as_str())
             .show_ui(ui, |ui| {
-                for class_str in get_char_starts_node_map().keys() {
+                // We want the dropdown to always be in the same order.
+                let mut keys: Vec<&&str> = get_char_starts_node_map().keys().into_iter().collect();
+                keys.sort();
+                for class_str in keys.iter() {
                     let class_value = CharacterClass::from_str(class_str);
                     if ui
                         .selectable_value(
@@ -164,6 +167,12 @@ fn rhs_menu(
                         )
                         .clicked()
                     {
+                        clear_all_tx.send(ClearAll);
+                        character.activated_node_ids.clear();
+                        character.starting_node = *get_char_starts_node_map()
+                            .get(*class_str)
+                            .expect("Unreachable this map is static.");
+
                         log::debug!("Class changed we need to nuke everything!");
                         path_repair.request_path_repair();
                         break;
@@ -275,7 +284,10 @@ fn rhs_menu(
         });
         ui.separator();
 
-        ui.heading(format!("{} Points Spent", active_nodes.iter().len() - 1));
+        ui.heading(format!(
+            "{} Points Spent",
+            (active_nodes.iter().len() - 1).min(123) // overflow.
+        ));
         ui.separator();
 
         if ui.button("Copy path to clipboard").clicked() {
@@ -509,15 +521,14 @@ fn draw_optimiser_ui(
 
                 // Hover preview
                 if response.hovered() {
-                    let radius = 82.0 * projection.scale;
                     aggregator
                         .iter()
                         .filter(|(_, s)| s.name() == stat_name)
                         .filter_map(|(id, _)| tree.nodes.get(id))
                         .for_each(|node| {
                             draw_circle.send(DrawCircleReq {
-                                radius,
-                                origin: Vec3::new(node.wx, -node.wy, 0.0),
+                                radius: 90.0,
+                                origin: Vec3::new(node.wx, -node.wy, 10.0),
                                 mat: color_str.into(),
                                 glyph: UIGlyph::from_millis(500),
                             });
@@ -566,18 +577,23 @@ fn draw_optimiser_ui(
                     return;
                 };
 
+                //TODO: we need to show the +% that we've beefed the main path by.
                 let button = ui.button(format!("Path #{} for {}", idx + 1, stat));
+
+                //TODO: we need to show with red circles the path nodes they'd have to UNSPEND!
 
                 // Hover preview
                 if button.hovered() {
                     path.iter()
+                        // Don't show them the nodes they already have.
+                        .filter(|nid| !character.activated_node_ids.contains(nid))
                         .filter_map(|id| tree.nodes.get(id))
                         .for_each(|node| {
                             draw_circle.send(DrawCircleReq {
                                 radius: 95.0,
                                 // have to go above the nodes to see the circles, and slightly larger than them.
                                 origin: Vec3::new(node.wx, -node.wy, 10.0),
-                                mat: "teal-800".into(),
+                                mat: "rose-700".into(),
                                 glyph: UIGlyph::from_millis(125),
                             });
                         });
