@@ -72,6 +72,7 @@ impl Plugin for BGServicesPlugin {
             .add_event::<EdgeColourReq>()
             .add_event::<EdgeDeactivationReq>()
             .add_event::<LoadCharacterReq>()
+            .add_event::<SyncCharacterReq>()
             .add_event::<ManualEdgeHighlightWithColour>()
             .add_event::<ManualNodeHighlightWithColour>()
             .add_event::<MoveCameraReq>()
@@ -527,6 +528,7 @@ fn path_repair(
     query: Query<&NodeMarker, With<NodeActive>>,
     root_node: Res<RootNode>,
     mut activator: EventWriter<NodeActivationReq>,
+    mut sync_char: EventWriter<SyncCharacterReq>,
     mut path_needs_repair: ResMut<PathRepairRequired>,
 ) {
     // the most likely reason for path repair is a mouse activity breaking a path.
@@ -534,8 +536,9 @@ fn path_repair(
         unreachable!("Unreachable because we pre-set this value in a startup system.");
     };
 
-    let root_node = root_node.0.unwrap_or_default(); // There is no NodeId == 0.
-    let mut active_nodes = query
+    let root_node = root_node.0.expect("Protected by run conditions");
+
+    let active_nodes = query
         .into_iter()
         // A user selecting a node wayyyyy off will have marked it active.
         // So we strip out there most recent cursor selection and the root.
@@ -543,15 +546,15 @@ fn path_repair(
         .map(|n| **n)
         .collect::<Vec<NodeId>>();
 
-    active_nodes.push(root_node);
-
     log::debug!(
         "Attempting path repair from {} to any of {:#?}",
         &most_recent,
         &active_nodes
     );
 
-    let shortest_path = tree.bfs_any(*most_recent, &active_nodes);
+    let shortest_path = tree
+        .shortest_to_target_from_any_of(*most_recent, &active_nodes)
+        .unwrap_or_default();
 
     match shortest_path.is_empty() {
         false => {
@@ -566,10 +569,15 @@ fn path_repair(
                 //TODO: Throw warning text event
                 return;
             };
-            shortest_path.into_iter().for_each(|nid| {
-                activator.send(NodeActivationReq(nid));
+            shortest_path.iter().for_each(|nid| {
+                activator.send(NodeActivationReq(*nid));
             });
             path_needs_repair.set_unrequired();
+            sync_char.send(SyncCharacterReq());
+            log::debug!(
+                "{} Activation reqs sent, char sync requested",
+                shortest_path.len()
+            );
         }
         true => {
             log::warn!("Unable to find a path from the {} to the any of the {} nodes in active_nodes, so instead we're trying to the root_node",
@@ -579,7 +587,7 @@ fn path_repair(
             let shortest_path = tree.bfs_any(root_node, &active_nodes);
             assert!(
                 !shortest_path.is_empty(),
-                "It should be impossible to return bfs without being able to reach the root_node"
+                "It should be impossible to return bfs_any without being able to reach the root_node"
             );
 
             shortest_path.into_iter().for_each(|nid| {

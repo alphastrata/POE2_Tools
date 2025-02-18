@@ -28,10 +28,10 @@ impl Plugin for MouseControlsPlugin {
             //
             ;
 
-        app.add_systems(
-            Update,
-            insert_root_to_history.run_if(RootNode::is_set.or(resource_changed::<ActiveCharacter>)),
-        );
+        // app.add_systems(
+        //     Update,
+        //     insert_root_to_history.run_if(RootNode::is_set.or(resource_changed::<ActiveCharacter>)),
+        // );
 
         app.add_systems(
             Update,

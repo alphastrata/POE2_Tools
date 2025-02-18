@@ -51,6 +51,9 @@ pub struct NodeDeactivationReq(pub NodeId);
 pub struct LoadCharacterReq(pub PathBuf);
 
 #[derive(Event)]
+pub struct SyncCharacterReq();
+
+#[derive(Event)]
 pub struct SaveCharacterReq;
 
 #[derive(Event, Debug, Deref, DerefMut)]

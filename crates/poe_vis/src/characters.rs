@@ -2,7 +2,7 @@ use crate::{
     background_services::{active_nodes_changed, clear},
     components::{NodeActive, NodeInactive, NodeMarker},
     consts::DEFAULT_SAVE_PATH,
-    events::{ClearAll, LoadCharacterReq, NodeActivationReq, VirtualPathReq},
+    events::{ClearAll, LoadCharacterReq, NodeActivationReq, SyncCharacterReq, VirtualPathReq},
     resources::{ActiveCharacter, LastSaveLocation, PathRepairRequired, RootNode},
 };
 use bevy::{color::Color, prelude::*, utils::HashMap};
@@ -24,8 +24,10 @@ impl Plugin for CharacterPlugin {
                     resource_exists::<ActiveCharacter>
                         .or(resource_exists_and_equals(RootNode(None))),
                 ),
-                update_active_character
-                    .run_if(on_event::<LoadCharacterReq>.or(ActiveCharacter::has_been_updated)),
+                update_active_character.run_if(
+                    on_event::<SyncCharacterReq>
+                        .or(on_event::<LoadCharacterReq>.or(ActiveCharacter::has_been_updated)),
+                ),
             ),
         );
 
@@ -69,6 +71,7 @@ fn update_active_from_character(
 }
 
 fn update_active_character(
+    // sync: EventReader<SyncCharacterReq>,
     mut active_character: ResMut<ActiveCharacter>,
     actuals: Query<&NodeMarker, With<NodeActive>>,
 ) {

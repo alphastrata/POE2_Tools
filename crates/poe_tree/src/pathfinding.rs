@@ -156,6 +156,7 @@ impl PassiveTree {
     ) -> Option<Vec<NodeId>> {
         candidates
             .iter()
+            .filter(|c| **c != target)
             .filter_map(|&c| {
                 // Try both directions since BFS is directional
                 let path = {
@@ -240,7 +241,7 @@ impl PassiveTree {
 
         while let Some((current, depth)) = queue.pop_front() {
             // If we've found a target, reconstruct path
-            if target_set.contains(&current) {
+            if target_set.contains(&current) && target_set.len() >= 2 {
                 let mut path = vec![current];
                 let mut step = current;
                 while let Some(prev) = predecessors.get(&step) {
