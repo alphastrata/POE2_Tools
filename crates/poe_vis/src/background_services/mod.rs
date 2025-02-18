@@ -100,7 +100,7 @@ impl Plugin for BGServicesPlugin {
         app.add_systems(
             PreUpdate,
             ((
-                sync_active_with_character.run_if(active_nodes_changed),
+                // sync_active_with_character.run_if(active_nodes_changed),
                 /* Only scan for edges when we KNOW the path is valid */
                 scan_edges_for_active_updates.run_if(resource_equals(PathRepairRequired(false))),
                 //deactivations:
@@ -137,8 +137,12 @@ impl Plugin for BGServicesPlugin {
                 process_edge_colour_changes.run_if(on_event::<EdgeColourReq>),
                 /* Runs a BFS so, try not to spam it.*/
                 path_repair
+                    .run_if(resource_exists::<RootNode>)
                     .run_if(sufficient_active_nodes)
-                    .run_if(resource_equals(PathRepairRequired(true))),
+                    .run_if(
+                        resource_equals(PathRepairRequired(true))
+                            .or(resource_changed::<ActiveCharacter>),
+                    ),
             ),
         );
 
@@ -333,15 +337,19 @@ fn process_node_activations(
     let events: Vec<NodeId> = activation_events.read().map(|nar| nar.0).collect();
 
     let mat = &game_materials.node_activated;
-    query.iter().for_each(|(ent, nid)| {
-        if events.contains(nid) || nid.0 == root_node.0.unwrap_or_default() {
-            commands.entity(ent).remove::<NodeInactive>();
-            log::trace!("Activating Node {}", **nid);
-            commands.entity(ent).insert(NodeActive);
-            colour_events.send(NodeColourReq(ent, mat.clone_weak()));
-            log::trace!("Colour change requested for  Node {}", **nid);
-        }
-    })
+    let activations = query
+        .iter()
+        .map(|(ent, nid)| {
+            if events.contains(nid) || nid.0 == root_node.0.unwrap_or_default() {
+                commands.entity(ent).remove::<NodeInactive>();
+                log::trace!("Activating Node {}", **nid);
+                commands.entity(ent).insert(NodeActive);
+                colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+                log::trace!("Colour change requested for  Node {}", **nid);
+            }
+        })
+        .count();
+    log::debug!("{activations} activation events processed.");
 }
 
 fn process_edge_activations(
@@ -527,13 +535,15 @@ fn path_repair(
     };
 
     let root_node = root_node.0.unwrap_or_default(); // There is no NodeId == 0.
-    let active_nodes = query
+    let mut active_nodes = query
         .into_iter()
         // A user selecting a node wayyyyy off will have marked it active.
         // So we strip out there most recent cursor selection and the root.
         .filter(|nid| nid.0 != *most_recent)
         .map(|n| **n)
         .collect::<Vec<NodeId>>();
+
+    active_nodes.push(root_node);
 
     log::debug!(
         "Attempting path repair from {} to any of {:#?}",

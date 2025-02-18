@@ -284,10 +284,8 @@ fn rhs_menu(
         });
         ui.separator();
 
-        ui.heading(format!(
-            "{} Points Spent",
-            (active_nodes.iter().len() - 1).min(123) // overflow.
-        ));
+        let points_spent = active_nodes.iter().len() + 1;
+        ui.heading(format!("{} Points Spent", points_spent));
         ui.separator();
 
         if ui.button("Copy path to clipboard").clicked() {

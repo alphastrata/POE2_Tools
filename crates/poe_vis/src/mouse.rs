@@ -28,7 +28,10 @@ impl Plugin for MouseControlsPlugin {
             //
             ;
 
-        app.add_systems(PostStartup, insert_root_to_history.run_if(RootNode::is_set));
+        app.add_systems(
+            Update,
+            insert_root_to_history.run_if(RootNode::is_set.or(resource_changed::<ActiveCharacter>)),
+        );
 
         app.add_systems(
             Update,
@@ -40,7 +43,9 @@ fn insert_root_to_history(
     root: Res<crate::resources::RootNode>,
     mut last_ten: ResMut<MouseSelecetedNodeHistory>,
 ) {
+    last_ten.clear();
     last_ten.push_back(root.0.expect("Protected by run conditions."));
+    log::debug!("Root inserted into mouse's click history");
 }
 
 pub fn hover_ticker(time: Res<Time>, mut query_hovz: Query<(Entity, &mut Hovered)>) {

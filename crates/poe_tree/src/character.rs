@@ -1,4 +1,6 @@
-use crate::{pob_utils, stats::Stat, type_wrappings::NodeId, PassiveTree};
+use crate::{
+    consts::get_char_starts_node_map, pob_utils, stats::Stat, type_wrappings::NodeId, PassiveTree,
+};
 use ahash::{AHashMap, AHashSet};
 use chrono::{DateTime, Utc};
 use core::fmt;
@@ -17,6 +19,14 @@ pub struct Character {
 }
 
 impl Character {
+    pub fn root_node(&self) -> NodeId {
+        *get_char_starts_node_map()
+            .get(self.character_class.as_str())
+            .expect(&format!(
+                "Unsupported class, no root node set for {:#?}",
+                self
+            ))
+    }
     fn load_pob_empty(file: &str) -> Self {
         let xml = std::fs::read_to_string(file).unwrap();
         let pob_char: pob_utils::POBCharacter = quick_xml::de::from_str(&xml).unwrap();
