@@ -1,19 +1,18 @@
-// We're working on an optimiser that is currently populated as you see below:
-// this path: [47175, 3936, 46325, 39581, 6839, 5710]
-// to this: [47175, 3936, 43164, 5710, 33556, 55473, 46325]
-// if 4 swaps allowed.
-// for 'melee damage'
-
-use std::collections::VecDeque;
-
+/// Optimisers go here.
 use ahash::AHashMap;
+use std::collections::VecDeque;
 
 use crate::{stats::Stat, type_wrappings::NodeId, PassiveTree};
 
+// TODO: Eventually we'll have different types of optimiser, probably suited to different things...
+/// Maybe we make each one its own thing...
 pub struct Optimiser {
     pub results: Vec<Vec<NodeId>>,
 }
+
+//NOTE: hard to call this an optimiser per se, it just brute forces a 'better' path...
 impl PassiveTree {
+    ///
     pub fn collect_stats<F>(
         tree: &PassiveTree,
         path: &[NodeId],
@@ -36,6 +35,7 @@ impl PassiveTree {
         map
     }
 
+    /// Takes while the predicate's criteria is strictly better than what is calculated from the baseline's Stat(s)
     pub fn take_while_better<F>(
         &self,
         start: NodeId,
@@ -77,7 +77,7 @@ impl PassiveTree {
                 continue;
             }
             let last = *path.last().unwrap();
-            for edge in &self.edges {
+            self.edges.iter().for_each(|edge| {
                 let (a, b) = (edge.start, edge.end);
                 if a == last && !path.contains(&b) {
                     let mut new_path = path.clone();
@@ -88,7 +88,7 @@ impl PassiveTree {
                     new_path.push(a);
                     queue.push_back(new_path);
                 }
-            }
+            });
         }
 
         // Sort results by total stat sum (descending)
@@ -100,3 +100,9 @@ impl PassiveTree {
         valid
     }
 }
+
+// TODO: an optimiser that only provides 'swaps'
+
+// TODO: an optimiser that can take in 'pins' i.e MUST HAVE nodes' IDs then make paths adhering to those constraints
+
+// TODO: an optimiser that can ensure a minimum +% worth of a Node's possible Stats in <= x moves.

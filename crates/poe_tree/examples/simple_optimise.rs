@@ -5,13 +5,13 @@ pub struct Optimiser {
 }
 
 use ahash::{AHashMap, HashSet};
-use poe_tree::{stats::Stat, type_wrappings::NodeId, PassiveTree};
+use poe_tree::{stats::Stat, type_wrappings::NodeId};
 mod common;
 
 fn main() {
-    let mut tree = common::quick_tree();
+    let tree = common::quick_tree();
 
-    let start_warrior: NodeId = 47175;
+    // let start_warrior: NodeId = 47175;
 
     let starting_path: HashSet<NodeId> = [47175, 3936, 46325, 39581, 6839, 5710]
         .into_iter()
@@ -40,6 +40,14 @@ fn main() {
         .flat_map(|b| tree.take_while_better(*b, s, allowable_delta, &baseline));
 
     let mut results: Vec<Vec<NodeId>> = searchspace.into_iter().collect();
+    assert!(
+        results.iter_mut().any(|v| {
+            v.sort();
+            v == &best_path.to_vec()
+        }),
+        "{:#?}",
+        results
+    );
 
     let s = |s: &Stat| {
         matches!(
@@ -51,7 +59,7 @@ fn main() {
         )
     };
 
-    for path in &results {
+    results.iter().for_each(|path| {
         let mut stat_map: AHashMap<String, f32> = AHashMap::new();
         path.iter()
             .flat_map(|nid| tree.nodes.get(nid))
@@ -64,17 +72,8 @@ fn main() {
             });
 
         println!("Path: {:?}", path);
-        for (key, total) in &stat_map {
+        stat_map.iter().for_each(|(key, total)| {
             println!("\t{}: {}", key, total);
-        }
-    }
-
-    assert!(
-        results.iter_mut().any(|v| {
-            v.sort();
-            v == &best_path.to_vec()
-        }),
-        "{:#?}",
-        results
-    );
+        });
+    });
 }

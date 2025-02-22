@@ -673,7 +673,6 @@ fn process_manual_node_highlights(
         });
 }
 
-//TODO: bool flag
 fn process_virtual_paths(
     mut colour_events: EventWriter<NodeColourReq>,
     game_materials: Res<GameMaterials>,
@@ -767,6 +766,7 @@ fn process_scale_requests(
         });
 }
 
+//TODO: If we're gonna to a lot of Optimiser stuff we maybe wanna move it out to its own source file...
 fn populate_optimiser(
     mut optimiser: ResMut<Optimiser>,
     tree: Res<PassiveTreeWrapper>,
@@ -774,13 +774,19 @@ fn populate_optimiser(
     mut req: EventReader<OptimiseReq>,
 ) {
     log::trace!("Optimise requested");
+    let baseline = active_character
+        .activated_node_ids
+        .iter()
+        .map(|v| *v)
+        .collect::<Vec<NodeId>>();
+
     req.read().for_each(|req| {
         if optimiser.is_available() {
             optimiser.set_busy();
             optimiser.results = tree
                 .branches(&active_character.activated_node_ids)
                 .iter()
-                .flat_map(|opt| tree.take_while(*opt, &req.selector, req.delta))
+                .flat_map(|opt| tree.take_while_better(*opt, &req.selector, req.delta, &baseline))
                 .collect();
         }
         optimiser.set_available();
