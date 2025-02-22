@@ -33,6 +33,9 @@ path = "examples/all_starts_to_chaos_inoculation.rs"
 [[examples]]
 name = "highsearchterm"
 path = "examples/highsearchterm.rs"
+[[examples]]
+name = "simple_optimise"
+path = "examples/simple_optimise.rs"
 
 
 [dependencies]
