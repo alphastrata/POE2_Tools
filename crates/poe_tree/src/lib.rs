@@ -25,6 +25,7 @@ use serde_json::Value;
 use std::{mem::size_of, time::Instant};
 
 pub mod prelude {}
+pub mod optimiser;
 
 #[derive(Debug, Clone, Default)]
 pub struct PassiveTree {

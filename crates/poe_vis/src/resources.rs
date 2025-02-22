@@ -60,6 +60,7 @@ impl Optimiser {
     // }
 }
 
+use poe_tree::optimiser::Optimiser as _Optimiser;
 #[derive(Resource)]
 pub struct Optimiser {
     pub results: Vec<Vec<NodeId>>,
