@@ -1,8 +1,9 @@
 mod common;
-use bevy::utils::hashbrown::HashSet;
 use common::*;
-use poe_tree::{ type_wrappings::NodeId};
+use poe_tree::type_wrappings::NodeId;
+
 use reqwest::blocking::Client;
+use std::collections::HashSet;
 
 fn main() {
     let mut tree = quick_tree();
@@ -25,7 +26,7 @@ fn main() {
     .into_iter()
     .collect();
 
-    let passive_branches = tree.branches(active_nodes);
+    let passive_branches = tree.branches(&active_nodes);
     if visualiser {
         passive_branches
             .iter()

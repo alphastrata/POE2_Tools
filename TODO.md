@@ -1,9 +1,11 @@
 # poe_vis
+
+- [ ] The optimiser UI is kinda shit, and the code is garbage.
 - [ ] BUG: sometimes active nodes' connecting edge doesn't highlight.
 - [ ] RPC circle and rect are kinda shit, replace both with a quad and let's do a custom shader, the aliasing is fucking abhorent.
 - [ ] Remove permanent starting node—add UI button and RPC command to set it to None.
-~~- [ ] Arcs not lines: Use arcs (like POE2) instead of straight lines. Calculate start and finish points to form an arc (maybe use `calculate_world_position` info, and compare with PoB assets to work out arc-length and radius).
-~~
+      ~~- [ ] Arcs not lines: Use arcs (like POE2) instead of straight lines. Calculate start and finish points to form an arc (maybe use `calculate_world_position` info, and compare with PoB assets to work out arc-length and radius).
+      ~~
 - [ ] Pruned Node Handling: When a pruned path disconnects downstream nodes:
   - Turn them red for two seconds.
   - Remove them from both `PassiveTree.active` and `.highlighted_nodes`.
@@ -15,6 +17,7 @@
 - [ ] Develop a screenspace shader that tints the background circle in six 60° wedges, blending colours from int → dex → str (and intermediate values).
 
 ## [ ] Handle root node by forcing it to == the ONLY real start node from 0 based on class
+
 - [ ] `ClearAll` needs to handle re-root.
 
 - [ ] Replace the 'Attribute Text' with some sorta UI letting em spend
@@ -25,6 +28,22 @@
 - [ ] `keystone` or `anchor` nodes may be `PermanentlyAssigned` component. using 'Pinned'
 - [ ] Default Starting Stats: Set up default starting stats for all character classes, build them from POB exports.
 - [ ] Streaming Pathfinding: Create streaming versions of functions in `pathfinding.rs` for animation-friendly pathfinding.
+
+# poe_tree
+
+- [] take_while()
+- [] take_while_better()
+- [] impl Optimisers:
+
+  1. one for generic
+  2. one for swaps?
+  3. one for generic but 'pinning' nodes that MUSt be in the output. (constraints)
+
+- [] docs
+- [] py03 bindings
+- [] pypy it
+- []
+- []
 
 ## Changelog (Completed Tasks)
 
@@ -60,5 +79,3 @@
 - [x] BUG: typing the move keys' bindings will move the canvas around when we're searching.
 - [x] piggybacking on the SearchState for the hover aggregated stats to show matching nodes is bad, because it encircles nodes that we haven't got in our current active build.
 - [x] Menu Mouse Interaction: Ensure mouse actions over menu elements don’t trigger selection, removal, hover, translation, or zoom.
-
-

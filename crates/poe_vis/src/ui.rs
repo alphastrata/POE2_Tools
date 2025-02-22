@@ -540,6 +540,7 @@ fn draw_optimiser_ui(
     // Delta slider
     ui.horizontal(|ui| {
         ui.label("Delta:");
+        //FIXME: This range needs to actually be the (current level ... 123-current level), or 1, 123 if no points are spent.
         ui.add(egui::Slider::new(&mut togglers.delta, 1..=10).text("Path length adjustment"));
     });
 
@@ -570,13 +571,39 @@ fn draw_optimiser_ui(
             .iter()
             .enumerate()
             .for_each(|(idx, path)| {
-                let Some(stat) = toggled_stat.as_ref() else {
+                let Some(stat_name) = toggled_stat.as_ref() else {
                     log::error!("Unable to pull path for stat? something is horribly wrong!");
                     return;
                 };
 
-                //TODO: we need to show the +% that we've beefed the main path by.
-                let button = ui.button(format!("Path #{} for {}", idx + 1, stat));
+                let s = |s: &Stat| s.name().to_owned() == *stat_name;
+
+                let mut stat_map: HashMap<String, f32> = HashMap::new();
+                path.iter()
+                    .flat_map(|nid| tree.nodes.get(nid))
+                    .flat_map(|pnode| {
+                        let skill = pnode.as_passive_skill(&tree);
+                        skill.stats().iter().filter(|stat_item| s(stat_item))
+                    })
+                    .for_each(|stat_item| {
+                        *stat_map
+                            .entry(stat_item.as_str().to_string())
+                            .or_insert(0.0) += stat_item.value();
+                    });
+
+                // Create a string of stat totals
+                let stat_totals = stat_map
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                let button = ui.button(format!(
+                    "Path #{} for {} (Totals: {})",
+                    idx + 1,
+                    stat_name,
+                    stat_totals
+                ));
 
                 //TODO: we need to show with red circles the path nodes they'd have to UNSPEND!
 

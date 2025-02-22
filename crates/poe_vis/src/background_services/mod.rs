@@ -19,7 +19,7 @@ use bevy::{
     utils::hashbrown::HashSet,
 };
 use poe_tree::{
-    consts::LEVEL_ONE_NODES,
+    consts::{get_char_starts_node_map, LEVEL_ONE_NODES},
     stats::Stat,
     type_wrappings::{EdgeId, NodeId},
     PassiveTree,
@@ -99,7 +99,7 @@ impl Plugin for BGServicesPlugin {
             .insert_resource(PathRepairRequired(false));
 
         app.add_systems(
-            PreUpdate,
+            PostUpdate,
             ((
                 // sync_active_with_character.run_if(active_nodes_changed),
                 /* Only scan for edges when we KNOW the path is valid */
@@ -215,12 +215,15 @@ pub fn clear(
         "active character's activated node count should be 0"
     );
 
+    // FIXME: Technically the remove::<Node/EdgeActive>() don't need to be here as they're supposedly taken care of by the events, but
+    // in practie i've noticed paths not being cleaned up and as scheduling is tedious... fukit.
     nodes
         .iter()
         .filter(|(_ent, nid)| nid.0 != active_character.starting_node)
         .for_each(|(ent, nid)| {
             commands.entity(ent).remove::<ManuallyHighlighted>();
             commands.entity(ent).remove::<VirtualPathMember>();
+            // commands.entity(ent).remove::<NodeActive>();
 
             node_deactivation_tx.send(NodeDeactivationReq(**nid));
         });
@@ -228,7 +231,7 @@ pub fn clear(
     edges.iter().for_each(|(ent, eid)| {
         commands.entity(ent).remove::<ManuallyHighlighted>();
         commands.entity(ent).remove::<VirtualPathMember>();
-
+        // commands.entity(ent).remove::<EdgeActive>();
         let (start, end) = eid.as_tuple();
         edge_deactivation_tx.send(EdgeDeactivationReq(start, end));
     });
@@ -424,15 +427,19 @@ pub fn process_node_deactivations(
     let events: Vec<NodeId> = deactivation_events.read().map(|ndr| ndr.0).collect();
 
     let mat = &game_materials.node_base;
-    query.iter().for_each(|(ent, nid)| {
-        if events.contains(nid) {
-            commands.entity(ent).remove::<NodeActive>();
-            log::trace!("Deactivating Node {}", **nid);
-            commands.entity(ent).insert(NodeInactive);
-            colour_events.send(NodeColourReq(ent, mat.clone_weak()));
-            log::trace!("Colour reset requested for Node {}", **nid);
-        }
-    })
+    query
+        .iter()
+        // we never want to deactivate start/root nodes.
+        .filter(|(ent, nid)| !get_char_starts_node_map().contains_key(nid))
+        .for_each(|(ent, nid)| {
+            if events.contains(nid) {
+                commands.entity(ent).remove::<NodeActive>();
+                log::trace!("Deactivating Node {}", **nid);
+                commands.entity(ent).insert(NodeInactive);
+                colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+                log::trace!("Colour reset requested for Node {}", **nid);
+            }
+        })
 }
 fn process_edge_deactivations(
     mut deactivation_events: EventReader<EdgeDeactivationReq>,
