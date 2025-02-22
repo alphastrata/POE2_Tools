@@ -48,12 +48,16 @@ impl Optimiser {
     }
 
     pub fn set_busy(&mut self) {
-        self.status == JobStatus::Busy;
+        self.status = JobStatus::Busy;
     }
 
     pub fn set_available(&mut self) {
-        self.status == JobStatus::Available;
+        self.status = JobStatus::Available;
     }
+
+    // pub fn minimum_moves(&self, existing_path: &[NodeId]) -> impl Iterator<Item = NodeId> {
+    //     todo!()
+    // }
 }
 
 #[derive(Resource)]

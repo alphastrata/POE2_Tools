@@ -547,6 +547,171 @@ fn _fuzzy_search_nodes(data: &PassiveTree, query: &str) -> Vec<NodeId> {
         .map(|(id, _)| *id)
         .collect()
 }
+
+// mod optimiser_utils {
+//     use crate::NodeId;
+//     use ahash::{AHashMap, AHashSet, AHasher, RandomState};
+//     use smallvec::SmallVec;
+//     use std::{
+//         cmp::{Ordering, Reverse},
+//         collections::{BinaryHeap, VecDeque},
+//         sync::{atomic::AtomicUsize, Arc, Mutex, RwLock},
+//         thread,
+//         time::{Duration, Instant},
+//     };
+//     // Helper struct for A* search (or modified for a greedy best-first search)
+//     #[derive(Clone, Eq, PartialEq)]
+//     struct SearchNode {
+//         path: Vec<NodeId>,
+//         cost: usize,      // Number of swaps or moves so far
+//         heuristic: usize, // Estimated cost to goal (Manhattan Distance between path positions)
+//     }
+
+//     impl Ord for SearchNode {
+//         fn cmp(&self, other: &Self) -> Ordering {
+//             // Reverse order for BinaryHeap (smallest heuristic + cost at the top)
+//             (other.cost + other.heuristic)
+//                 .cmp(&(self.cost + self.heuristic))
+//                 .then_with(|| other.cost.cmp(&self.cost))
+//         }
+//     }
+
+//     impl PartialOrd for SearchNode {
+//         fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+//             Some(self.cmp(other))
+//         }
+//     }
+
+//     impl Optimiser {
+//         pub fn minimum_moves(&self, existing_path: &[NodeId], tree: &PassiveTree) -> Vec<NodeId> {
+//             if existing_path.len() <= 1 {
+//                 return existing_path.to_vec(); // No moves needed for paths of length 0 or 1
+//             }
+//             let mut best_path: Option<Vec<NodeId>> = None;
+//             let mut min_cost: Option<usize> = None;
+
+//             // Heuristic Function:  Manhattan Distance-like heuristic for path closeness
+//             fn heuristic(path: &[NodeId], target_path: &[NodeId]) -> usize {
+//                 let mut cost: usize = 0;
+//                 (0..path.len()).for_each(|i| {
+//                     if i >= target_path.len() {
+//                         cost += 1; // Penalize extra nodes at the end
+//                     } else if path[i] != target_path[i] {
+//                         cost += 1; // Count mismatches
+//                     }
+//                 });
+//                 return cost;
+//             }
+
+//             // Generate neighbors (candidate paths with one swap/move)
+//             fn generate_neighbors(current_path: &[NodeId], tree: &PassiveTree) -> Vec<Vec<NodeId>> {
+//                 let mut neighbors = Vec::new();
+
+//                 // Option 1: Try to swap adjacent nodes
+//                 (0..current_path.len() - 1).for_each(|i| {
+//                     let mut new_path = current_path.to_vec();
+//                     if tree.edges.contains(&Edge {
+//                         start: new_path[i],
+//                         end: new_path[i + 1],
+//                     }) {
+//                         new_path.swap(i, i + 1);
+//                         neighbors.push(new_path);
+//                     }
+//                 });
+
+//                 // Option 2:  Try to insert a valid node at each position.  More expensive.
+//                 (0..current_path.len()).for_each(|i| {
+//                     let mut new_path = current_path.to_vec();
+
+//                     //Try to move existing nodes along
+//                     let mut possible_nodes: Vec<NodeId> = Vec::new();
+
+//                     if i == 0 {
+//                         if current_path.len() > 1 {
+//                             if tree.edges.contains(&Edge {
+//                                 start: current_path[0],
+//                                 end: current_path[1],
+//                             }) {
+//                                 possible_nodes.push(current_path[1])
+//                             }
+//                         }
+//                     } else if i == current_path.len() - 1 {
+//                         if tree.edges.contains(&Edge {
+//                             start: current_path[i - 1],
+//                             end: current_path[i],
+//                         }) {
+//                             possible_nodes.push(current_path[i - 1]);
+//                         }
+//                     } else {
+//                         if tree.edges.contains(&Edge {
+//                             start: current_path[i - 1],
+//                             end: current_path[i],
+//                         }) {
+//                             possible_nodes.push(current_path[i - 1]);
+//                         }
+//                         if tree.edges.contains(&Edge {
+//                             start: current_path[i],
+//                             end: current_path[i + 1],
+//                         }) {
+//                             possible_nodes.push(current_path[i + 1]);
+//                         }
+//                     }
+
+//                     possible_nodes.into_iter().for_each(|node| {
+//                         let mut test_path = current_path.to_vec();
+//                         test_path.remove(i);
+//                         test_path.insert(i, node);
+//                         neighbors.push(test_path)
+//                     });
+//                 });
+
+//                 return neighbors;
+//             }
+
+//             let mut visited = AHashSet::new();
+//             let mut queue: BinaryHeap<SearchNode> = BinaryHeap::new();
+
+//             queue.push(SearchNode {
+//                 path: existing_path.to_vec(),
+//                 cost: 0,
+//                 heuristic: heuristic(existing_path, existing_path), // Initially, heuristic is 0 for the existing path
+//             });
+//             visited.insert(existing_path.to_vec());
+
+//             while let Some(current_node) = queue.pop() {
+//                 let current_path = current_node.path;
+
+//                 if best_path.is_none() || current_node.cost < min_cost.unwrap() {
+//                     best_path = Some(current_path.to_vec());
+//                     min_cost = Some(current_node.cost);
+//                     //println!("New Best Path: {:?}, Cost: {}", best_path.as_ref().unwrap(), min_cost.unwrap());
+//                 }
+
+//                 if current_node.cost > min_cost.unwrap_or(usize::MAX) {
+//                     continue; // Prune if current cost exceeds best found
+//                 }
+
+//                 let neighbors = generate_neighbors(current_path.as_slice(), tree);
+
+//                 neighbors.iter().for_each(|neighbor| {
+//                     if !visited.contains(&neighbor) {
+//                         let cost = current_node.cost + 1; // Each move/swap increments cost
+//                         let heuristic_value = heuristic(neighbor.as_slice(), existing_path);
+//                         queue.push(SearchNode {
+//                             path: neighbor.clone(),
+//                             cost,
+//                             heuristic: heuristic_value,
+//                         });
+//                         visited.insert(neighbor.to_vec());
+//                     }
+//                 });
+//             }
+
+//             best_path.unwrap_or_else(|| existing_path.to_vec()) //Return existing path if no improvement is found
+//         }
+//     }
+// }
+
 #[cfg(test)]
 mod test {
     use crate::{consts::get_level_one_nodes, quick_tree, stats::arithmetic::PlusPercentage};

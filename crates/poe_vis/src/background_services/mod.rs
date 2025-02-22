@@ -767,7 +767,6 @@ fn process_scale_requests(
         });
 }
 
-// NOTE: atomics because I'm too lazy to think of a runtime condition etc for this ...
 fn populate_optimiser(
     mut optimiser: ResMut<Optimiser>,
     tree: Res<PassiveTreeWrapper>,

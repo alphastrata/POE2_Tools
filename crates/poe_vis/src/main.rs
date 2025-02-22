@@ -25,7 +25,7 @@ fn main() {
                 })
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        decorations: false,
+                        // decorations: false,
                         focused: true,
                         ..Default::default()
                     }),
