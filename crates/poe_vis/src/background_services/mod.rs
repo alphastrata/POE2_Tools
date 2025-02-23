@@ -117,7 +117,9 @@ impl Plugin for BGServicesPlugin {
             Update,
             (
                 //
-                process_load_character.run_if(on_event::<LoadCharacterReq>),
+                process_load_character
+                    .run_if(on_event::<LoadCharacterReq>)
+                    .after(clear),
                 process_save_character
                     .run_if(on_event::<SaveCharacterReq>.or(on_event::<SaveCharacterAsReq>)),
                 /* Users need to see paths magically illuminate */

@@ -316,6 +316,7 @@ fn rhs_menu(
             projection,
             togglers,
             path_repair,
+            clear_all_tx,
         );
     })
 }
@@ -500,6 +501,7 @@ fn draw_optimiser_ui(
     projection: &OrthographicProjection,
     mut togglers: ResMut<Toggles>,
     mut path_repair: ResMut<PathRepairRequired>,
+    mut clear_all_tx: EventWriter<ClearAll>,
 ) {
     ui.heading("Optimiser");
     ui.separator();
@@ -677,9 +679,13 @@ fn draw_optimiser_ui(
                 // Click handling
                 if button.clicked() {
                     log::debug!("Replacing existing path with new one...");
-                    character.activated_node_ids.clear();
+                    clear_all_tx.send(ClearAll);
+                    // the clear all will wipe everything.
+                    // we still have the character mutably here, which means clear will run after this releases it.
+                    // so what we need to do is have this triggered or seomthing and enacted after...
                     character.activated_node_ids.extend(path.iter().copied());
                     path_repair.request_path_repair();
+                    return;
                 }
             });
     }
