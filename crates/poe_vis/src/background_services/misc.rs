@@ -31,7 +31,7 @@ use crate::{
     search, PassiveTreeWrapper,
 };
 
-fn process_scale_requests(
+pub(crate) fn process_scale_requests(
     mut scale_events: EventReader<NodeScaleReq>,
     mut transforms: Query<&mut Transform>,
 ) {
@@ -45,7 +45,7 @@ fn process_scale_requests(
 }
 
 /// Adjust each node’s Transform.scale so it doesn’t get too big or too small on screen.
-fn adjust_node_sizes(
+pub(crate) fn adjust_node_sizes(
     camera_query: Query<&OrthographicProjection, With<Camera2d>>,
     scaling: Res<NodeScaling>,
     mut node_query: Query<&mut Transform, With<NodeMarker>>,
@@ -67,7 +67,7 @@ fn adjust_node_sizes(
 ///
 /// This is useful because you can reuse the same run condition but with different variables.
 /// This is how the common conditions module works.
-fn time_passed(t: f32) -> impl FnMut(Local<f32>, Res<Time>) -> bool {
+pub(crate) fn time_passed(t: f32) -> impl FnMut(Local<f32>, Res<Time>) -> bool {
     move |mut timer: Local<f32>, time: Res<Time>| {
         // Tick the timer
         *timer += time.delta_secs();

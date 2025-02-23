@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex};
 
 use crate::{
-    background_services::{active_nodes_changed, clear},
     components::{NodeActive, NodeInactive, NodeMarker},
     consts::DEFAULT_SAVE_PATH,
     events::{
@@ -28,7 +27,7 @@ impl Plugin for CharacterPlugin {
                 //
                 process_load_character
                     .run_if(on_event::<LoadCharacterReq>)
-                    .after(clear),
+                    .after(crate::background_services::clear),
                 process_save_character
                     .run_if(on_event::<SaveCharacterReq>.or(on_event::<SaveCharacterAsReq>)),
                 /* Users need to see paths magically illuminate */

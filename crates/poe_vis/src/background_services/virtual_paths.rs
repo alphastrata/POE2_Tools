@@ -40,7 +40,7 @@ pub fn nothing_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
     query.is_empty()
 }
 
-fn process_virtual_paths(
+pub(crate) fn process_virtual_paths(
     mut colour_events: EventWriter<NodeColourReq>,
     game_materials: Res<GameMaterials>,
     edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
@@ -56,7 +56,7 @@ fn process_virtual_paths(
         colour_events.send(NodeColourReq(ent, mat.clone_weak()));
     });
 }
-fn populate_virtual_path(
+pub(crate) fn populate_virtual_path(
     mut commands: Commands,
     tree: Res<PassiveTreeWrapper>,
     active_character: Res<ActiveCharacter>,
@@ -97,7 +97,7 @@ fn populate_virtual_path(
     });
 }
 
-fn clear_virtual_paths(
+pub(crate) fn clear_virtual_paths(
     mut commands: Commands,
     mut colour_nodes: EventWriter<NodeColourReq>,
     mut colour_events: EventWriter<EdgeColourReq>,

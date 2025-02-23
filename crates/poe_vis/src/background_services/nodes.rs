@@ -24,8 +24,10 @@ use crate::{
     search, PassiveTreeWrapper,
 };
 
+use super::generated;
+
 //Activations
-fn process_node_activations(
+pub(crate) fn process_node_activations(
     mut activation_events: EventReader<NodeActivationReq>,
     mut colour_events: EventWriter<NodeColourReq>,
     query: Query<(Entity, &NodeMarker), (With<NodeInactive>, Without<ManuallyHighlighted>)>,
@@ -50,9 +52,50 @@ fn process_node_activations(
         .count();
     log::debug!("{activations} activation events processed.");
 }
+// Colours & Aesthetics.
+pub(crate) fn process_node_colour_changes(
+    mut colour_events: EventReader<NodeColourReq>,
+    mut materials_q: Query<&mut MeshMaterial2d<ColorMaterial>>,
+) {
+    colour_events.read().for_each(|NodeColourReq(entity, mat)| {
+        if let Ok(mut m) = materials_q.get_mut(*entity) {
+            m.0 = mat.clone_weak();
+        }
+    });
+}
+pub(crate) fn process_manual_node_highlights(
+    mut events: EventReader<ManualNodeHighlightWithColour>,
+    mut colour_events: EventWriter<NodeColourReq>,
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut game_materials: ResMut<GameMaterials>,
+    query: Query<(Entity, &NodeMarker)>,
+) {
+    events
+        .read()
+        .for_each(|ManualNodeHighlightWithColour(node_id, colour_str)| {
+            let mat = game_materials
+                .other
+                .entry(colour_str.to_owned())
+                .or_insert_with(|| {
+                    let color = generated::parse_tailwind_color(colour_str);
+                    materials.add(color)
+                })
+                .clone();
+
+            query.iter().for_each(|(ent, marker)| {
+                if **marker == *node_id {
+                    commands.entity(ent).remove::<NodeInactive>();
+                    commands.entity(ent).remove::<NodeActive>();
+                    colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+                    commands.entity(ent).insert(ManuallyHighlighted);
+                }
+            });
+        });
+}
 
 // Deactivations
-pub fn process_node_deactivations(
+pub(crate) fn process_node_deactivations(
     mut deactivation_events: EventReader<NodeDeactivationReq>,
     mut colour_events: EventWriter<NodeColourReq>,
     query: Query<(Entity, &NodeMarker), (With<NodeActive>, Without<ManuallyHighlighted>)>,
@@ -77,14 +120,14 @@ pub fn process_node_deactivations(
         })
 }
 
-pub fn active_nodes_changed(query: Query<(), Changed<NodeActive>>) -> bool {
+pub(crate) fn active_nodes_changed(query: Query<(), Changed<NodeActive>>) -> bool {
     !query.is_empty()
 }
 
-pub fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
+pub(crate) fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
     !query.is_empty()
 }
 
-pub fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
+pub(crate) fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
     query.iter().count() > 1 // Only run if at least 2 nodes are active
 }

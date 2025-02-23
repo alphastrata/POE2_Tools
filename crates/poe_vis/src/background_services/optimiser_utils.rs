@@ -31,7 +31,7 @@ use crate::{
     search, PassiveTreeWrapper,
 };
 
-fn populate_optimiser(
+pub(crate) fn populate_optimiser(
     mut optimiser: ResMut<Optimiser>,
     tree: Res<PassiveTreeWrapper>,
     active_character: Res<ActiveCharacter>,

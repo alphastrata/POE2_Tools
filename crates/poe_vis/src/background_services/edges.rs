@@ -31,7 +31,64 @@ use crate::{
     search, PassiveTreeWrapper,
 };
 
-fn process_edge_activations(
+use super::generated;
+
+pub fn process_manual_edge_highlights(
+    mut events: EventReader<ManualEdgeHighlightWithColour>,
+    mut colour_events: EventWriter<EdgeColourReq>,
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut game_materials: ResMut<GameMaterials>,
+    query: Query<(Entity, &EdgeMarker)>,
+) {
+    events.read().for_each(
+        |ManualEdgeHighlightWithColour(req_start, req_end, colour_str)| {
+            let mat = game_materials
+                .other
+                .entry(colour_str.to_owned())
+                .or_insert_with(|| {
+                    let color = generated::parse_tailwind_color(colour_str);
+                    materials.add(color)
+                })
+                .clone();
+
+            query.iter().for_each(|(ent, marker)| {
+                let (e_start, e_end) = marker.as_tuple();
+                let mut go = false;
+                match (e_start == *req_start, e_end == *req_end) {
+                    (true, true) => go = true,
+                    _ => {
+                        // either way is a match...
+                        //TODO: we should try to make this more ergonomic...
+                        if e_start == *req_end && e_end == *req_start {
+                            go = true;
+                        }
+                    }
+                }
+                if go {
+                    log::info!("manual edge highlight action.");
+                    commands.entity(ent).remove::<EdgeInactive>();
+                    commands.entity(ent).remove::<EdgeActive>();
+                    colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
+                    commands.entity(ent).insert(ManuallyHighlighted);
+                    log::info!("manual edge highlight complete.");
+                }
+            });
+        },
+    );
+}
+pub(crate) fn process_edge_colour_changes(
+    mut colour_events: EventReader<EdgeColourReq>,
+    mut materials_q: Query<&mut MeshMaterial2d<ColorMaterial>>,
+) {
+    colour_events.read().for_each(|EdgeColourReq(entity, mat)| {
+        if let Ok(mut m) = materials_q.get_mut(*entity) {
+            m.0 = mat.clone_weak();
+        }
+    });
+}
+
+pub fn process_edge_activations(
     mut activation_events: EventReader<EdgeActivationReq>,
     mut colour_events: EventWriter<EdgeColourReq>,
     query: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
@@ -64,7 +121,7 @@ fn process_edge_activations(
         });
 }
 
-fn scan_edges_for_active_updates(
+pub fn scan_edges_for_active_updates(
     mut edge_activator: EventWriter<EdgeActivationReq>,
     haystack: Query<&EdgeMarker, With<EdgeInactive>>,
     needles: Query<&NodeMarker, With<NodeActive>>,
@@ -91,7 +148,7 @@ fn scan_edges_for_active_updates(
     });
 }
 
-fn process_edge_deactivations(
+pub fn process_edge_deactivations(
     mut deactivation_events: EventReader<EdgeDeactivationReq>,
     mut colour_events: EventWriter<EdgeColourReq>,
     query: Query<(Entity, &EdgeMarker), (With<EdgeActive>, Without<ManuallyHighlighted>)>,
@@ -121,7 +178,7 @@ fn process_edge_deactivations(
             log::trace!("Colour reset requested for Edge {start}..{end}");
         });
 }
-fn scan_edges_for_inactive_updates(
+pub fn scan_edges_for_inactive_updates(
     mut edge_deactivator: EventWriter<EdgeDeactivationReq>,
     haystack: Query<&EdgeMarker, (With<EdgeActive>, Without<EdgeInactive>)>,
     needles: Query<&NodeMarker, (With<NodeActive>, Without<NodeInactive>)>,
