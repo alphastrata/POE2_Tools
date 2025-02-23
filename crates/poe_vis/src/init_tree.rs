@@ -109,7 +109,7 @@ fn spawn_edges(
         ) {
             (Some(start), Some(end)) => (start, end),
             (start, end) => {
-                log::error!("Failed to fetch nodes, start: {:?}, end: {:?}", start, end);
+                log::warn!("Failed to fetch node, start: {:?}, end: {:?}", start, end);
                 return;
             }
         };
@@ -120,7 +120,7 @@ fn spawn_edges(
         ) {
             (Some(start_group), Some(end_group)) => (start_group, end_group),
             (start_group, end_group) => {
-                log::error!(
+                log::warn!(
                     "Failed to fetch groups, start_group: {:?}, end_group: {:?}",
                     start_group,
                     end_group

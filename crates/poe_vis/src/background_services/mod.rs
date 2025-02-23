@@ -207,8 +207,10 @@ pub fn clear(
     mut node_deactivation_tx: EventWriter<NodeDeactivationReq>,
     mut edge_deactivation_tx: EventWriter<EdgeDeactivationReq>,
     mut path_needs_repair: ResMut<PathRepairRequired>,
+    mut selected_history: ResMut<MouseSelecetedNodeHistory>,
 ) {
     path_needs_repair.set_unrequired();
+    selected_history.clear();
     log::debug!("Clear command received.");
     active_character.activated_node_ids.clear();
     assert_eq!(
@@ -541,7 +543,8 @@ fn path_repair(
 ) {
     // the most likely reason for path repair is a mouse activity breaking a path.
     let Some(most_recent) = recently_selected.back() else {
-        unreachable!("Unreachable because we pre-set this value in a startup system.");
+        path_needs_repair.set_unrequired();
+        return;
     };
 
     let root_node = root_node.0.expect("Protected by run conditions");
