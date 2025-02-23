@@ -56,6 +56,9 @@ pub struct SyncCharacterReq();
 #[derive(Event)]
 pub struct SaveCharacterReq;
 
+#[derive(Event, Deref, DerefMut)]
+pub struct OverrideCharacterNodesReq(pub Vec<NodeId>);
+
 #[derive(Event, Debug, Deref, DerefMut)]
 pub struct SaveCharacterAsReq(pub PathBuf);
 

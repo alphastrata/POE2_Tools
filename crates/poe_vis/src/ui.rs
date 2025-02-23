@@ -5,7 +5,8 @@ use crate::{
     consts::TAILWIND_COLOURS_AS_STR,
     events::{
         ClearAll, ClearSearchResults, DrawCircleReq, LoadCharacterReq, MoveCameraReq,
-        NodeDeactivationReq, OptimiseReq, SaveCharacterAsReq, SaveCharacterReq,
+        NodeActivationReq, NodeDeactivationReq, OptimiseReq, OverrideCharacterNodesReq,
+        SaveCharacterAsReq, SaveCharacterReq, SyncCharacterReq,
     },
     resources::{
         ActiveCharacter, CameraSettings, Optimiser, PathRepairRequired, SearchState, ToggleUi,
@@ -30,14 +31,10 @@ use poe_tree::{
 
 pub struct UIPlugin;
 
-#[derive(Resource, Default)]
-struct UICapturesInput(pub bool);
-
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
             // space
-            .init_resource::<UICapturesInput>()
             .init_resource::<ActiveNodeCounter>() // store node count
             .init_resource::<ToggleUi>()
             // space
@@ -81,8 +78,10 @@ fn egui_ui_system(
     mut clear_search_results_tx: EventWriter<ClearSearchResults>,
     mut contexts: EguiContexts,
     mut draw_circle: EventWriter<DrawCircleReq>,
+    mut sync_char_tx: EventWriter<OverrideCharacterNodesReq>,
     mut move_camera_tx: EventWriter<MoveCameraReq>,
     mut optimiser_req: EventWriter<OptimiseReq>,
+    mut activate_node_tx: EventWriter<NodeActivationReq>,
     mut save_as_tx: EventWriter<SaveCharacterAsReq>,
     mut save_tx: EventWriter<SaveCharacterReq>,
     sys_params: EguiSystemParamsWrapper,
@@ -122,6 +121,8 @@ fn egui_ui_system(
         optimiser_req,
         togglers,
         path_repair,
+        activate_node_tx,
+        sync_char_tx,
     );
 }
 
@@ -141,6 +142,8 @@ fn rhs_menu(
     optimiser_req: EventWriter<OptimiseReq>,
     mut togglers: ResMut<Toggles>,
     mut path_repair: ResMut<PathRepairRequired>,
+    mut activate_node_tx: EventWriter<NodeActivationReq>,
+    mut sync_char_tx: EventWriter<OverrideCharacterNodesReq>,
 ) -> egui::InnerResponse<()> {
     let ctx = contexts.ctx_mut();
 
@@ -317,6 +320,8 @@ fn rhs_menu(
             togglers,
             path_repair,
             clear_all_tx,
+            activate_node_tx,
+            sync_char_tx,
         );
     })
 }
@@ -402,47 +407,6 @@ fn fmt_for_ui(poe_node: &PoeNode, tree: &PassiveTree, ui: &mut egui::Ui) {
     }
 }
 
-// fn display_aggregated_stats<'t>(
-//     ui: &mut egui::Ui,
-//     stats: impl Iterator<Item = (NodeId, &'t Stat)>,
-//     tree: &PassiveTreeWrapper,
-//     draw_circle: &mut EventWriter<DrawCircleReq>,
-//     projection_scale: f32,
-// ) {
-//     let mut groups: HashMap<String, (f32, usize, Vec<NodeId>)> = HashMap::new();
-//     for (node_id, stat) in stats {
-//         let name = stat.name();
-//         let value = stat.value();
-//         groups
-//             .entry(name.to_string())
-//             .and_modify(|(sum, count, node_ids)| {
-//                 *sum += value;
-//                 *count += 1;
-//                 node_ids.push(node_id);
-//             })
-//             .or_insert((value, 1, vec![node_id]));
-//     }
-//     let mut entries: Vec<_> = groups.into_iter().collect();
-//     entries.sort_by(|(a, _), (b, _)| a.cmp(b));
-//     for (name, (sum, count, node_ids)) in entries {
-//         let response = ui.label(format!("{}: {} ({} nodes)", name, sum, count));
-//         if response.hovered() {
-//             let scaled_radius = (20.0 * projection_scale).abs();
-//             for node_id in node_ids {
-//                 if let Some(node) = tree.nodes.get(&node_id) {
-//                     let origin = Vec3::new(node.wx, -node.wy, 0.0);
-//                     draw_circle.send(DrawCircleReq {
-//                         radius: scaled_radius,
-//                         origin,
-//                         mat: "amber-500".into(),
-//                         glyph: UIGlyph::from_millis(500),
-//                     });
-//                 }
-//             }
-//         }
-//     }
-// }
-
 fn display_aggregated_stats<'t>(
     ui: &mut egui::Ui,
     stats: impl Iterator<Item = (NodeId, &'t Stat)>,
@@ -498,10 +462,12 @@ fn draw_optimiser_ui(
     optimiser: Res<Optimiser>,
     mut optimiser_req: EventWriter<OptimiseReq>,
     mut draw_circle: EventWriter<DrawCircleReq>,
-    projection: &OrthographicProjection,
+    _projection: &OrthographicProjection,
     mut togglers: ResMut<Toggles>,
     mut path_repair: ResMut<PathRepairRequired>,
     mut clear_all_tx: EventWriter<ClearAll>,
+    mut activate_node_tx: EventWriter<NodeActivationReq>,
+    mut sync_char_tx: EventWriter<OverrideCharacterNodesReq>,
 ) {
     ui.heading("Optimiser");
     ui.separator();
@@ -643,7 +609,6 @@ fn draw_optimiser_ui(
                             .or_insert(0.0) += stat_item.value();
                     });
 
-                // Create a string of stat totals
                 let stat_totals = stat_map
                     .iter()
                     .map(|(k, v)| format!("{}: {}", k, v))
@@ -658,7 +623,6 @@ fn draw_optimiser_ui(
                 ));
 
                 //TODO: we need to show with red circles the path nodes they'd have to UNSPEND!
-
                 // Hover preview
                 if button.hovered() {
                     path.iter()
@@ -680,12 +644,7 @@ fn draw_optimiser_ui(
                 if button.clicked() {
                     log::debug!("Replacing existing path with new one...");
                     clear_all_tx.send(ClearAll);
-                    // the clear all will wipe everything.
-                    // we still have the character mutably here, which means clear will run after this releases it.
-                    // so what we need to do is have this triggered or seomthing and enacted after...
-                    character.activated_node_ids.extend(path.iter().copied());
-                    path_repair.request_path_repair();
-                    return;
+                    sync_char_tx.send(OverrideCharacterNodesReq(path.clone()));
                 }
             });
     }

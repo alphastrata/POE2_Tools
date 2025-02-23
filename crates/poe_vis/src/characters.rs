@@ -2,7 +2,10 @@ use crate::{
     background_services::{active_nodes_changed, clear},
     components::{NodeActive, NodeInactive, NodeMarker},
     consts::DEFAULT_SAVE_PATH,
-    events::{ClearAll, LoadCharacterReq, NodeActivationReq, SyncCharacterReq, VirtualPathReq},
+    events::{
+        ClearAll, LoadCharacterReq, NodeActivationReq, OverrideCharacterNodesReq, SyncCharacterReq,
+        VirtualPathReq,
+    },
     resources::{ActiveCharacter, LastSaveLocation, PathRepairRequired, RootNode},
 };
 use bevy::{color::Color, prelude::*, utils::HashMap};
@@ -20,18 +23,37 @@ impl Plugin for CharacterPlugin {
         app.add_systems(
             PostUpdate,
             (
-                set_starting_node_based_on_character_class.run_if(
-                    resource_exists::<ActiveCharacter>
-                        .or(resource_exists_and_equals(RootNode(None))),
+                (
+                    set_starting_node_based_on_character_class.run_if(
+                        resource_exists::<ActiveCharacter>
+                            .or(resource_exists_and_equals(RootNode(None))),
+                    ),
+                    update_active_character
+                        .run_if(on_event::<SyncCharacterReq>.or(
+                            on_event::<LoadCharacterReq>.or(ActiveCharacter::has_been_updated),
+                        )),
                 ),
-                update_active_character.run_if(
-                    on_event::<SyncCharacterReq>
-                        .or(on_event::<LoadCharacterReq>.or(ActiveCharacter::has_been_updated)),
-                ),
+                override_char.run_if(on_event::<OverrideCharacterNodesReq>),
             ),
         );
 
         log::debug!("CharacterPlugin plugin enabled");
+    }
+}
+
+fn override_char(
+    mut active_mut: ResMut<ActiveCharacter>,
+    mut req: EventReader<OverrideCharacterNodesReq>,
+    mut node_activator: EventWriter<NodeActivationReq>,
+) {
+    for r in req.read() {
+        active_mut.activated_node_ids = r.iter().map(|v| *v).collect();
+
+        active_mut.activated_node_ids.iter().for_each(|nid| {
+            node_activator.send(NodeActivationReq(*nid));
+        });
+
+        return;
     }
 }
 
