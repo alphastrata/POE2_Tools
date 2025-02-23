@@ -139,10 +139,12 @@ pub struct UserConfig {
 pub struct PathRepairRequired(pub bool);
 
 impl PathRepairRequired {
+    #[inline(always)]
     pub(crate) fn request_path_repair(&mut self) {
         log::debug!("Path Repair requested");
         **self = true;
     }
+    #[inline(always)]
     pub(crate) fn set_unrequired(&mut self) {
         log::debug!("Path Repair marked as unrequired");
 
@@ -160,14 +162,15 @@ pub struct SearchState {
 }
 
 impl SearchState {
+    #[inline(always)]
     pub(crate) fn should_search(state: Res<SearchState>) -> bool {
         state.search_query.len() >= SEARCH_THRESHOLD
     }
-
+    #[inline(always)]
     pub(crate) fn is_open(state: Res<SearchState>) -> bool {
         state.open
     }
-
+    #[inline(always)]
     pub(crate) fn is_closed(state: Res<SearchState>) -> bool {
         !state.open
     }
@@ -180,11 +183,13 @@ pub struct VirtualPath {
 }
 
 impl VirtualPath {
+    #[inline(always)]
     pub fn clear(&mut self) {
         *self = Self::default();
     }
 }
 impl VirtualPath {
+    #[inline(always)]
     pub fn contains_node(&self, node: NodeId) -> bool {
         // assuming self.nodes is sorted
         for &n in &self.nodes {
@@ -197,7 +202,7 @@ impl VirtualPath {
         }
         false
     }
-
+    #[inline(always)]
     pub fn contains_edge(&self, edge: &EdgeMarker) -> bool {
         let (n1, n2) = match edge.0 < edge.1 {
             true => (edge.0, edge.1),
@@ -224,6 +229,7 @@ impl VirtualPath {
         change: [-44.287% -43.952% -43.627%] (p = 0.00 < 0.05)
         Performance has improved.
      */
+    #[inline(always)]
     pub fn sort(&mut self) {
         self.nodes.sort_unstable();
         // self.edges.sort_unstable_by_key(|em| {

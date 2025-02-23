@@ -4908,6 +4908,7 @@ dependencies = [
 name = "poe_vis"
 version = "0.1.0"
 dependencies = [
+ "ahash",
  "bevy",
  "bevy_cosmic_edit",
  "bevy_egui",

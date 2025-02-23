@@ -151,10 +151,10 @@ fn rhs_menu(
         ui.heading("Active Nodes");
         ui.separator();
 
+        //FIXME: This UI doesn't work.. dunno why it always shoes dupliates and is out of-order desipte sorting!?1
         egui::ComboBox::from_label("CLASS:")
             .selected_text(character.character_class.as_str())
             .show_ui(ui, |ui| {
-                // We want the dropdown to always be in the same order.
                 let mut keys: Vec<&&str> = get_char_starts_node_map().keys().into_iter().collect();
                 keys.sort();
                 for class_str in keys.iter() {
@@ -168,18 +168,18 @@ fn rhs_menu(
                         .clicked()
                     {
                         clear_all_tx.send(ClearAll);
-                        character.activated_node_ids.clear();
+
                         character.starting_node = *get_char_starts_node_map()
                             .get(*class_str)
                             .expect("Unreachable this map is static.");
 
                         log::debug!("Class changed we need to nuke everything!");
-                        path_repair.request_path_repair();
-                        break;
+
+                        return;
                     }
                 }
             });
-        ui.separator();
+
         ui.separator();
 
         ui.collapsing("Node details...", |ui| {
@@ -266,10 +266,10 @@ fn rhs_menu(
                 all_stats.push((character.starting_node, stat));
             }
         }
-        active_nodes.iter().for_each(|nm| {
-            if let Some(poe_node) = tree.nodes.get(&nm.0) {
+        character.activated_node_ids.iter().for_each(|nm| {
+            if let Some(poe_node) = tree.nodes.get(&nm) {
                 for stat in poe_node.as_passive_skill(&tree).stats() {
-                    all_stats.push((nm.0, stat));
+                    all_stats.push((*nm, stat));
                 }
             }
         });
@@ -284,8 +284,8 @@ fn rhs_menu(
         });
         ui.separator();
 
-        let points_spent = active_nodes.iter().len() + 1;
-        ui.heading(format!("{} Points Spent", points_spent));
+        let points_spent = character.activated_node_ids.len();
+        ui.heading(format!("{}/123 passives allocated", points_spent));
         ui.separator();
 
         if ui.button("Copy path to clipboard").clicked() {
@@ -297,6 +297,8 @@ fn rhs_menu(
         ui.separator();
         if ui.button("Clear All").clicked() {
             clear_all_tx.send(ClearAll);
+            //NOTE: It's important to bail if we run a clear all so none of the other egui shitfuckery has a chance to override values causing our ever-listening bevy systems to accidentally reactivate shit.
+            return;
         }
 
         ui.separator();

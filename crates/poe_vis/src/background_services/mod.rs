@@ -19,7 +19,7 @@ use bevy::{
     utils::hashbrown::HashSet,
 };
 use poe_tree::{
-    consts::{get_char_starts_node_map, LEVEL_ONE_NODES},
+    consts::{get_char_starts_node_map, CHAR_START_NODES, LEVEL_ONE_NODES},
     stats::Stat,
     type_wrappings::{EdgeId, NodeId},
     PassiveTree,
@@ -206,7 +206,9 @@ pub fn clear(
 
     mut node_deactivation_tx: EventWriter<NodeDeactivationReq>,
     mut edge_deactivation_tx: EventWriter<EdgeDeactivationReq>,
+    mut path_needs_repair: ResMut<PathRepairRequired>,
 ) {
+    path_needs_repair.set_unrequired();
     log::debug!("Clear command received.");
     active_character.activated_node_ids.clear();
     assert_eq!(
@@ -242,8 +244,7 @@ pub fn clear(
         "active character's activated node count should be 0"
     );
 
-    // JIC we always require path repair after a Clear
-    log::debug!("ClearAll executed successfully, NOTHING should be highlighet/coloured etc.");
+    log::debug!("ClearAll executed successfully, NOTHING should be highlighted/coloured etc.");
 }
 
 fn process_save_character(
@@ -430,7 +431,7 @@ pub fn process_node_deactivations(
     query
         .iter()
         // we never want to deactivate start/root nodes.
-        .filter(|(ent, nid)| !get_char_starts_node_map().contains_key(nid))
+        .filter(|(_ent, nid)| !CHAR_START_NODES.iter().any(|v| *v == ***nid))
         .for_each(|(ent, nid)| {
             if events.contains(nid) {
                 commands.entity(ent).remove::<NodeActive>();
@@ -473,8 +474,8 @@ fn process_edge_deactivations(
 }
 fn scan_edges_for_inactive_updates(
     mut edge_deactivator: EventWriter<EdgeDeactivationReq>,
-    haystack: Query<&EdgeMarker, With<EdgeActive>>,
-    needles: Query<&NodeMarker, With<NodeActive>>,
+    haystack: Query<&EdgeMarker, (With<EdgeActive>, Without<EdgeInactive>)>,
+    needles: Query<&NodeMarker, (With<NodeActive>, Without<NodeInactive>)>,
 ) {
     let active_nodes: HashSet<NodeId> = needles.into_iter().map(|marker| **marker).collect();
 

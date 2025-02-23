@@ -1,9 +1,8 @@
 mod common;
+use ahash::{AHashMap, AHashSet, HashSet, HashSetExt};
 use common::*;
 use poe_tree::type_wrappings::NodeId;
-
 use reqwest::blocking::Client;
-use std::collections::HashSet;
 
 fn main() {
     let mut tree = quick_tree();
@@ -17,7 +16,7 @@ fn main() {
         std::process::exit(1)
     }
 
-    let active_nodes: HashSet<NodeId> = [
+    let active_nodes: AHashSet<NodeId> = [
         10364, 55342, 17248, 11604, 31765, 15775, 61196, 14267, 51741, 8975, 17088, 57821, 722,
         61834, 56045, 53960, 30808, 2361, 32442, 35696, 12253, 11504, 30839, 41017, 35671, 14262,
         32763, 38728, 44776, 14539, 48773, 26034, 3630, 45631, 11598, 37514, 34316, 4536, 31172,
