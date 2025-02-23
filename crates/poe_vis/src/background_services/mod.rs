@@ -36,29 +36,371 @@ use crate::{
 };
 
 pub(crate) struct BGServicesPlugin;
+use nodes;
+use edges;
+use virtual_paths;
 
-// Conditional Helpers to rate-limit systems:
-pub fn active_nodes_changed(query: Query<(), Changed<NodeActive>>) -> bool {
-    !query.is_empty()
-}
+pub(super)mod nodes {
 
-pub fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
-    !query.is_empty()
-}
+   
+    
+    use bevy::prelude::Color;
+    use bevy::{
+        color::palettes::tailwind,
+        prelude::{Visibility, *},
+        render::{mesh::ConvexPolygonMeshBuilder, render_graph::Edge},
+        text::CosmicBuffer,
+        time::common_conditions::on_timer,
+        utils::hashbrown::HashSet,
+    };
+    use poe_tree::{
+        consts::{get_char_starts_node_map, CHAR_START_NODES, LEVEL_ONE_NODES},
+        stats::Stat,
+        type_wrappings::{EdgeId, NodeId},
+        PassiveTree,
+    };
+    
+    use crate::{
+        components::*,
+        consts::{DEFAULT_SAVE_PATH, SEARCH_THRESHOLD},
+        events::{self, ManualNodeHighlightWithColour, NodeActivationReq, *},
+        materials::{self, GameMaterials},
+        mouse::handle_node_clicks,
+        resources::*,
+        search, PassiveTreeWrapper,
+    };
+    
+    //Activations
+    fn process_node_activations(
+        mut activation_events: EventReader<NodeActivationReq>,
+        mut colour_events: EventWriter<NodeColourReq>,
+        query: Query<(Entity, &NodeMarker), (With<NodeInactive>, Without<ManuallyHighlighted>)>,
+        mut commands: Commands,
+        root_node: Res<RootNode>,
+        game_materials: Res<GameMaterials>,
+    ) {
+        let events: Vec<NodeId> = activation_events.read().map(|nar| nar.0).collect();
 
-pub fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
-    query.iter().count() > 1 // Only run if at least 2 nodes are active
-}
+        let mat = &game_materials.node_activated;
+        let activations = query
+            .iter()
+            .map(|(ent, nid)| {
+                if events.contains(nid) || nid.0 == root_node.0.unwrap_or_default() {
+                    commands.entity(ent).remove::<NodeInactive>();
+                    log::trace!("Activating Node {}", **nid);
+                    commands.entity(ent).insert(NodeActive);
+                    colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+                    log::trace!("Colour change requested for  Node {}", **nid);
+                }
+            })
+            .count();
+        log::debug!("{activations} activation events processed.");
+    }
 
-pub fn something_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
-    // println!("SOMETHING HOVERED");
-    !query.is_empty()
-}
-pub fn nothing_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
-    // println!("NOTHING HOVERED");
-    query.is_empty()
-}
+    // Deactivations
+    pub fn process_node_deactivations(
+        mut deactivation_events: EventReader<NodeDeactivationReq>,
+        mut colour_events: EventWriter<NodeColourReq>,
+        query: Query<(Entity, &NodeMarker), (With<NodeActive>, Without<ManuallyHighlighted>)>,
+        mut commands: Commands,
+        game_materials: Res<GameMaterials>,
+    ) {
+        let events: Vec<NodeId> = deactivation_events.read().map(|ndr| ndr.0).collect();
 
+        let mat = &game_materials.node_base;
+        query
+            .iter()
+            // we never want to deactivate start/root nodes.
+            .filter(|(_ent, nid)| !CHAR_START_NODES.iter().any(|v| *v == ***nid))
+            .for_each(|(ent, nid)| {
+                if events.contains(nid) {
+                    commands.entity(ent).remove::<NodeActive>();
+                    log::trace!("Deactivating Node {}", **nid);
+                    commands.entity(ent).insert(NodeInactive);
+                    colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+                    log::trace!("Colour reset requested for Node {}", **nid);
+                }
+            })
+    }
+
+    pub fn active_nodes_changed(query: Query<(), Changed<NodeActive>>) -> bool {
+        !query.is_empty()
+    }
+
+    pub fn active_edges_changed(query: Query<(), Changed<EdgeActive>>) -> bool {
+        !query.is_empty()
+    }
+
+    pub fn sufficient_active_nodes(query: Query<&NodeMarker, With<NodeActive>>) -> bool {
+        query.iter().count() > 1 // Only run if at least 2 nodes are active
+    }
+}
+pub(super)mod virtual_paths {
+   
+    
+    use std::{
+        boxed::Box,
+        ops::ControlFlow,
+        sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex},
+        time::Duration,
+    };
+    
+    use bevy::prelude::Color;
+    use bevy::{
+        color::palettes::tailwind,
+        prelude::{Visibility, *},
+        render::{mesh::ConvexPolygonMeshBuilder, render_graph::Edge},
+        text::CosmicBuffer,
+        time::common_conditions::on_timer,
+        utils::hashbrown::HashSet,
+    };
+    use poe_tree::{
+        consts::{get_char_starts_node_map, CHAR_START_NODES, LEVEL_ONE_NODES},
+        stats::Stat,
+        type_wrappings::{EdgeId, NodeId},
+        PassiveTree,
+    };
+    
+    use crate::{
+        components::*,
+        consts::{DEFAULT_SAVE_PATH, SEARCH_THRESHOLD},
+        events::{self, ManualNodeHighlightWithColour, NodeActivationReq, *},
+        materials::{self, GameMaterials},
+        mouse::handle_node_clicks,
+        resources::*,
+        search, PassiveTreeWrapper,
+    };
+    
+    pub fn something_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
+        // println!("SOMETHING HOVERED");
+        !query.is_empty()
+    }
+    pub fn nothing_is_hovered(query: Query<&NodeMarker, With<Hovered>>) -> bool {
+        // println!("NOTHING HOVERED");
+        query.is_empty()
+    }
+
+    fn process_virtual_paths(
+        mut colour_events: EventWriter<NodeColourReq>,
+        game_materials: Res<GameMaterials>,
+        edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
+        nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
+    ) {
+        nodes.iter().for_each(|(ent, _em)| {
+            let mat = game_materials.blue.clone_weak();
+            colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+        });
+
+        edges.iter().for_each(|(ent, _em)| {
+            let mat = game_materials.blue.clone_weak();
+            colour_events.send(NodeColourReq(ent, mat.clone_weak()));
+        });
+    }
+    fn populate_virtual_path(
+        mut commands: Commands,
+        tree: Res<PassiveTreeWrapper>,
+        active_character: Res<ActiveCharacter>,
+        mut virt_path_req: EventReader<VirtualPathReq>,
+        edges: Query<(Entity, &EdgeMarker), Without<EdgeActive>>,
+        nodes: Query<(Entity, &NodeMarker), Without<NodeActive>>,
+    ) {
+        let hover_hits: Vec<NodeId> = virt_path_req.read().map(|req| **req).collect();
+        let best = active_character
+            .activated_node_ids
+            .iter()
+            .filter_map(|&candidate| tree.shortest_to_target_from_any_of(candidate, &hover_hits))
+            .min_by_key(|path| path.len());
+
+        if best.is_none() {
+            log::warn!(
+                "No best path found from {:#?} to any of {:#?}",
+                hover_hits,
+                active_character.activated_node_ids
+            );
+            return;
+        }
+
+        let best = best.unwrap();
+        nodes
+            .iter()
+            .filter(|(_, nm)| best.contains(&nm.0))
+            .for_each(|(ent, _)| {
+                commands.entity(ent).insert(VirtualPathMember);
+            });
+
+        let m_cmd = Arc::new(Mutex::new(&mut commands));
+        edges.par_iter().for_each(|(ent, em)| {
+            let (start, end) = em.as_tuple();
+            if best.contains(&start) && best.contains(&end) {
+                m_cmd.lock().unwrap().entity(ent).insert(VirtualPathMember);
+            }
+        });
+    }
+
+    fn clear_virtual_paths(
+        mut commands: Commands,
+        mut colour_nodes: EventWriter<NodeColourReq>,
+        mut colour_events: EventWriter<EdgeColourReq>,
+        game_materials: Res<GameMaterials>,
+        edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
+        nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
+    ) {
+        nodes.iter().for_each(|(ent, _em)| {
+            let mat = game_materials.node_base.clone_weak();
+            commands.entity(ent).remove::<VirtualPathMember>();
+
+            colour_nodes.send(NodeColourReq(ent, mat.clone_weak()));
+        });
+
+        edges.iter().for_each(|(ent, _em)| {
+            let mat = game_materials.edge_base.clone_weak();
+            commands.entity(ent).remove::<VirtualPathMember>();
+
+            colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
+        });
+    }
+}
+pub(super)mod edges {
+
+use std::{
+    boxed::Box,
+    ops::ControlFlow,
+    sync::{atomic::AtomicBool, atomic::Ordering, Arc, Mutex},
+    time::Duration,
+};
+
+use bevy::prelude::Color;
+use bevy::{
+    color::palettes::tailwind,
+    prelude::{Visibility, *},
+    render::{mesh::ConvexPolygonMeshBuilder, render_graph::Edge},
+    text::CosmicBuffer,
+    time::common_conditions::on_timer,
+    utils::hashbrown::HashSet,
+};
+use poe_tree::{
+    consts::{get_char_starts_node_map, CHAR_START_NODES, LEVEL_ONE_NODES},
+    stats::Stat,
+    type_wrappings::{EdgeId, NodeId},
+    PassiveTree,
+};
+
+use crate::{
+    components::*,
+    consts::{DEFAULT_SAVE_PATH, SEARCH_THRESHOLD},
+    events::{self, ManualNodeHighlightWithColour, NodeActivationReq, *},
+    materials::{self, GameMaterials},
+    mouse::handle_node_clicks,
+    resources::*,
+    search, PassiveTreeWrapper,
+};
+
+    fn process_edge_activations(
+        mut activation_events: EventReader<EdgeActivationReq>,
+        mut colour_events: EventWriter<EdgeColourReq>,
+        query: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
+        active_nodes: Query<&NodeMarker, With<NodeActive>>,
+        mut commands: Commands,
+        game_materials: Res<GameMaterials>,
+    ) {
+        //NOTE: the maximum size of an active_nodes set is (123 * 4 bytes)
+        let active_nodes: HashSet<NodeId> = active_nodes.into_iter().map(|nid| nid.0).collect();
+    
+        //NOTE: these should always be pretty tiny, it'd realistically be the number of edges we could receive in a single frame.
+        let requested: HashSet<(EdgeId, EdgeId)> = activation_events
+            .read()
+            .map(move |ear| ear.as_tuple())
+            .collect();
+    
+        let mat = &game_materials.edge_activated;
+    
+        query
+            .into_iter()
+            .map(|(ent, edge_marker)| (ent, edge_marker.as_tuple()))
+            .filter(|(_ent, edge)| requested.contains(edge))
+            .filter(|(_ent, (start, end))| active_nodes.contains(start) && active_nodes.contains(end))
+            .for_each(|(ent, (start, end))| {
+                log::trace!("Activating Edge {start}..{end}");
+                commands.entity(ent).remove::<EdgeInactive>();
+                commands.entity(ent).insert(EdgeActive);
+                colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
+                log::trace!("Colour change requested for Edge {start}..{end}");
+            });
+    }
+    
+    fn scan_edges_for_active_updates(
+        mut edge_activator: EventWriter<EdgeActivationReq>,
+        haystack: Query<&EdgeMarker, With<EdgeInactive>>,
+        needles: Query<&NodeMarker, With<NodeActive>>,
+    ) {
+        let active_nodes: HashSet<NodeId> = needles.into_iter().map(|marker| **marker).collect();
+    
+        let mtx_edge_activator = std::sync::Arc::new(std::sync::Mutex::new(&mut edge_activator));
+        // There are ~3200 edges (8bytes each), so even if we've activated half of them this usually shows performance benefits.
+        // as we never really expect to be activating more than a handful of the nodes we do find, lock contention has been observed to be low,
+        // relative to the searchspace.
+        haystack.par_iter().for_each(|edg| {
+            let (start, end) = edg.as_tuple();
+    
+            if active_nodes.contains(&start) && active_nodes.contains(&end) {
+                match mtx_edge_activator.lock() {
+                    Ok(mut l_edge_activator) => {
+                        l_edge_activator.send(EdgeActivationReq(start, end));
+                    }
+                    _ => {
+                        log::error!("Unable to gain lock on the EventWriter to send an activation request for Edge {:?}", edg);
+                    },
+                }
+            }
+        });
+    }
+    
+    fn process_edge_deactivations(
+        mut deactivation_events: EventReader<EdgeDeactivationReq>,
+        mut colour_events: EventWriter<EdgeColourReq>,
+        query: Query<(Entity, &EdgeMarker), (With<EdgeActive>, Without<ManuallyHighlighted>)>,
+        active_nodes: Query<&NodeMarker, (With<NodeActive>, Without<ManuallyHighlighted>)>,
+        mut commands: Commands,
+        game_materials: Res<GameMaterials>,
+    ) {
+        let active_nodes: HashSet<NodeId> = active_nodes.into_iter().map(|nid| **nid).collect();
+    
+        let requested: HashSet<(EdgeId, EdgeId)> = deactivation_events
+            .read()
+            .map(|edr| edr.as_tuple())
+            .collect();
+    
+        let mat = &game_materials.edge_base;
+    
+        query
+            .into_iter()
+            .map(|(ent, edge_marker)| (ent, edge_marker.as_tuple()))
+            .filter(|(_ent, edge)| requested.contains(edge))
+            .filter(|(_ent, (start, end))| !active_nodes.contains(start) || !active_nodes.contains(end))
+            .for_each(|(ent, (start, end))| {
+                log::trace!("Deactivating Edge {start}..{end}");
+                commands.entity(ent).remove::<EdgeActive>();
+                commands.entity(ent).insert(EdgeInactive);
+                colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
+                log::trace!("Colour reset requested for Edge {start}..{end}");
+            });
+    }
+    fn scan_edges_for_inactive_updates(
+        mut edge_deactivator: EventWriter<EdgeDeactivationReq>,
+        haystack: Query<&EdgeMarker, (With<EdgeActive>, Without<EdgeInactive>)>,
+        needles: Query<&NodeMarker, (With<NodeActive>, Without<NodeInactive>)>,
+    ) {
+        let active_nodes: HashSet<NodeId> = needles.into_iter().map(|marker| **marker).collect();
+    
+        // < 300 active edges are possible at any given time.
+        haystack.iter().for_each(|edg| {
+            let (start, end) = edg.as_tuple();
+            if !active_nodes.contains(&start) || !active_nodes.contains(&end) {
+                edge_deactivator.send(EdgeDeactivationReq(start, end));
+            }
+        });
+    }
+    }
 impl Plugin for BGServicesPlugin {
     fn build(&self, app: &mut App) {
         app
@@ -118,16 +460,10 @@ impl Plugin for BGServicesPlugin {
             Update,
             (
                 //
-                process_load_character
-                    .run_if(on_event::<LoadCharacterReq>)
-                    .after(clear),
-                process_save_character
-                    .run_if(on_event::<SaveCharacterReq>.or(on_event::<SaveCharacterAsReq>)),
-                /* Users need to see paths magically illuminate */
                 //activations:
                 process_node_activations.run_if(on_event::<NodeActivationReq>),
                 process_edge_activations,
-                // Lock the rate we populate the virtual paths at 50ms
+                // Lock the rate we populate the virtual paths
                 populate_virtual_path.run_if(on_event::<VirtualPathReq>.and(time_passed(0.080))),
                 process_virtual_paths.after(populate_virtual_path),
                 clear_virtual_paths.run_if(
@@ -176,30 +512,8 @@ fn time_passed(t: f32) -> impl FnMut(Local<f32>, Res<Time>) -> bool {
     }
 }
 
-fn sync_active_with_character(
-    active_character: Res<ActiveCharacter>,
-    mut deactivator: EventWriter<NodeDeactivationReq>,
-    mut activator: EventWriter<NodeActivationReq>,
-    query: Query<(Entity, &NodeMarker)>,
-) {
-    log::trace!("Updating character.");
 
-    let active = Arc::new(Mutex::new(&mut activator));
-    let deactive = Arc::new(Mutex::new(&mut deactivator));
-    query.par_iter().for_each(|(_ent, nm)| {
-        // We'll just be sloppy and potentially send activation requests to nodes that _may_
-        // already BE active, and so on.
-        match active_character.activated_node_ids.contains(&nm.0) {
-            true => {
-                active.lock().unwrap().send(NodeActivationReq(nm.0));
-            }
-            false => {
-                deactive.lock().unwrap().send(NodeDeactivationReq(nm.0));
-            }
-        }
-    });
-}
-
+mod paths{
 pub fn clear(
     nodes: Query<(Entity, &NodeMarker)>,
     edges: Query<(Entity, &EdgeMarker)>,
@@ -252,247 +566,10 @@ pub fn clear(
     log::debug!("ClearAll executed successfully, NOTHING should be highlighted/coloured etc.");
 }
 
-fn process_save_character(
-    save: EventReader<SaveCharacterReq>,
-    mut save_as: EventReader<SaveCharacterAsReq>, // "save as" event with a PathBuf
-    mut last_save_loc: ResMut<LastSaveLocation>,
-    mut active_character: ResMut<ActiveCharacter>,
-    active_nodes: Query<&NodeMarker, With<NodeActive>>,
-) {
-    active_character.activated_node_ids = active_nodes.iter().map(|nm| **nm).collect();
-    active_character.level = active_character.activated_node_ids.len() as u8;
 
-    // Choose path based on events
-    let path = if let Some(evt) = save_as.read().last() {
-        // "Save as" event overrides last_save_loc
-        **last_save_loc = (**evt).clone();
-        (**evt).clone()
-    } else if !save.is_empty() {
-        last_save_loc.0.clone()
-    } else {
-        // Default fallback
-        std::path::PathBuf::from(DEFAULT_SAVE_PATH)
-    };
 
-    if let Err(e) = active_character.save_to_toml(&path) {
-        log::error!("{}", e);
-    }
-    log::debug!("Character Saved to {:?}", path);
+
 }
-
-fn process_load_character(
-    mut loader: EventReader<LoadCharacterReq>,
-    mut active_character: ResMut<ActiveCharacter>,
-    mut root_node: ResMut<RootNode>,
-) {
-    println!("Load Character requested");
-    loader.read().for_each(|req| {
-        let path = &req.0;
-        match path.extension().and_then(|s| s.to_str()) {
-            Some("toml") => {
-                // Use ours.
-                match poe_tree::character::Character::load_from_toml(path) {
-                    Some(character) => {
-                        active_character.character = character;
-                        println!("Load Character from OUR format finalised");
-                    }
-                    None => eprintln!("Failed to load TOML from {}", path.display()),
-                }
-            }
-            Some("xml") => {
-                // Assume XML is in PoB export format.
-                match std::fs::read_to_string(path) {
-                    Ok(xml_str) => {
-                        match quick_xml::de::from_str::<poe_tree::pob_utils::POBCharacter>(&xml_str)
-                        {
-                            Ok(pob_char) => {
-                                active_character.character = pob_char.into();
-                                println!("Load Character from POB's format finalised");
-                            }
-                            Err(e) => log::error!("XML parse error in {}: {:?}", path.display(), e),
-                        }
-                    }
-                    Err(e) => eprintln!("Failed to read {}: {:?}", path.display(), e),
-                }
-            }
-            //TODO: throw UI error (There's an event for it ThrowWarning)
-            Some(ext) => {
-                log::error!("Unsupported file extension: {}", ext);
-            }
-            None => {
-                log::error!("Could not determine file extension for {}", path.display());
-            }
-        }
-    });
-
-    LEVEL_ONE_NODES
-        .iter()
-        .flat_map(|v| active_character.activated_node_ids.get(v))
-        .for_each(|v| {
-            log::debug!("Resetting the root node to: {v}");
-
-            **root_node = Some(*v)
-        });
-}
-
-//Activations
-fn process_node_activations(
-    mut activation_events: EventReader<NodeActivationReq>,
-    mut colour_events: EventWriter<NodeColourReq>,
-    query: Query<(Entity, &NodeMarker), (With<NodeInactive>, Without<ManuallyHighlighted>)>,
-    mut commands: Commands,
-    root_node: Res<RootNode>,
-    game_materials: Res<GameMaterials>,
-) {
-    let events: Vec<NodeId> = activation_events.read().map(|nar| nar.0).collect();
-
-    let mat = &game_materials.node_activated;
-    let activations = query
-        .iter()
-        .map(|(ent, nid)| {
-            if events.contains(nid) || nid.0 == root_node.0.unwrap_or_default() {
-                commands.entity(ent).remove::<NodeInactive>();
-                log::trace!("Activating Node {}", **nid);
-                commands.entity(ent).insert(NodeActive);
-                colour_events.send(NodeColourReq(ent, mat.clone_weak()));
-                log::trace!("Colour change requested for  Node {}", **nid);
-            }
-        })
-        .count();
-    log::debug!("{activations} activation events processed.");
-}
-
-fn process_edge_activations(
-    mut activation_events: EventReader<EdgeActivationReq>,
-    mut colour_events: EventWriter<EdgeColourReq>,
-    query: Query<(Entity, &EdgeMarker), With<EdgeInactive>>,
-    active_nodes: Query<&NodeMarker, With<NodeActive>>,
-    mut commands: Commands,
-    game_materials: Res<GameMaterials>,
-) {
-    //NOTE: the maximum size of an active_nodes set is (123 * 4 bytes)
-    let active_nodes: HashSet<NodeId> = active_nodes.into_iter().map(|nid| nid.0).collect();
-
-    //NOTE: these should always be pretty tiny, it'd realistically be the number of edges we could receive in a single frame.
-    let requested: HashSet<(EdgeId, EdgeId)> = activation_events
-        .read()
-        .map(move |ear| ear.as_tuple())
-        .collect();
-
-    let mat = &game_materials.edge_activated;
-
-    query
-        .into_iter()
-        .map(|(ent, edge_marker)| (ent, edge_marker.as_tuple()))
-        .filter(|(_ent, edge)| requested.contains(edge))
-        .filter(|(_ent, (start, end))| active_nodes.contains(start) && active_nodes.contains(end))
-        .for_each(|(ent, (start, end))| {
-            log::trace!("Activating Edge {start}..{end}");
-            commands.entity(ent).remove::<EdgeInactive>();
-            commands.entity(ent).insert(EdgeActive);
-            colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
-            log::trace!("Colour change requested for Edge {start}..{end}");
-        });
-}
-
-fn scan_edges_for_active_updates(
-    mut edge_activator: EventWriter<EdgeActivationReq>,
-    haystack: Query<&EdgeMarker, With<EdgeInactive>>,
-    needles: Query<&NodeMarker, With<NodeActive>>,
-) {
-    let active_nodes: HashSet<NodeId> = needles.into_iter().map(|marker| **marker).collect();
-
-    let mtx_edge_activator = std::sync::Arc::new(std::sync::Mutex::new(&mut edge_activator));
-    // There are ~3200 edges (8bytes each), so even if we've activated half of them this usually shows performance benefits.
-    // as we never really expect to be activating more than a handful of the nodes we do find, lock contention has been observed to be low,
-    // relative to the searchspace.
-    haystack.par_iter().for_each(|edg| {
-        let (start, end) = edg.as_tuple();
-
-        if active_nodes.contains(&start) && active_nodes.contains(&end) {
-            match mtx_edge_activator.lock() {
-                Ok(mut l_edge_activator) => {
-                    l_edge_activator.send(EdgeActivationReq(start, end));
-                }
-                _ => {
-                    log::error!("Unable to gain lock on the EventWriter to send an activation request for Edge {:?}", edg);
-                },
-            }
-        }
-    });
-}
-
-// Deactivations
-pub fn process_node_deactivations(
-    mut deactivation_events: EventReader<NodeDeactivationReq>,
-    mut colour_events: EventWriter<NodeColourReq>,
-    query: Query<(Entity, &NodeMarker), (With<NodeActive>, Without<ManuallyHighlighted>)>,
-    mut commands: Commands,
-    game_materials: Res<GameMaterials>,
-) {
-    let events: Vec<NodeId> = deactivation_events.read().map(|ndr| ndr.0).collect();
-
-    let mat = &game_materials.node_base;
-    query
-        .iter()
-        // we never want to deactivate start/root nodes.
-        .filter(|(_ent, nid)| !CHAR_START_NODES.iter().any(|v| *v == ***nid))
-        .for_each(|(ent, nid)| {
-            if events.contains(nid) {
-                commands.entity(ent).remove::<NodeActive>();
-                log::trace!("Deactivating Node {}", **nid);
-                commands.entity(ent).insert(NodeInactive);
-                colour_events.send(NodeColourReq(ent, mat.clone_weak()));
-                log::trace!("Colour reset requested for Node {}", **nid);
-            }
-        })
-}
-fn process_edge_deactivations(
-    mut deactivation_events: EventReader<EdgeDeactivationReq>,
-    mut colour_events: EventWriter<EdgeColourReq>,
-    query: Query<(Entity, &EdgeMarker), (With<EdgeActive>, Without<ManuallyHighlighted>)>,
-    active_nodes: Query<&NodeMarker, (With<NodeActive>, Without<ManuallyHighlighted>)>,
-    mut commands: Commands,
-    game_materials: Res<GameMaterials>,
-) {
-    let active_nodes: HashSet<NodeId> = active_nodes.into_iter().map(|nid| **nid).collect();
-
-    let requested: HashSet<(EdgeId, EdgeId)> = deactivation_events
-        .read()
-        .map(|edr| edr.as_tuple())
-        .collect();
-
-    let mat = &game_materials.edge_base;
-
-    query
-        .into_iter()
-        .map(|(ent, edge_marker)| (ent, edge_marker.as_tuple()))
-        .filter(|(_ent, edge)| requested.contains(edge))
-        .filter(|(_ent, (start, end))| !active_nodes.contains(start) || !active_nodes.contains(end))
-        .for_each(|(ent, (start, end))| {
-            log::trace!("Deactivating Edge {start}..{end}");
-            commands.entity(ent).remove::<EdgeActive>();
-            commands.entity(ent).insert(EdgeInactive);
-            colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
-            log::trace!("Colour reset requested for Edge {start}..{end}");
-        });
-}
-fn scan_edges_for_inactive_updates(
-    mut edge_deactivator: EventWriter<EdgeDeactivationReq>,
-    haystack: Query<&EdgeMarker, (With<EdgeActive>, Without<EdgeInactive>)>,
-    needles: Query<&NodeMarker, (With<NodeActive>, Without<NodeInactive>)>,
-) {
-    let active_nodes: HashSet<NodeId> = needles.into_iter().map(|marker| **marker).collect();
-
-    // < 300 active edges are possible at any given time.
-    haystack.iter().for_each(|edg| {
-        let (start, end) = edg.as_tuple();
-        if !active_nodes.contains(&start) || !active_nodes.contains(&end) {
-            edge_deactivator.send(EdgeDeactivationReq(start, end));
-        }
-    });
-}
-
 // Colours & Aesthetics.
 fn process_node_colour_changes(
     mut colour_events: EventReader<NodeColourReq>,
@@ -687,86 +764,6 @@ fn process_manual_node_highlights(
         });
 }
 
-fn process_virtual_paths(
-    mut colour_events: EventWriter<NodeColourReq>,
-    game_materials: Res<GameMaterials>,
-    edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
-    nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
-) {
-    nodes.iter().for_each(|(ent, _em)| {
-        let mat = game_materials.blue.clone_weak();
-        colour_events.send(NodeColourReq(ent, mat.clone_weak()));
-    });
-
-    edges.iter().for_each(|(ent, _em)| {
-        let mat = game_materials.blue.clone_weak();
-        colour_events.send(NodeColourReq(ent, mat.clone_weak()));
-    });
-}
-fn populate_virtual_path(
-    mut commands: Commands,
-    tree: Res<PassiveTreeWrapper>,
-    active_character: Res<ActiveCharacter>,
-    mut virt_path_req: EventReader<VirtualPathReq>,
-    edges: Query<(Entity, &EdgeMarker), Without<EdgeActive>>,
-    nodes: Query<(Entity, &NodeMarker), Without<NodeActive>>,
-) {
-    let hover_hits: Vec<NodeId> = virt_path_req.read().map(|req| **req).collect();
-    let best = active_character
-        .activated_node_ids
-        .iter()
-        .filter_map(|&candidate| tree.shortest_to_target_from_any_of(candidate, &hover_hits))
-        .min_by_key(|path| path.len());
-
-    if best.is_none() {
-        log::warn!(
-            "No best path found from {:#?} to any of {:#?}",
-            hover_hits,
-            active_character.activated_node_ids
-        );
-        return;
-    }
-
-    let best = best.unwrap();
-    nodes
-        .iter()
-        .filter(|(_, nm)| best.contains(&nm.0))
-        .for_each(|(ent, _)| {
-            commands.entity(ent).insert(VirtualPathMember);
-        });
-
-    let m_cmd = Arc::new(Mutex::new(&mut commands));
-    edges.par_iter().for_each(|(ent, em)| {
-        let (start, end) = em.as_tuple();
-        if best.contains(&start) && best.contains(&end) {
-            m_cmd.lock().unwrap().entity(ent).insert(VirtualPathMember);
-        }
-    });
-}
-
-fn clear_virtual_paths(
-    mut commands: Commands,
-    mut colour_nodes: EventWriter<NodeColourReq>,
-    mut colour_events: EventWriter<EdgeColourReq>,
-    game_materials: Res<GameMaterials>,
-    edges: Query<(Entity, &EdgeMarker), (With<VirtualPathMember>, Without<EdgeActive>)>,
-    nodes: Query<(Entity, &NodeMarker), (With<VirtualPathMember>, Without<NodeActive>)>,
-) {
-    nodes.iter().for_each(|(ent, _em)| {
-        let mat = game_materials.node_base.clone_weak();
-        commands.entity(ent).remove::<VirtualPathMember>();
-
-        colour_nodes.send(NodeColourReq(ent, mat.clone_weak()));
-    });
-
-    edges.iter().for_each(|(ent, _em)| {
-        let mat = game_materials.edge_base.clone_weak();
-        commands.entity(ent).remove::<VirtualPathMember>();
-
-        colour_events.send(EdgeColourReq(ent, mat.clone_weak()));
-    });
-}
-
 fn process_scale_requests(
     mut scale_events: EventReader<NodeScaleReq>,
     mut transforms: Query<&mut Transform>,
@@ -781,28 +778,37 @@ fn process_scale_requests(
 }
 
 //TODO: If we're gonna to a lot of Optimiser stuff we maybe wanna move it out to its own source file...
-fn populate_optimiser(
-    mut optimiser: ResMut<Optimiser>,
-    tree: Res<PassiveTreeWrapper>,
-    active_character: Res<ActiveCharacter>,
-    mut req: EventReader<OptimiseReq>,
-) {
-    log::trace!("Optimise requested");
-    let baseline = active_character
-        .activated_node_ids
-        .iter()
-        .map(|v| *v)
-        .collect::<Vec<NodeId>>();
 
-    req.read().for_each(|req| {
-        if optimiser.is_available() {
-            optimiser.set_busy();
-            optimiser.results = tree
-                .branches(&active_character.activated_node_ids)
-                .iter()
-                .flat_map(|opt| tree.take_while_better(*opt, &req.selector, req.delta, &baseline))
-                .collect();
-        }
-        optimiser.set_available();
-    })
+mod optimiser_utils{
+    use bevy::prelude::*;
+
+    use crate::resources::Optimiser;
+    
+    fn populate_optimiser(
+        mut optimiser: ResMut<Optimiser>,
+        tree: Res<PassiveTreeWrapper>,
+        active_character: Res<ActiveCharacter>,
+        mut req: EventReader<OptimiseReq>,
+    ) {
+        log::trace!("Optimise requested");
+        let baseline = active_character
+            .activated_node_ids
+            .iter()
+            .map(|v| *v)
+            .collect::<Vec<NodeId>>();
+    
+        req.read().for_each(|req| {
+            if optimiser.is_available() {
+                optimiser.set_busy();
+                optimiser.results = tree
+                    .branches(&active_character.activated_node_ids)
+                    .iter()
+                    .flat_map(|opt| tree.take_while_better(*opt, &req.selector, req.delta, &baseline))
+                    .collect();
+            }
+            optimiser.set_available();
+        })
+    }
+    
+    
 }
