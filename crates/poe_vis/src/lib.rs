@@ -1,8 +1,7 @@
 #![feature(box_into_inner)]
 #![allow(dead_code, unused_imports)]
 #![allow(clippy::type_complexity)]
-use bevy::color::palettes::tailwind;
-use bevy::prelude::*;
+use bevy::{color::palettes::tailwind, prelude::*};
 
 use background_services::BGServicesPlugin;
 use camera::PoeVisCameraPlugin;
@@ -12,7 +11,6 @@ use hotkeys::HotkeysPlugin;
 use init_tree::TreeCanvasPlugin;
 use materials::PoeVisMaterials;
 use mouse::MouseControlsPlugin;
-use nodes::NodeInteractionPlugin;
 use overlays_n_popups::OverlaysAndPopupsPlugin;
 use remote::RPCPlugin;
 use search::SearchToolsPlugin;
@@ -24,13 +22,11 @@ mod characters;
 pub mod components; // Pub because used in benchmarks
 mod config;
 mod consts;
-mod edges;
 mod events;
 mod hotkeys;
 mod init_tree;
 mod materials;
 mod mouse;
-mod nodes;
 mod overlays_n_popups;
 mod remote;
 pub mod resources;
@@ -55,7 +51,6 @@ impl Plugin for PoeVis {
             UserConfigPlugin,
             SearchToolsPlugin,
             OverlaysAndPopupsPlugin,
-            NodeInteractionPlugin,
             // ShadersPlugin
             //  If making RPC Videos suggest disabling these:
             HotkeysPlugin,
