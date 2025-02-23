@@ -1,20 +1,4 @@
-mod edges;
-mod generated;
-mod misc;
-mod nodes;
-mod optimiser_utils;
-mod paths;
-mod virtual_paths;
-
 use bevy::prelude::*;
-
-use edges::*;
-pub use generated::{parse_tailwind_color, tailwind_to_egui};
-use misc::*;
-use nodes::*;
-use optimiser_utils::*;
-pub use paths::clear;
-use paths::*;
 
 use crate::{
     events::*,
@@ -24,13 +8,41 @@ use crate::{
     },
 };
 
-pub(crate) struct BGServicesPlugin;
+// Re-export necessary modules
+mod edges;
+mod generated;
+mod misc;
+mod nodes;
+mod optimiser_utils;
+mod paths;
+mod virtual_paths;
+
+pub use generated::{parse_tailwind_color, tailwind_to_egui};
+pub use paths::clear;
+
+// Main BGServicesPlugin, this is our wrapper plugin
+pub struct BGServicesPlugin;
 
 impl Plugin for BGServicesPlugin {
     fn build(&self, app: &mut App) {
-        app
-            // Spacing..
-            .add_event::<ClearAll>()
+        app.add_plugins((
+            EssentialsPlugin,
+            NodePlugin,
+            EdgePlugin,
+            PathingPlugin,
+            OptimiserPlugin,
+        ));
+
+        log::debug!("BGServices plugin enabled");
+    }
+}
+
+// Just a convenience 'holder' plugin for all the events and resources we need.
+pub struct EssentialsPlugin;
+
+impl Plugin for EssentialsPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<ClearAll>()
             .add_event::<ClearSearchResults>()
             .add_event::<ClearVirtualPath>()
             .add_event::<DrawCircleReq>()
@@ -45,7 +57,6 @@ impl Plugin for BGServicesPlugin {
             .add_event::<NodeActivationReq>()
             .add_event::<NodeColourReq>()
             .add_event::<NodeDeactivationReq>()
-            .add_event::<NodeDeactivationReq>()
             .add_event::<NodeScaleReq>()
             .add_event::<OptimiseReq>()
             .add_event::<OverrideCharacterNodesReq>()
@@ -55,10 +66,6 @@ impl Plugin for BGServicesPlugin {
             .add_event::<SyncCharacterReq>()
             .add_event::<ThrowWarning>()
             .add_event::<VirtualPathReq>()
-            //spacing..
-            ;
-
-        app //
             .init_resource::<Toggles>()
             .insert_resource(Optimiser {
                 results: Vec::new(),
@@ -66,60 +73,102 @@ impl Plugin for BGServicesPlugin {
             })
             .insert_resource(PathRepairRequired(false));
 
+        log::debug!("Core plugin enabled");
+    }
+}
+
+// Plugin for Node Management
+pub struct NodePlugin;
+
+impl Plugin for NodePlugin {
+    fn build(&self, app: &mut App) {
         app.add_systems(
             PostUpdate,
             (
-                /* Only scan for edges when we KNOW the path is valid */
-                scan_edges_for_active_updates.run_if(resource_equals(PathRepairRequired(false))),
-                //deactivations:
-                process_node_deactivations.run_if(on_event::<NodeDeactivationReq>),
-                process_edge_deactivations,
-                scan_edges_for_inactive_updates,
-                /* happening all the time with camera moves. */
-                adjust_node_sizes,
+                nodes::process_node_deactivations.run_if(on_event::<NodeDeactivationReq>),
+                misc::adjust_node_sizes,
             )
-                .after(clear), //
+                .after(clear),
         );
         app.add_systems(
             Update,
             (
-                //
-                //activations:
-                process_node_activations.run_if(on_event::<NodeActivationReq>),
-                process_edge_activations,
-                // Lock the rate we populate the virtual paths
+                nodes::process_node_activations.run_if(on_event::<NodeActivationReq>),
+                nodes::process_node_colour_changes.run_if(on_event::<NodeColourReq>),
+                nodes::process_manual_node_highlights
+                    .run_if(on_event::<ManualNodeHighlightWithColour>),
+            ),
+        );
+        log::debug!("Node plugin enabled");
+    }
+}
+
+// Plugin for Edge Management
+pub struct EdgePlugin;
+
+impl Plugin for EdgePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            PostUpdate,
+            (
+                edges::scan_edges_for_active_updates
+                    .run_if(resource_equals(PathRepairRequired(false))),
+                edges::process_edge_deactivations,
+                edges::scan_edges_for_inactive_updates,
+            )
+                .after(clear),
+        );
+        app.add_systems(
+            Update,
+            (
+                edges::process_edge_activations,
+                edges::process_edge_colour_changes.run_if(on_event::<EdgeColourReq>),
+                edges::process_manual_edge_highlights
+                    .run_if(on_event::<ManualEdgeHighlightWithColour>),
+            ),
+        );
+        log::debug!("Edge plugin enabled");
+    }
+}
+
+// Plugin for Path and Virtual Path Logic
+pub struct PathingPlugin;
+
+impl Plugin for PathingPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
                 virtual_paths::populate_virtual_path
-                    .run_if(on_event::<VirtualPathReq>.and(time_passed(0.080))),
+                    .run_if(on_event::<VirtualPathReq>.and(misc::time_passed(0.080))),
                 virtual_paths::process_virtual_paths.after(virtual_paths::populate_virtual_path),
                 virtual_paths::clear_virtual_paths.run_if(
                     on_event::<ClearVirtualPath>
                         .or(on_event::<ClearAll>.or(CameraSettings::is_moving)),
                 ),
-                process_manual_node_highlights.run_if(on_event::<ManualNodeHighlightWithColour>),
-                process_manual_edge_highlights.run_if(on_event::<ManualEdgeHighlightWithColour>),
-                /* Pretty lightweight, can be spammed.*/
-                process_node_colour_changes.run_if(on_event::<NodeColourReq>),
-                process_edge_colour_changes.run_if(on_event::<EdgeColourReq>),
-                /* Runs a BFS so, try not to spam it.*/
-                path_repair
+                paths::path_repair
                     .run_if(resource_exists::<RootNode>)
-                    .run_if(sufficient_active_nodes)
+                    .run_if(nodes::sufficient_active_nodes)
                     .run_if(
                         resource_equals(PathRepairRequired(true))
                             .or(resource_changed::<ActiveCharacter>),
                     ),
             ),
         );
+        app.add_systems(Update, clear.run_if(on_event::<ClearAll>));
+        log::debug!("Pathing plugin enabled");
+    }
+}
 
-        // Optimiser routines:
+// Plugin for Optimiser Logic
+pub struct OptimiserPlugin;
+
+impl Plugin for OptimiserPlugin {
+    fn build(&self, app: &mut App) {
         app.add_systems(
             PostUpdate,
-            //TODO: cap the framerate that this can run at...i.e && NOT WORKING
-            populate_optimiser.run_if(on_event::<OptimiseReq>),
+            optimiser_utils::populate_optimiser.run_if(on_event::<OptimiseReq>),
         );
-
-        app.add_systems(Update, clear.run_if(on_event::<ClearAll>));
-
-        log::debug!("BGServices plugin enabled");
+        log::debug!("Optimiser plugin enabled");
     }
 }
