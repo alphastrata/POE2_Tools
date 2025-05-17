@@ -1,0 +1,44 @@
+#$ data/user_config.toml
+[colors]
+# Node Colors
+attack = "#E95678"          # Red
+mana = "#26BBD9"            # Blue
+dexterity = "#29D398"       # Green
+intelligence = "#26BBD9"    # Blue
+strength = "#E95678"        # Red
+all_nodes = "#3c3c3c"       # Dark grey
+activated_nodes = "#29D398" # Green
+activated_edges = "#22A882" # Green
+
+# UI Colors
+background = "#000000"
+foreground = "#C7C9CB"
+red = "#E95678"
+orange = "#FAB795"
+yellow = "#FABD2F"
+green = "#29D398"
+blue = "#26BBD9"
+purple = "#EE64AC"
+cyan = "#59E3E3"
+
+[controls]
+
+move_left = ["h", "left_arrow"]
+move_right = ["i", "right_arrow"]
+move_up = ["e", "up_arrow"]
+move_down = ["n", "down_arrow"]
+camera_reset_home = ["esc"]
+
+search_for_node_by_name = ["/"]
+exit = ["esc"]
+load_character_nodes = ["l"]
+save_active_character = ["s"]
+toggle_ui = ["u"]
+
+
+#TODO: base_node_size
+#TODO: default camera_zoom
+#TODO: zoom sensitivity
+#TODO: transate_sensitivity
+#TODO: lock_camera_when_typing
+#TODO: screen dims (save last camera position and window size)

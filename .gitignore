@@ -1,0 +1,9 @@
+/target
+PathOfBuilding
+.DS_Store
+.vscode
+.cargo
+/.cargo/*
+__pycache__
+data/.*
+

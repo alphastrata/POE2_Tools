@@ -1,0 +1,51 @@
+#$ crates/poe_vis/Cargo.toml
+[package]
+name = "poe_vis"
+version = "0.1.0"
+edition = "2021"
+
+
+[[bin]]
+name = "vis"
+path = "src/main.rs"
+
+[lib]
+name = "poe_vis"
+path = "src/lib.rs"
+
+[[example]]
+name = "colourful"
+path = "examples/colourful.rs"
+
+
+[dependencies]
+poe_tree = { workspace = true }
+
+bevy = { workspace = true, features = ["file_watcher"] }
+bevy_cosmic_edit.workspace = true
+bevy_egui = { workspace = true, features = ["manage_clipboard"] }
+crossbeam = { workspace = true, features = ["crossbeam-channel"] }
+crossbeam-channel.workspace = true
+jsonrpc-core.workspace = true
+jsonrpc-http-server.workspace = true
+log = { workspace = true }
+pretty_env_logger = { workspace = true }
+rfd = { workspace = true }
+serde_json = { workspace = true }
+serde.workspace = true
+toml.workspace = true
+tracing-subscriber.workspace = true
+quick-xml = { workspace = true, features = ["serialize"] }
+
+[dev-dependencies]
+reqwest = { workspace = true, features = ["blocking"] }
+rand.workspace = true
+criterion.workspace = true
+rayon.workspace = true
+ahash.workspace = true
+
+
+[[bench]]
+name = "virtual_paths"
+harness = false
+path = "benches/virtual_paths.rs"

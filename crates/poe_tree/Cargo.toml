@@ -1,0 +1,88 @@
+#$ crates/poe_tree/Cargo.toml
+[package]
+name = "poe_tree"
+version = "0.1.0"
+edition = "2021"
+
+[[examples]]
+name = "stat_parse"
+path = "examples/stat_parse.rs"
+
+
+[[examples]]
+name = "node_count"
+path = "examples/node_count.rs"
+
+[[example]]
+name = "lightning_dam"
+path = "examples/lightning_dam.rs"
+
+[[examples]]
+name = "evasion"
+path = "examples/evasion.rs"
+
+[[examples]]
+name = "possible"
+path = "examples/possible_builds.rs"
+
+[[examples]]
+name = "all2chaos"
+path = "examples/all_starts_to_chaos_inoculation.rs"
+
+
+[[examples]]
+name = "highsearchterm"
+path = "examples/highsearchterm.rs"
+[[examples]]
+name = "simple_optimise"
+path = "examples/simple_optimise.rs"
+
+
+[dependencies]
+log = { workspace = true }
+pretty_env_logger = { workspace = true }
+rfd = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+toml = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+bitset.workspace = true
+rayon.workspace = true
+num_cpus.workspace = true
+crossbeam-channel.workspace = true
+regex.workspace = true
+quick-xml = { workspace = true, features = ["serialize"] }
+bit-set.workspace = true
+smallvec.workspace = true
+ahash = { workspace = true, features = ["serde"] }
+
+[dev-dependencies]
+reqwest = { workspace = true, features = ["blocking"] }
+criterion.workspace = true
+
+[build-dependencies]
+serde.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+
+
+[[bench]]
+name = "str_vs_enum_match"
+path = "benches/str_vs_enum_match.rs"
+harness = false
+
+[[bench]]
+name = "bfs_vs_dijkstra"
+path = "benches/bfs_vs_dijkstra.rs"
+harness = false
+
+[[bench]]
+name = "take_while"
+path = "benches/take_while.rs"
+harness = false
+
+[[bench]]
+name = "walk_n_steps"
+path = "benches/walk_n_steps.rs"
+harness = false
